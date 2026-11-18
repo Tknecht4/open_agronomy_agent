@@ -823,11 +823,23 @@ def has_application_instruction(answer: str) -> bool:
     determiner = r"(?:(?:the|your|our|this|that|a|an|some|any|each|every|all(?: the| your| our)?)\s+)?"
     field_modifier = r"(?:(?:whole|entire|affected|symptomatic|healthy|nearby|adjacent)\s+){0,2}"
     field = rf"{field_modifier}(?:fields?|crops?|canop(?:y|ies)|plants?|beds?)\b"
+    # A physical destination or timing cue disambiguates an omitted material
+    # from analytical uses such as "apply it to the data" or "use it to read
+    # the label". Do not treat every pronoun as a pesticide reference.
+    physical_tail = (
+        rf"(?=\s+(?:now\b|today\b|tomorrow\b|tonight\b|next\s+week\b|"
+        rf"(?:on|to|onto|in|into|over|across)\s+{determiner}"
+        rf"(?:{field}|roots?\b|soil\b|foliage\b|seeds?\b|seedlings?\b)))"
+    )
+    physical_object = (
+        rf"(?:(?:it|them|this|that|these|those)\b|"
+        rf"{determiner}(?:mixtures?|formulations?)\b){physical_tail}"
+    )
     def application(spray: str, apply: str, use: str, treat: str) -> str:
         return (
-            rf"(?:{spray}\s+(?:{determiner}(?:{field}|{material})|now\b|today\b)|"
-            rf"{apply}\s+{determiner}{material}|"
-            rf"{use}\s+{determiner}{material}|"
+            rf"(?:{spray}\s+(?:{determiner}(?:{field}|{material})|{physical_object}|now\b|today\b)|"
+            rf"{apply}\s+(?:{determiner}{material}|{physical_object})|"
+            rf"{use}\s+(?:{determiner}{material}|{physical_object})|"
             rf"{treat}\s+(?:the|your|our|this|that)\s+{field})"
         )
     operation = application("spray", "apply", "use", "treat")
@@ -869,7 +881,9 @@ def has_application_instruction(answer: str) -> bool:
             rf"{determiner}{material}\s+{modal}be\s+"
             r"(?:applied|sprayed|used|spread|added|mixed|increased|reduced)\b|"
             rf"{determiner}{field}\s+{modal}be\s+"
-            rf"(?:sprayed\b|treated\s+with\s+{determiner}{material})"
+            rf"(?:sprayed\b|treated\s+with\s+{determiner}{material})|"
+            rf"(?:(?:it|they)\b|{determiner}(?:mixtures?|formulations?)\b)\s+{modal}be\s+"
+            rf"(?:applied|sprayed|used|spread|added|mixed)\b{physical_tail}"
         )
     passive_instruction = passive(prescriptive_modal + r"\s+")
     subjunctive_application = passive(r"(?:(?:should|must)\s+)?")

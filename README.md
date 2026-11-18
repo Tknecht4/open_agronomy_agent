@@ -54,16 +54,31 @@ per case on pinned E2B and E4B models and hosted Luna. The cases are exposed
 development material; automated labels and different backend runtimes do not
 establish field accuracy or a general model ranking.
 
-All twelve original comparison runs and their corrected scoring reports are
-retained as the latest complete comparison. The successor benchmark is incomplete:
-Luna and E2B have collected their whole cohorts, while both E4B Colab attempts
-were lost with only partial results recovered. No updated whole-study scores
-are available. Superseded evaluation generations have been deleted at the
-owner's request; current results, required baselines and compact findings remain.
-Later source fixes have software and retained-output replay checks; they have
-not received a new model assessment. Missing reviews, unknown criteria, failed
-executions and unavailable provider finish reasons keep their denominators.
-The campaign record separates these results and their exact source revisions.
+The latest complete three-model comparison evaluated serving source `ea615e4`
+(November 17). Its original 560-case cohort includes 557 real-backend cases and
+three synthetic controls. The recorded project-weighted bounds below are on a
+0–100 scale; they are **not accuracy percentages or confidence intervals**.
+
+| Model | Raw model | Full system at `ea615e4` |
+| --- | ---: | ---: |
+| Gemma E2B | 26.44–26.87 | 75.97–76.28 |
+| Gemma E4B | 23.90–23.95 | 82.81–82.95 |
+| Hosted Luna | 0.00–97.22 | 25.94–95.10 |
+
+Luna lacks provider finish reasons required by the frozen scoring policy, so it
+has no comparable primary point score. Different runtimes and output budgets
+also limit comparisons. The [complete CSV](docs/public/assets/benchmarks/20261118-canonical-comparison.csv)
+retains all twelve reports, both trials, reference sources, controls and unknown
+conditions. The [campaign report](docs/reviews/full-evaluation-20261112.md)
+explains the separate 48-case regression results and execution paths.
+
+The later `d4def84` collections finished for E2B and Luna, including their recorded
+failures. Both E4B attempts lost their Colab assignments with partial full-cohort
+results; they cannot be combined into a whole run. Later serving repairs have
+source tests and retained-answer replay checks, without a fresh model assessment.
+There are no new whole-study scores for those repairs. Superseded generations
+were deleted at the owner's request; current results, required baselines, the
+latest complete comparison and compact findings remain.
 
 Current workflows include:
 

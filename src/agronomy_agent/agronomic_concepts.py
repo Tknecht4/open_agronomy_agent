@@ -124,7 +124,7 @@ def _maturity_edits(sentence: str, question: str):
         # a number that happens to collapse to the question's identifier.
         subject = named_subject(before)
         supplied_subjects = subjects.get(original, set())
-        if subject is None or (supplied_subjects and subject not in supplied_subjects):
+        if subject is None or subject not in supplied_subjects:
             return match.group()
         if re.search(r"(?<![\d.])" + re.escape(original) + r"(?!\d|\.\d)", sentence):
             # Both identifiers are deliberate local operands. Rewriting one

@@ -437,3 +437,25 @@ def test_maturity_restoration_requires_an_explicit_supplied_entity_assignment():
 def test_maturity_hypothesis_is_not_an_affirmative_subject_assignment(modal):
     answer = f'Soybean Y {modal} maturity group 0.3.'
     assert correct_concept_claims(answer, 'Explain soybean maturity group 00.3.') == (answer, ())
+
+
+@pytest.mark.parametrize('question,answer', [
+    ('Explain soybean maturity group 00.', 'Atlas has maturity group 0. This is its adaptation classification.'),
+    ('Explain soybean maturity group 000.4.', "Atlas's maturity group 0.4 is listed in a seed guide."),
+    ('Atlas is mentioned in a soybean trial. Explain maturity group 00.3.', 'Atlas has maturity group 0.3.'),
+])
+def test_generic_maturity_identifier_does_not_supply_a_named_variety_assignment(question, answer):
+    # These imposed variety claims are not established facts. A generic
+    # identifier must not authorize the correction layer to reassign a variety.
+    assert correct_concept_claims(answer, question) == (answer, ())
+    result = verify(answer, question)
+    assert result.answer == answer
+    assert not result.localized_cleanup
+
+
+def test_named_maturity_restoration_keeps_the_supplied_variety_binding():
+    question = 'Soybean Atlas has maturity group 00.3. Explain this identifier.'
+    answer = 'Atlas has maturity group 0.3.'
+    corrected, edits = correct_concept_claims(answer, question)
+    assert corrected == 'Atlas has maturity group 00.3.'
+    assert len(edits) == 1

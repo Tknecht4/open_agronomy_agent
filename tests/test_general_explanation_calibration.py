@@ -53,6 +53,57 @@ def test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp
         assert len(result.stage_receipts) == 17
     finally:
         store._conn.close()
+
+
+def test_generic_maturity_question_does_not_reassign_a_variety_in_the_saved_answer(tmp_path, monkeypatch):
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(
+        tmp_path, monkeypatch,
+        'Explain soybean maturity group 00.',
+        'Atlas has maturity group 0. This is its adaptation classification.',
+    )
+
+
+@pytest.mark.parametrize('instruction', [
+    'Apply it tomorrow.',
+    'Spray it on your crop.',
+    'You should apply it tomorrow.',
+    'Apply this mixture tomorrow.',
+    'Use the formulation on the field.',
+])
+def test_product_rate_definition_does_not_persist_an_unrequested_pronominal_application(tmp_path, monkeypatch, instruction):
+    from agronomy_agent.answerability import has_application_instruction
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+
+    class Backend:
+        backend_id = 'synthetic_unrequested_application_contract'
+        intervention_profile = 'balanced'
+        def generate(self, messages):
+            return 'A pesticide product rate is the amount of the formulated product per unit area. ' + instruction
+        def close(self):
+            pass
+
+    backend = Backend()
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *a, **k: backend)
+    database = tmp_path / 'product-rate.sqlite3'
+    store = TraceStore(database)
+    try:
+        session = store.create_session('Synthetic product-rate explanation', {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(
+            store=store,
+            settings=build_settings(db_path=database, artifact_root=tmp_path / 'artifacts', network_mode='offline'),
+            session_id=session['session_id'], message='What does pesticide product rate mean?', mode='agronomic_rag',
+            model_id='imposed', rag_config='configs/rag.yaml', max_tokens=180, generation_backend=backend,
+        ))
+        assert instruction not in result.answer
+        assert not has_application_instruction(result.answer)
+        assert 'product' in result.answer.lower() and 'area' in result.answer.lower()
+        assert store.get_turn(result.turn['turn_id'])['answer'] == result.answer
+        assert len(result.stage_receipts) == 17
+    finally:
+        store._conn.close()
 from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation, assess_answerability
 from agronomy_agent.decision_route import build_decision_route_state
 from agronomy_agent.evidence_handshake import build_evidence_handshake, filter_decision_distractors
@@ -1134,7 +1185,7 @@ def test_regional_pest_alert_keeps_complete_model_method():
      ("cannot establish a complete rotation history", "management records")),
     ("Could you explain plainly why one phone photo of weeds is not enough to choose a herbicide for lentils in Newfoundland and Labrador?",
      "I cannot choose a product without a label.", ("photographed", "density", "history")),
-    ("Explain soybean maturity 00.3.",
+    ("Soybean Y has maturity 00.3. Explain this identifier.",
      "Soybean Y has maturity 0.3. The identifiers alone do not establish local adaptation.",
      ("maturity 00.3", "local adaptation")),
     ("What annual soil-loss ranges define the five SoilERI classes, and does a decreasing trend prove past soil damage is restored?",

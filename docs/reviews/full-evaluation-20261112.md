@@ -4,6 +4,64 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current assessment status — November 18
 
+### Independent PR review and comparison closeout
+
+The fresh independent review of PR #134 reproduced and repaired two issues
+through the persisted product entrypoint. The output application screen missed
+pronoun and material-alias instructions such as “Apply it tomorrow” and “Use the
+formulation on the field” after a valid definition. The repair recognizes these
+physical application clauses, including positive modal/passive forms, while
+preserving analytical uses, denials, history and quoted or hypothetical text.
+It retains useful product-rate explanation instead of adding an application.
+
+The soybean identifier correction could also assign a named variety to an
+unprovided group: a generic question about group `00` changed an answer's
+“Atlas has maturity group 0” to `00`. Restoration now requires an actual supplied
+variety/identifier binding. Significant leading zeroes remain preserved for bound
+records; a generic group does not establish a variety rating. The
+[Manitoba soybean maturity work](https://manitobapulse.ca/2020/01/soybeans-in-the-spotlight-how-sensitive-are-they-to-day-length/)
+retains these distinct group identifiers and field-dependent development.
+
+The final focused selection passed 1,933 tests. Independent verification passed
+857 Python tests and 142 UI tests, plus fresh operand, mixed-request and persisted
+answer controls. These are imposed backend/source checks, not new real-model
+observations or field qualification. The review also checked seed-emergence bases,
+formulation versus contained nutrient/active ingredient, crop scope and preventive
+late-blight wording against primary agronomy guidance. Preventive protection can
+precede infection; diagnosis is not a universal prerequisite for prevention.
+[Manitoba guidance](https://www.manitoba.ca/agriculture/crops/plant-diseases/late-blight-potatoes.html)
+supports that distinction. The review did not activate new runtime sources.
+
+The retained comparison was freshly verified across **all twelve canonical
+reports**, without scoring again or collecting new labels. Its 14,592 planned
+observations remain 14,487 eligible completed real-backend answers, 69 execution
+failures and 36 completed synthetic controls. There are 14,460 review records
+and 27 unknown review bindings. The
+[complete comparison CSV](../public/assets/benchmarks/20261118-canonical-comparison.csv)
+exports all 73 canonical groups with source, arm, backend, model revision, trial,
+planned counts, score bounds, truncation and safety unknowns. It retains controls
+and the separate unknown-condition E4B reference failure. Trials are not averaged.
+This is a verified export of the completed `ea615e4` study below, **not an
+assessment of the later PR source**.
+
+For the original 557 real-backend cases per trial, the full-system bounds are
+75.97–76.28 for E2B and 82.81–82.95 for E4B, versus raw bounds of 26.44–26.87 and
+23.90–23.95. Known raw truncations were 323/557 and 379/557, falling to 17/557 and
+4/557 in the full system. These recorded outcomes help explain the system's
+advantage within this exposed development panel; they do not isolate a causal
+component effect or establish cross-runtime model superiority. Luna's primary
+bounds remain 0.00–97.22 raw and 25.94–95.10 full because required provider
+termination evidence is missing. Its unknown finish reasons cannot be reported
+as zero truncations or a comparable point score. Safety unknowns remain separate;
+zero recorded fatal failures does not establish safety qualification.
+
+**Did the final generations finish?** E2B and Luna finished their whole `d4def84`
+collections. E4B did not: its two interrupted attempts remain separate. The exact
+coverage and execution failures are below. Colab CLI confirmed zero active
+assignments and a zero usage rate at closeout; no replacement run was launched
+for this review. A fresh whole assessment of the repaired source remains unmet.
+
+
 The fresh serving-source assessment uses `d4def84` and producer hash
 `a9c70423012d9d8d0c2ae324f93c317293ef9a319f56a9709098e15a12d20a11`.
 It plans all 608 frozen development cases, raw and full-system arms, two trials,
@@ -139,8 +197,8 @@ Coverage limitations remain, including incomplete seed-vigour discussion and
 occasional repetitive boundary wording. This qualitative review is not a frozen
 semantic regrade, a measured refusal rate or expert/field validation.
 
-Draft [PR #134](https://github.com/Tknecht4/open_agronomy_agent/pull/134) contains
-the composed source fixes. Documentation closeout is separate from the frozen
+[PR #134](https://github.com/Tknecht4/open_agronomy_agent/pull/134) contains
+the composed source fixes and independent-review repairs described above. Documentation closeout is separate from the frozen
 model source and requires its own final-head CI. The full current benchmark
 remains an unmet requirement; preserving its failures and partial outputs does
 not turn it into a completed assessment.
