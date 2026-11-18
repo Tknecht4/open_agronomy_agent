@@ -6,12 +6,47 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 The fresh serving-source assessment uses `d4def84` and producer hash
 `a9c70423012d9d8d0c2ae324f93c317293ef9a319f56a9709098e15a12d20a11`.
-It runs all 608 frozen development cases, raw and full-system arms, two trials,
+It plans all 608 frozen development cases, raw and full-system arms, two trials,
 on E2B, E4B and hosted Luna: 7,296 new observation slots across six runs. The
 six historical reference runs, their accepted labels and unknowns remain
-unchanged. The new collections are still running; no fresh whole-study semantic
-scores or agronomic conclusions are available yet. The completed historical
-study below must not be read as an evaluation of this successor.
+unchanged. The successor benchmark is incomplete. Luna's whole collection is
+retained and E2B is still collecting. Both E4B attempts lost their Colab
+assignments before whole completion; the provider's reason is unknown. No new
+replacement campaign is scheduled. There are no fresh whole-study semantic
+scores. The completed historical study below must not be read as an evaluation
+of this successor or the later integration repairs.
+
+### Collection coverage and interruption
+
+At the November 18 closeout inspection:
+
+| Model / attempt | Regression observations / 192 | Original-cohort observations / 2,240 | Disposition |
+| --- | ---: | ---: | --- |
+| Hosted Luna | 192 | 2,240 | Whole collection retained; execution failures remain visible |
+| E2B | 192 | Still collecting | Existing job retains its original time limit |
+| E4B, original attempt | 192 | 291 | Assignment lost; retained prefix only |
+| E4B, replacement attempt | 192 | 135 | Assignment lost; retained prefix only |
+
+The E4B prefixes are separate attempts and cannot be spliced into a whole run.
+For the replacement, the local collector exhausted five collection attempts;
+a fresh Colab census omitted the assignment and its status returned session not
+found. This establishes assignment absence, not a model refusal or its cause.
+All 1,849 locally retained collection files, including failed-transfer receipts,
+were copied and hash-verified in the durable output tree. The two leftover local
+E4B deadline monitors were retired; E2B was untouched. The regression cohort has
+an original-VM reader receipt. No full-cohort final original-VM reader or whole
+two-cohort E4B completion receipt is available.
+
+Luna's regression collection has 192 completed observations. Its original
+cohort has 2,218 completed and 22 failed observations. Six failures are declared
+synthetic controls and sixteen are the retained hosted conversation-contract
+failures described below; these are not model refusals. The completed regression
+production arm records 66 configured-model, 14 verifier-fallback, four editor
+rewrite and twelve deterministic final answers. Those execution paths are not
+quality labels or refusal counts. Current collection coverage does not supply a
+matched whole-study comparison, and no partial quality score is substituted.
+
+### Source and grower-facing findings
 
 The successor repairs requested-task ownership, false authority holds,
 terminal-answer selection and jurisdiction-specific fallback wording. Exact
@@ -59,8 +94,29 @@ clarification, not a demonstrated numerical application error or a new guard.
 [USDA's agronomy manual](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)
 explains that liquid calculation basis.
 
-Final answer review, current canonical reports, source/document integration,
-independent review, exact PR CI and workspace retirement remain unfinished.
+The latest integration source at `b4e7260` also passed 6,169 backend tests with
+58 skipped, 532 frontend tests, type checking, build, public-document checks,
+strict documentation build and public-package scope checks. The final
+liquid-basis wording then passed the 652-test focused selection. Independent
+review covered the complete 132-file PR delta and found no additional reproduced
+material source blocker; a fresh 144-test integration selection passed. These
+are software checks, not agronomic validation. Three model-producer files differ
+from the frozen `d4def84` source, so its outputs do not validate the later repairs.
+
+Reading actual retained answers also confirmed useful boundaries: alternative
+seed-survival denominators are shown explicitly, non-brassica root symptoms do
+not become clubroot diagnoses, and contrasting eroded, wet and manure-affected
+soil zones retain separate sampling support. The seed arithmetic was served by
+the deterministic calculator; it is not evidence of Luna's arithmetic ability.
+Coverage limitations remain, including incomplete seed-vigour discussion and
+occasional repetitive boundary wording. This qualitative review is not a frozen
+semantic regrade, a measured refusal rate or expert/field validation.
+
+Draft [PR #134](https://github.com/Tknecht4/open_agronomy_agent/pull/134) contains
+the composed source fixes. Exact final-head CI, final canonical reporting and
+workspace cleanup remain unfinished. The full current benchmark remains an
+unmet requirement; preserving its failures and partial outputs does not turn it
+into a completed assessment.
 
 ## Historical completed whole assessment — `ea615e4`
 
@@ -248,11 +304,12 @@ identifiers in traces and validation.
 The first composed-source full run retained 33 failures, 6,053 passes and 58
 skips. Its failures exposed additional integration gaps, including clarification
 label linkage, source-specific interpretation routes and a child reaching its
-log limit with exit zero. They are being repaired and independently rechecked.
+log limit with exit zero. Subsequent repairs were integrated and independently
+checked as recorded in the current status above.
 Fresh frontend installation, type checking, all 508 tests and the build passed.
 These synthetic software checks do not supply new model observations or expert
-agronomic grades. A new whole candidate collection is pending; the table above
-continues to describe the original assessed source.
+agronomic grades. The successor collection and its interruption are recorded
+above; the table continues to describe the original assessed source.
 
 ### Completed regression scoring
 
@@ -323,6 +380,9 @@ states and source identities describe those checkpoints; the current assessment
 is above. Historical failures and unknowns have not been rewritten.
 
 ### November 16 source checkpoint
+
+The following dated checkpoints retain their state at the time. Statements
+about running or pending work are historical; the current status is above.
 
 On November 16, the `67e490e` source completed source verification: 5,951
 backend tests passed on macOS with 58 skipped; 6,050 passed in Linux CI with
