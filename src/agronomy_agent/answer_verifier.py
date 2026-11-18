@@ -1053,7 +1053,7 @@ def _aafc_historical_crop_yield_slc_fallback(
             "No. An AAFC historical crop-yield-by-SLC value cannot authorize or establish suitable conditions for "
             "an application. It is regional historical context, not a current field observation, weather source, or "
             "product-use authority.\n\n"
-            "Require the exact current Health Canada PMRA label, product, crop and target, current local wind, rain, "
+            "Require the exact current product label for the treatment jurisdiction, product, crop and target, current local wind, rain, "
             "temperature and other label-relevant weather, plus field-specific drift, runoff, buffer, crop-stage, and "
             "site conditions. If any required evidence or label condition is unresolved, delay or do not proceed."
         )
@@ -1202,7 +1202,7 @@ def _aafc_soil_erosion_risk_fallback(
         return (
             "No. An AAFC SoilERI class cannot authorize or establish safe conditions for a pesticide application; "
             "it is a 2021 census-year regional erosion model, not a current spray assessment. Before spraying, identify "
-            "the exact product, crop, and target, and verify the current PMRA product label for that use. Check current "
+            "the exact product, crop, and target, and verify the current jurisdiction-specific product label for that use. Check current "
             "on-site wind and gusts, inversion and rain or rainfast timing, plus label-specific temperature or humidity "
             "limits, drift exposure, runoff paths, sensitive areas, setbacks, and buffers. If the label or current field "
             "and weather conditions cannot be verified and satisfied, delay or do not spray."
@@ -4641,7 +4641,7 @@ def _decision_route_failure_answer(
         if target_class == "fungicide":
             return (
                 "I cannot choose a fungicide or state a rate from the crop and disease name alone. First confirm the target disease from representative scouting or diagnostic evidence, and record incidence, severity, crop stage and canopy condition. Add recent and forecast weather, leaf wetness or irrigation where relevant, and the prior fungicide application history, including efficacy and modes of action. "
-                "Identify the exact product and registration, then verify the current PMRA product label for the crop and target disease. That label controls the rate, timing and interval, maximum applications, preharvest and re-entry intervals, mixing, buffers, and other restrictions. Fit any treatment into current local disease guidance and a resistance-management program that rotates effective FRAC or mode-of-action groups. Until the diagnosis, field risk, exact product, current label, and resistance fit are known, do not name or apply a product or rate."
+                "Identify the exact product and registration, then verify the current jurisdiction-specific product label for the crop and target disease. That label controls the rate, timing and interval, maximum applications, preharvest and re-entry intervals, mixing, buffers, and other restrictions. Fit any treatment into current local disease guidance and a resistance-management program that rotates effective FRAC or mode-of-action groups. Until the diagnosis, field risk, exact product, current label, and resistance fit are known, do not name or apply a product or rate."
             )
         if target_class != "herbicide":
             return (
@@ -4737,7 +4737,7 @@ def _decision_route_failure_answer(
     if decision == "underspecified_spray":
         return (
             "I cannot choose a spray from that question alone. Provide the crop and production site, target weed, pest, or disease, crop stage and target stage, jurisdiction, field pattern or representative scouting count, recent treatment history, and the exact product if one is already under consideration. For a follow-up application, include the prior product, rate, timing, efficacy, and resistance or application-failure concern. "
-            "Then check on-site wind, rain and crop conditions and verify that the current product label and PMRA registration cover the crop, target, stage, timing, rate, intervals, buffers, and other restrictions. Until those facts are known, do not select a product or rate."
+            "Then check on-site wind, rain and crop conditions and verify that the current product label and applicable registration cover the crop, target, stage, timing, rate, intervals, buffers, and other restrictions. Until those facts are known, do not select a product or rate."
         )
     if decision == "boundary_only_fertility_rate":
         crop = state.crop or "crop"
@@ -4772,8 +4772,8 @@ def _decision_route_failure_answer(
     if decision == "plant_health_diagnostic":
         if re.search(r"\bstripe rust\b", lower):
             return (
-                "The yellow-orange stripes are consistent with stripe rust, but do not confirm it or spray from colour alone. Inspect representative upper and lower leaves across the field for narrow linear rows of raised yellow-orange pustules and powdery spores, whether symptoms follow leaf veins, and whether new lesions are appearing. Map incidence, severity and canopy position; record spring-wheat crop stage, recent rain, humidity or leaf wetness, regional disease risk, field history, and variety susceptibility. "
-                "Attach clear photos and submit a fresh representative leaf sample or use a diagnostic lab when the signs remain uncertain. Consider a fungicide only after diagnosis, disease pressure and movement toward yield-critical leaves, crop stage, current Alberta risk guidance, expected yield protection and economics support it, then verify the current PMRA product label and resistance group."
+                "The yellow-orange stripes are consistent with stripe rust, but do not confirm it or spray from colour alone. Inspect representative upper and lower leaves across the field for narrow linear rows of raised yellow-orange pustules and powdery spores, whether symptoms follow leaf veins, and whether new lesions are appearing. Map incidence, severity and canopy position; record the crop stage, recent rain, humidity or leaf wetness, regional disease risk, field history, and variety susceptibility. "
+                "Attach clear photos and submit a fresh representative leaf sample or use a diagnostic lab when the signs remain uncertain. Consider a fungicide only after diagnosis, disease pressure and movement toward yield-critical leaves, crop stage, current applicable local stripe-rust guidance, expected yield protection and economics support it, then verify the current jurisdiction-specific product label and resistance group."
             )
         if state.crop == "potato" and foliar_symptoms_reported(state.question):
             local_guidance = _clubroot_guidance_scope(state.question, jurisdiction).replace(
@@ -4781,13 +4781,13 @@ def _decision_route_failure_answer(
             )
             return (
                 "Before changing the potato disease program, collect representative fresh leaves and stems from the advancing lesion margin in affected, edge and normal areas; photograph upper and lower leaf surfaces and canopy position, and submit a diagnostic sample when identity would change the program. Record incidence, severity, lesion expansion, distribution, crop stage, variety, rotation, seed and disease history, irrigation, recent rain, humidity and leaf-wetness period. "
-                f"Compare those observations with {local_guidance}. Change prevention, timing or product only when the working diagnosis and risk justify it, and verify the current PMRA product label for potato, target, crop stage, timing, intervals, resistance group and seasonal restrictions."
+                f"Compare those observations with {local_guidance}. Change prevention, timing or product only when the working diagnosis and risk justify it, and verify the current jurisdiction-specific product label for potato, target, crop stage, timing, intervals, resistance group and seasonal restrictions."
             )
     if decision == "ambiguous_product_followup":
         return (
             "Do not repeat the same insecticide, herbicide, fungicide, product, or rate from the rain event alone. "
             "Identify the exact product and registration, crop and target, prior rate and application time, rain start and amount, and the label's rainfast, reapplication, interval, seasonal-maximum, and crop-stage restrictions. Check whether the first application had time to become rainfast and whether the target is still active; rain does not automatically erase a treatment or authorize another pass. "
-            "Use an on-site field observation of rain timing, crop condition, and target activity plus the current product label and actual application record to decide whether to wait, reassess efficacy, or make a labeled follow-up. The current PMRA label controls. Do not substitute advice about an unnamed pest or product."
+            "Use an on-site field observation of rain timing, crop condition, and target activity plus the current product label and actual application record to decide whether to wait, reassess efficacy, or make a labeled follow-up. The current label applicable to the treatment jurisdiction controls. Do not substitute advice about an unnamed pest or product."
         )
     if decision == "crop_stress_differential":
         if re.search(r"\b(?:phosphorus|phosphate|soil[- ]test p|low p)\b", lower):
@@ -4877,7 +4877,7 @@ def _decision_route_failure_answer(
     if decision == "hail_disease_differential":
         return (
             "Map the storm path first and compare exposed, sheltered, edge, and interior plants. Direct hail injury should align with the event and impact direction and show fresh tearing, shredding, bruising, breakage, or scars on leaves and other exposed tissues. Mark representative lesions and revisit them: static wounds that dry and callus support physical injury, while lesions that continue expanding, develop distinct margins, sporulation, pustules, ooze, or other pathogen signs, or appear on new tissue after the storm support an active disease process. "
-            "Record crop stage, lesion age and canopy position, storm timing, subsequent leaf wetness, hybrid or variety susceptibility, prior disease history, and whether symptoms also occur outside the hail track. Photograph the same plants over time and submit representative advancing-margin tissue when progression remains ambiguous. Do not name a disease or recommend a fungicide from colour alone. Before treatment, confirm active biological progression, use a current locally validated risk model or action threshold, compare the expected yield or quality benefit with treatment cost and likely return, and verify crop stage, resistance-management fit, and the current PMRA label."
+            "Record crop stage, lesion age and canopy position, storm timing, subsequent leaf wetness, hybrid or variety susceptibility, prior disease history, and whether symptoms also occur outside the hail track. Photograph the same plants over time and submit representative advancing-margin tissue when progression remains ambiguous. Do not name a disease or recommend a fungicide from colour alone. Before treatment, confirm active biological progression, use a current locally validated risk model or action threshold, compare the expected yield or quality benefit with treatment cost and likely return, and verify crop stage, resistance-management fit, and the current label for the treatment jurisdiction."
         )
     if decision == "corn_common_rust_differential":
         return (
@@ -5210,7 +5210,7 @@ def _decision_route_failure_answer(
         return (
             "A regional alert does not mean that every potato field needs the same application today or a shorter interval. Late-blight protection is preventive: locally applicable disease alerts and validated weather-risk guidance can inform protection before visible lesions; do not require visible disease or an insect-style economic threshold first. Check the alert's date, location, target disease and applicability, crop stage and canopy growth, variety susceptibility, nearby infection reports, field history, recent rain or irrigation, humidity and leaf wetness, and representative scouting records. "
             "If lesions or other suspicious signs are found, inspect upper and lower leaves, stems, lesion margins and undersides, map incidence and progression, distinguish disease from injury, and promptly seek confirmation with a fresh representative diagnostic sample. Absence of observed lesions does not rule out infection risk. "
-            "Before selecting a product, timing or interval, verify the exact current PMRA product label for potato and the target, current provincial guidance, prior applications and remaining protection, rainfastness and coverage, minimum intervals and seasonal limits, resistance group and management, and expected yield or quality protection, cost and cost of delay. The alert alone cannot establish that field-specific decision."
+            "Before selecting a product, timing or interval, verify the exact current jurisdiction-specific product label for potato and the target, current provincial guidance, prior applications and remaining protection, rainfastness and coverage, minimum intervals and seasonal limits, resistance group and management, and expected yield or quality protection, cost and cost of delay. The alert alone cannot establish that field-specific decision."
         )
     if decision == "fungicide_decision":
         if state.crop == "corn" and re.search(r"\brectangular\b[^?]{0,100}\blesions?\b|\blesions?\b[^?]{0,100}\bleaf veins?\b", lower):
@@ -5556,9 +5556,7 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
         "crop_stress_differential", "drought_nitrogen_adjustment", "spray_weather_window",
         "clubroot_containment", "pest_treatment", "weed_escape_management",
     } or question_type == "plant_health":
-        answer = _conservative_failure_answer(question_type, question=question)
-        # The procedural method transfers; a Canadian label reference does not.
-        return answer.replace("current PMRA product label", "current jurisdiction-specific product label").replace("PMRA registration", "applicable registration")
+        return _conservative_failure_answer(question_type, question=question)
     return concept
 
 

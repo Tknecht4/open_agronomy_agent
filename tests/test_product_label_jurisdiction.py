@@ -186,3 +186,47 @@ def test_ambiguous_or_missing_treatment_jurisdiction_stays_neutral() -> None:
         assert "without the treatment jurisdiction" in answer
         assert "PMRA" not in answer
         assert "EPA" not in answer
+
+
+@pytest.mark.parametrize("jurisdiction", [None, "France", "US", "Canada", "CA-AB"])
+@pytest.mark.parametrize("question,diagnostic_detail", [
+    ("My potato leaves have expanding brown lesions after wet weather. What should I collect before changing the disease program?",
+     "advancing lesion margin"),
+    ("My wheat leaves have yellow-orange stripes. Could this be stripe rust, and should I change the disease program?",
+     "pustules"),
+])
+def test_failed_diagnostic_answer_keeps_scouting_without_assuming_label_authority(
+    jurisdiction, question, diagnostic_detail,
+) -> None:
+    from agronomy_agent.answer_verifier import verify_answer
+
+    class BrokenEditor:
+        def generate(self, messages):
+            return "True False " * 40
+
+    result = verify_answer(
+        "```json\n" + "import repeated_alias\n" * 30,
+        question=question, evidence_text="", question_type="plant_health",
+        risk_level="high", editor=BrokenEditor(), review_mode="risk_gated",
+        jurisdiction=jurisdiction,
+    )
+
+    assert result.fallback_applied
+    assert diagnostic_detail in result.answer and "label" in result.answer.lower()
+    assert "PMRA" not in result.answer and "EPA" not in result.answer
+    if jurisdiction != "CA-AB":
+        assert "Alberta" not in result.answer
+    assert "spring-wheat crop stage" not in result.answer
+
+
+def test_known_province_still_scopes_potato_alerts_without_granting_treatment() -> None:
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    from agronomy_agent.decision_route import build_decision_route_state
+
+    question = "My potato leaves have expanding brown lesions. What should I collect before changing the disease program?"
+    answer = _decision_route_failure_answer(
+        build_decision_route_state(question, "plant_health"), jurisdiction="CA-AB",
+    )
+    assert "current Alberta potato disease alerts or IPM guidance" in answer
+    assert "working diagnosis and risk justify it" in answer
+    assert "jurisdiction-specific product label" in answer
