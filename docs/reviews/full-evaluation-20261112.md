@@ -13,6 +13,8 @@ formulation on the field” after a valid definition. The repair recognizes thes
 physical application clauses, including positive modal/passive forms, while
 preserving analytical uses, denials, history and quoted or hypothetical text.
 It retains useful product-rate explanation instead of adding an application.
+Analytical targets such as field data and soil-test results retain their data
+role; their field or soil modifier does not create an application instruction.
 
 The soybean identifier correction could also assign a named variety to an
 unprovided group: a generic question about group `00` changed an answer's
@@ -22,9 +24,10 @@ records; a generic group does not establish a variety rating. The
 [Manitoba soybean maturity work](https://manitobapulse.ca/2020/01/soybeans-in-the-spotlight-how-sensitive-are-they-to-day-length/)
 retains these distinct group identifiers and field-dependent development.
 
-The final focused selection passed 1,933 tests. Independent verification passed
+The final focused selection passed 1,938 tests. Independent verification passed
 857 Python tests and 142 UI tests, plus fresh operand, mixed-request and persisted
-answer controls. These are imposed backend/source checks, not new real-model
+answer controls. The analytical-target refinement also passed 160 independent
+focused tests. These are imposed backend/source checks, not new real-model
 observations or field qualification. The review also checked seed-emergence bases,
 formulation versus contained nutrient/active ingredient, crop scope and preventive
 late-blight wording against primary agronomy guidance. Preventive protection can

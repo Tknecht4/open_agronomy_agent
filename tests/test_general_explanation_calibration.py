@@ -63,6 +63,14 @@ def test_generic_maturity_question_does_not_reassign_a_variety_in_the_saved_answ
     )
 
 
+def test_water_model_explanation_keeps_application_to_field_data_in_saved_answer(tmp_path, monkeypatch):
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(
+        tmp_path, monkeypatch,
+        'Explain what a crop water-use model is.',
+        'A crop water-use model describes the water balance. Apply it to the field data.',
+    )
+
+
 @pytest.mark.parametrize('instruction', [
     'Apply it tomorrow.',
     'Spray it on your crop.',

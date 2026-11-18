@@ -826,10 +826,14 @@ def has_application_instruction(answer: str) -> bool:
     # A physical destination or timing cue disambiguates an omitted material
     # from analytical uses such as "apply it to the data" or "use it to read
     # the label". Do not treat every pronoun as a pesticide reference.
+    physical_target = (
+        rf"(?:{field}|roots?\b|soil\b|foliage\b|seeds?\b|seedlings?\b)"
+        rf"(?!(?:[- ]{modifier}){{0,3}}[- ](?:{reference}|values?|measurements?|readings?|results?)(?![-\w]))"
+    )
     physical_tail = (
         rf"(?=\s+(?:now\b|today\b|tomorrow\b|tonight\b|next\s+week\b|"
         rf"(?:on|to|onto|in|into|over|across)\s+{determiner}"
-        rf"(?:{field}|roots?\b|soil\b|foliage\b|seeds?\b|seedlings?\b)))"
+        rf"{physical_target}))"
     )
     physical_object = (
         rf"(?:(?:it|them|this|that|these|those)\b|"
