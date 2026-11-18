@@ -415,7 +415,7 @@ def is_rate_basis_explanation(question: str) -> bool:
         rf"\s*(?:what is|explain) the difference between {unit_basis} and {unit_basis}[.!?]*\s*", question, re.I,
     ):
         return True
-    term = r"(?:(?:a|the)\s+)?(?:(?:pesticide\s+)?label|(?:(?:pesticide|fertili[sz]er)\s+)?product|(?:fertili[sz]er\s+)?nutrient)\s+rates?"
+    term = r"(?:(?:a|the)\s+)?(?:(?:pesticide\s+)?label|(?:(?:pesticide|fertili[sz]er|commercial)\s+)?product|(?:fertili[sz]er\s+)?nutrient)\s+rates?"
     request = (
         rf"(?:what is|define|explain)\s+{term}"
         rf"(?:\s+and how is it different from\s+{term})?"

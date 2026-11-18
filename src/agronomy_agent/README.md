@@ -352,6 +352,13 @@ and [NPIC's active-ingredient definition](https://npic.orst.edu/ingred/active.ht
 Materials can have both nutrient and pesticidal roles. Mentioning nutrient
 supply alone does not trigger a correction. These general definitions provide
 neither a crop-specific drydown rate nor a fertilizer target or product permission.
+The shared rate-definition completeness check requires a relationship to the
+quantity of the commercial formulation; nearby words such as product and amount
+do not establish that relationship. An affirmative definition cannot equate the
+whole product amount with its contained active-ingredient amount. Negated
+misconceptions and valid conversions retain their meaning. A pesticide label
+may itself state an active-ingredient basis, which must be distinguished from
+formulated-product quantity; see [MU Extension's spray-mix calculation guide](https://extension.missouri.edu/publications/g1272).
 Localized corrections preserve the original draft and explicit changed spans,
 retain coordinated prose, and require reassessment of the entire result. Their
 typed provenance is validated at the production execution boundary, separately

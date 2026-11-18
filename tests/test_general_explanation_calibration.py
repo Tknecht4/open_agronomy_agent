@@ -424,6 +424,139 @@ def test_rate_basis_recovery_explains_input_mass_rather_than_crop_concentration(
     assert "not a nutrient concentration measured" in result.answer
 
 
+RATE_BASIS_QUESTION = "Explain commercial product rates and fertilizer nutrient rates."
+RATE_BASIS_EXPLANATION = (
+    "Product rate describes the mass or volume of the commercial formulation per area. "
+    "A fertilizer nutrient rate describes the mass of a named nutrient per area. "
+    "The declared nutrient analysis relates those quantities on compatible bases."
+)
+
+
+@pytest.mark.parametrize("question", [
+    "Explain commercial product rate and fertilizer nutrient rate.",
+    "How do commercial product rates and nutrient rates differ?",
+])
+def test_commercial_formulation_qualifier_keeps_a_whole_terminology_request(question):
+    assert is_rate_basis_explanation(question)
+
+
+@pytest.mark.parametrize("question", [
+    "Explain commercial product rate and nutrient rate, then choose a rate for my field.",
+    "How do commercial product rates and nutrient rates differ? Tell me how much to apply tomorrow.",
+])
+def test_commercial_formulation_qualifier_does_not_hide_an_application_request(question):
+    assert not is_rate_basis_explanation(question)
+
+
+def test_rate_definition_requires_formulation_quantity_not_keyword_cooccurrence():
+    from agronomy_agent.observation_guidance import observation_guidance
+    wrong = (
+        "The commercial product amount basis describes the amount of the active ingredient. "
+        "The nutrient rate is nutrient mass per area."
+    )
+    method = observation_guidance(RATE_BASIS_QUESTION)
+    assert "product_rate_basis" in method.missing(wrong)
+    assert method.unsupported_inference(wrong)
+    assert not method.missing(RATE_BASIS_EXPLANATION)
+
+
+@pytest.mark.parametrize("wrong", [
+    "Product rate is the mass of the active ingredient.",
+    "Product amount means the quantity of contained active ingredient.",
+    "The commercial product amount basis describes the amount of the active ingredient in the product.",
+])
+@pytest.mark.parametrize("wrong_first", [True, False])
+def test_correct_definition_cannot_hide_a_product_constituent_conflation(wrong, wrong_first):
+    answer = (wrong + " " + RATE_BASIS_EXPLANATION if wrong_first
+              else RATE_BASIS_EXPLANATION + " " + wrong)
+    result = verify_answer(answer, question=RATE_BASIS_QUESTION, evidence_text="",
+        question_type="exam_review", risk_level="low", editor=UnavailableEditor(),
+        review_mode="risk_conditioned_selective_v3")
+    assert wrong not in result.answer
+    assert "commercial formulation" in result.answer
+    assert not result.final_assessment.reasons
+
+
+@pytest.mark.parametrize("addition", [
+    "Product rate is not the mass of the active ingredient.",
+    "It is incorrect that product rate is the mass of the active ingredient.",
+    "Incorrect claim: 'product rate is the mass of the active ingredient'.",
+    "The claim 'product rate is the mass of the active ingredient' is incorrect.",
+    "Product rate is derived from active-ingredient rate and its concentration in the formulation.",
+    "A pesticide label may express a rate as active-ingredient mass per area; use its declared basis.",
+])
+def test_product_definition_keeps_denials_conversions_and_active_ingredient_label_bases(addition):
+    answer = RATE_BASIS_EXPLANATION + " " + addition
+    result = verify_answer(answer, question=RATE_BASIS_QUESTION, evidence_text="",
+        question_type="exam_review", risk_level="low", editor=UnavailableEditor(),
+        review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer
+    assert not result.fallback_applied
+
+
+def test_editor_cannot_introduce_product_active_ingredient_conflation():
+    wrong = (
+        "Product rate is the amount of the active ingredient in the product. "
+        "Nutrient rate is the mass of a named nutrient per area."
+    )
+    class WrongEditor:
+        def generate(self, messages):
+            return wrong
+    result = verify_answer("Decision: explain the requested rates.\n" + RATE_BASIS_EXPLANATION,
+        question=RATE_BASIS_QUESTION, evidence_text="", question_type="exam_review",
+        risk_level="low", editor=WrongEditor(), review_mode="risk_conditioned_selective_v3")
+    assert wrong not in result.answer
+    assert "commercial formulation" in result.answer
+    assert not result.final_assessment.reasons
+
+
+def test_product_definition_accepts_the_mass_of_all_formulation_constituents():
+    answer = (
+        "Product rate is the mass of the active ingredient plus the other ingredients "
+        "in the formulation per hectare. A nutrient rate is the mass of a named nutrient per area."
+    )
+    result = verify_answer(answer, question=RATE_BASIS_QUESTION, evidence_text="",
+        question_type="exam_review", risk_level="low", editor=UnavailableEditor(),
+        review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.fallback_applied
+
+
+@pytest.mark.parametrize("correct_first", [True, False])
+def test_denying_formulation_quantity_is_not_a_complete_or_correct_product_definition(correct_first):
+    from agronomy_agent.observation_guidance import observation_guidance
+    wrong = "Product rate is not the amount of the commercial formulation per area."
+    method = observation_guidance(RATE_BASIS_QUESTION)
+    assert "product_rate_basis" in method.missing(wrong)
+    assert method.unsupported_inference(wrong)
+    answer = (RATE_BASIS_EXPLANATION + " " + wrong if correct_first
+              else wrong + " " + RATE_BASIS_EXPLANATION)
+    result = verify_answer(answer, question=RATE_BASIS_QUESTION, evidence_text="",
+        question_type="exam_review", risk_level="low", editor=UnavailableEditor(),
+        review_mode="risk_conditioned_selective_v3")
+    assert wrong not in result.answer
+    assert "commercial formulation" in result.answer
+
+
+def test_unrelated_other_ingredient_statement_cannot_hide_an_ai_only_definition():
+    from agronomy_agent.observation_guidance import observation_guidance
+    answer = (
+        "Product rate is the mass of the active ingredient, while other ingredients affect formulation. "
+        + RATE_BASIS_EXPLANATION
+    )
+    assert observation_guidance(RATE_BASIS_QUESTION).unsupported_inference(answer)
+
+
+def test_product_definition_can_contrast_mass_and_volume_units():
+    answer = (
+        "Product rate is not a mass rate in this volume-based example. It expresses the volume "
+        "of the commercial product per area. A nutrient rate is the mass of a named nutrient per area."
+    )
+    result = verify_answer(answer, question=RATE_BASIS_QUESTION, evidence_text="",
+        question_type="exam_review", risk_level="low", editor=UnavailableEditor(),
+        review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.fallback_applied
+
+
 def test_below_threshold_cannot_alone_discharge_sampling_adequacy():
     from agronomy_agent.observation_guidance import observation_guidance
     question = "Explain aphid scouting and matching threshold units before deciding whether more sampling is needed."

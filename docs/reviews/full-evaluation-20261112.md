@@ -94,14 +94,32 @@ clarification, not a demonstrated numerical application error or a new guard.
 [USDA's agronomy manual](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)
 explains that liquid calculation basis.
 
-The latest integration source at `b4e7260` also passed 6,169 backend tests with
+The integration checkpoint at `b4e7260` also passed 6,169 backend tests with
 58 skipped, 532 frontend tests, type checking, build, public-document checks,
 strict documentation build and public-package scope checks. The final
 liquid-basis wording then passed the 652-test focused selection. Independent
 review covered the complete 132-file PR delta and found no additional reproduced
 material source blocker; a fresh 144-test integration selection passed. These
-are software checks, not agronomic validation. Three model-producer files differ
-from the frozen `d4def84` source, so its outputs do not validate the later repairs.
+are software checks, not agronomic validation. The later integration changes
+model-producer files, so the frozen `d4def84` outputs do not validate its repairs.
+
+Subsequent reading of six native regression cases in both trials, across E2B
+and E4B, confirmed the already identified foliar-task and imagery-fallback issues.
+It also reproduced one remaining E2B definition error: an edited answer equated
+commercial product amount with contained active-ingredient amount. Replay
+against the integration source accepted that error unchanged. The existing
+rate-definition check now requires the formulation-quantity relationship and
+rejects that affirmative conflation even when a correct definition is appended.
+Denials, valid conversions and label rates explicitly stated on an
+active-ingredient basis remain accepted. A commercial-product qualifier also
+retains its ordinary terminology scope, with follow-on actions still checked.
+The final focused selection passes 675 tests. Before the final clause-edge
+refinements, the full backend suite passed 6,187 tests with 58 skipped. Eleven
+independent checks verify the final refinement, including complete constituent
+sums, negation, quoted misconceptions and unrelated-clause ownership. Replaying
+the four retained rate-definition answers repairs both E2B errors and preserves
+both valid E4B answers byte for byte. These are source and replay checks, not
+another model run or a new set of benchmark grades; final-head CI is separate.
 
 Reading actual retained answers also confirmed useful boundaries: alternative
 seed-survival denominators are shown explicitly, non-brassica root symptoms do
@@ -113,10 +131,10 @@ occasional repetitive boundary wording. This qualitative review is not a frozen
 semantic regrade, a measured refusal rate or expert/field validation.
 
 Draft [PR #134](https://github.com/Tknecht4/open_agronomy_agent/pull/134) contains
-the composed source fixes. Exact final-head CI, final canonical reporting and
-workspace cleanup remain unfinished. The full current benchmark remains an
-unmet requirement; preserving its failures and partial outputs does not turn it
-into a completed assessment.
+the composed source fixes and tracks exact final-head CI separately. Current
+canonical reporting and cleanup of active evaluation inputs await job closeout.
+The full current benchmark remains an unmet requirement; preserving its failures
+and partial outputs does not turn it into a completed assessment.
 
 ## Historical completed whole assessment — `ea615e4`
 

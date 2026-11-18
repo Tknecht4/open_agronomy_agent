@@ -22,6 +22,10 @@ POTATO_MONITORING_ANSWER = (
     "Use crop stage, local disease risk and forecasts, and the exact crop/target/product label to plan any preventive fungicide program; visible collapse is not a prerequisite for prevention planning."
 )
 
+_OTHER_FORMULATION_INGREDIENTS = (
+    r"\s+(?:plus|and)\s+(?:the\s+)?(?:other|inactive|inert|remaining)\s+ingredients?\b"
+)
+
 
 def _proposition_explicitly_denied(prefix: str) -> bool:
     """Bind denial to the immediately following claim, not later caveats."""
@@ -43,8 +47,16 @@ class ObservationGuidance:
         return self.key == key or key in self.method_ids
 
     def missing(self, answer: str) -> tuple[str, ...]:
-        missing = [name for name, _, patterns in self.facets
-                   if not any(re.search(p, answer, re.I) for p in patterns)]
+        def facet_present(name: str, patterns: tuple[str, ...]) -> bool:
+            for pattern in patterns:
+                for match in re.finditer(pattern, answer, re.I):
+                    if name == "product_rate_basis" and re.search(
+                        r"\b(?:not|never)\s+(?:the\s+)?$", answer[:match.start()], re.I,
+                    ):
+                        continue
+                    return True
+            return False
+        missing = [name for name, _, patterns in self.facets if not facet_present(name, patterns)]
         if any(name == "illustrative_rate_example" for name, _, _ in self.facets):
             # A disclaimer alone is not an example. Reuse the same arithmetic
             # and span contract that guards quantities; never whitelist values.
@@ -57,6 +69,30 @@ class ObservationGuidance:
     def unsupported_inference(self, answer: str) -> bool:
         """Reject bounded contradictions even when a correct check is appended."""
         for sentence in re.split(r"[.!?;]\s*|\n+", answer):
+            if any(name == "product_rate_basis" for name, _, _ in self.facets):
+                # Product quantity and the quantity of a contained constituent
+                # are different bases. A valid conversion or an AI-based label
+                # does not define the whole product as its active ingredient.
+                for claim in re.finditer(
+                    r"\b(?:commercial\s+)?product\s+(?:rate|amount(?:\s+basis)?)\s+"
+                    r"(?:is|means|describes|measures|expresses|represents|refers to)\s+"
+                    r"(?:(?:the\s+)?(?P<basis>amount|mass|volume|quantity)\s+of\s+"
+                    r"(?:the\s+)?(?:contained\s+)?active[- ]ingredients?\b|"
+                    r"(?:not|never)\s+(?:the\s+)?(?:amount|quantity)\s+of\s+(?:the\s+)?"
+                    r"(?:(?:commercial|formulated|whole|total|entire)\s+)*(?:product|formulation)\b)",
+                    sentence, re.I,
+                ):
+                    prefix, suffix = sentence[:claim.start()], sentence[claim.end():]
+                    if (claim["basis"] is not None and claim["basis"].lower() != "volume"
+                            and re.match(_OTHER_FORMULATION_INGREDIENTS, suffix, re.I)):
+                        continue
+                    denied = (_proposition_explicitly_denied(prefix)
+                              or re.search(r"\b(?:incorrect|false|wrong|mistaken)\s+"
+                                           r"(?:claim|statement|definition)\s*(?:[:\"'“‘]\s*)*$", prefix, re.I)
+                              or (re.search(r"[\"'“‘]\s*$", prefix)
+                                  and re.match(r"[\"'”’]\s+is\s+(?:incorrect|false|wrong)\b", suffix, re.I)))
+                    if not denied:
+                        return True
             if self.has_method("healthy_potato_monitoring"):
                 for claim in re.finditer(
                     r"\bif\s+(?:considering|planning)\s+(?:a|any)\s+fungicide(?:\s+(?:application|use))?,?\s+"
@@ -450,7 +486,14 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             facets.append(("label_rate_basis", "Explain the amount/concentration basis specified by the product label.", (r"\b(?:amount|quantity|concentration)\b[^.]{0,100}\b(?:product|label|pesticide|formulation)\b", r"\b(?:product|label|pesticide|formulation)\b[^.]{0,100}\b(?:amount|quantity|concentration)\b")))
         elif has(r"\bproduct\b"):
             parts.append("A product rate describes the amount of the commercial formulation on its stated application basis, such as product mass or volume per area.")
-            facets.append(("product_rate_basis", "Explain the commercial-product amount basis.", (r"\bproduct\b[^.]{0,100}\b(?:amount|mass|volume|quantity)\b", r"\b(?:amount|mass|volume|quantity)\b[^.]{0,100}\bproduct\b")))
+            facets.append(("product_rate_basis", "Explain the quantity of the commercial formulation on its application basis.", (
+                r"\b(?:amount|mass|volume|quantity)\s+(?:of\s+)?(?:the\s+)?"
+                r"(?:(?:commercial|formulated|whole|total|entire)\s+)*(?:product|formulation)\b",
+                r"\b(?:product|formulation)\s+(?:amount|mass|volume|quantity)\s+"
+                r"(?:applied\s+)?per\s+(?:unit\s+)?(?:area|hectare|ha|acre|ac|volume)\b",
+                r"\b(?:amount|mass|quantity)\s+of\s+(?:the\s+)?active[- ]ingredients?\b"
+                + _OTHER_FORMULATION_INGREDIENTS,
+            )))
         if has(r"\bnutrient\b"):
             parts.append("For a field application, a fertilizer nutrient rate commonly expresses the mass of a named nutrient per area. Other application systems may use an explicitly stated concentration or volume basis. For a w/w analysis, nutrient mass per area equals product mass per area multiplied by the nutrient mass fraction. Convert liquid product volume to mass using its declared density before applying that fraction; a declared nutrient mass per product volume can instead be used directly with compatible units. Keep the declared nutrient basis explicit. Product analysis is not a nutrient concentration measured in the crop or soil.")
             facets.append(("nutrient_rate_basis", "Explain nutrient mass per area, distinct from product amount or measured crop concentration.", (r"\b(?:mass|amount|kg|kilograms?|lb|pounds?)\b[^.]{0,100}\b(?:nutrient|nitrogen|phosphorus|N|P|K)\b[^.]{0,60}\b(?:area|hectare|ha|acre|ac)\b", r"\bnutrient\b[^.]{0,60}\bmass per (?:unit )?area\b")))
