@@ -90,7 +90,17 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
       - name: Audit high-severity frontend dependencies
-        run: npm audit --audit-level=high
+        run: |
+          npm run test:audit
+          npm run audit:dependencies -- --report "$RUNNER_TEMP/frontend-npm-audit.json"
+      - name: Retain original frontend dependency audit
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: frontend-dependency-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/frontend-npm-audit.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Typecheck
         run: npm run typecheck
       - name: Test

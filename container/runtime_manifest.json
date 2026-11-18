@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-18T04:28:57+00:00",
+  "generated_at": "2026-11-18T05:04:01+00:00",
   "status": "pass",
-  "contract_sha256": "86ba72bbe3a2de459ab6af4425f4caa93394e540f8f81fba63887690e6e55a2b",
+  "contract_sha256": "f1a2b571f5f9e085f155fc06565f4848391ca63150e570562c74254adb530df4",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -425,9 +425,9 @@
     },
     {
       "path": "frontend/scripts",
-      "file_count": 2,
-      "bytes": 5981,
-      "sha256": "f3a08fc946bdae390718390c35fbb510cec6e50945bce02ed4600c937b796c31"
+      "file_count": 4,
+      "bytes": 19807,
+      "sha256": "797d2f3945d97d4937d6eaf6c2841863c706c68c7773604a91084e5412510079"
     },
     {
       "path": "frontend/public",
@@ -564,8 +564,8 @@
     {
       "path": "frontend/package.json",
       "role": "runtime_control",
-      "bytes": 1035,
-      "sha256": "05c987f67ec1438f6c565473a210497f857f995d756bcfcb1e68c2940fa2dcfe"
+      "bytes": 1169,
+      "sha256": "e6eea653f4f2d313aeec19a7613049fa5889dd3df26a469a8014110bad04004b"
     },
     {
       "path": "frontend/package-lock.json",

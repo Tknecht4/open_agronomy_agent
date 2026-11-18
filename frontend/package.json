@@ -5,6 +5,8 @@
   "license": "PolyForm-Noncommercial-1.0.0",
   "type": "module",
   "scripts": {
+    "audit:dependencies": "node scripts/audit-dependencies.mjs",
+    "test:audit": "node --test scripts/verify-dependency-audit.mjs",
     "dev": "vite",
     "build": "vite build && node scripts/build-license-notices.mjs",
     "test:licenses": "node --test scripts/verify-license-notices.mjs",

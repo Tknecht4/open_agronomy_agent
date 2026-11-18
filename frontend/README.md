@@ -4,6 +4,25 @@
 
 `frontend/` is the supported farm and field React workspace. **Farms** opens the farm directory; a farm opens its fields and map, and a field opens its overview, imagery, soil/terrain, records, and tables. **Fields** shows fields across farms. **Records** shows the season's activity. **Questions** provides field-scoped or general conversation. It is a client of the FastAPI application; a rendered page does not prove the API, model, corpus, or adapters are ready. See the [workspace guide](../docs/public/operations/workspace.md) for the user flow.
 
+## Dependency audit
+
+Run `npm run test:audit` and `npm run audit:dependencies -- --report <new-json-path>`.
+The latter retains the original npm finding and checks its dependency graph.
+Through **2026-11-24 00:00 UTC**, `dependency-audit-policy.json` accepts only
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) for the
+exact locked picomatch 4.0.7 development chain. No patched release was available
+at review; [upstream tracking](https://github.com/micromatch/picomatch/issues/247)
+remains open. This accepts a bounded tooling risk; it does not fix the library.
+Malicious repository/configuration globs can still stall build/test jobs.
+Inspected patterns come from repository, configuration or operator CLI inputs;
+production serves built static files. Do not expose development/test servers.
+The gate checks production reachability independently of lockfile `dev` flags
+and rejects another blocking advisory or an additional advisory cause, changed
+versions, malformed/failed audits or an expired exception. Independent findings
+below the existing high-severity threshold remain visible. Raw audit JSON remains
+visible in CI artifacts. Remove
+the exception when an upstream fix is available or reassess before expiry.
+
 ## Entry points and map
 
 - `src/main.tsx` mounts the application.
