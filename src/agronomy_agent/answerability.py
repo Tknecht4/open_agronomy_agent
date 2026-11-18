@@ -18,6 +18,7 @@ from typing import Any, Mapping, Sequence
 
 from agronomy_agent.request_scope import (
     has_action_directive, has_unqualified_followup, is_concept_comparison_scope, analytical_request_kind,
+    information_request_kind,
 )
 from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for, calculation_request_is_complete
 
@@ -244,10 +245,6 @@ _REGULATED_CONTROL_TERMS_RE = re.compile(
     r"pre[- ]harvest interval|phi|restricted[- ]entry interval|rei|buffer(?: zone)?|restriction)\b",
     re.IGNORECASE,
 )
-_BENIGN_DEFINITION_RE = re.compile(
-    r"^\s*(?:what (?:is|are|does)|define|explain(?: in general)?|what does)\b",
-    re.IGNORECASE,
-)
 _FERTILIZER_ONLY_RE = re.compile(
     r"\b(?:fertili[sz]er|nitrogen|phosphorus|potassium|sulphur|sulfur|urea|potash|map|dap|"
     r"nutrient|n[- ]p[- ]k|\d{1,2}-\d{1,2}-\d{1,2})\b",
@@ -408,14 +405,22 @@ def product_action_request_text(question: str) -> str:
 def is_rate_basis_explanation(question: str) -> bool:
     """Recognize a whole terminology request, never a disclaimer around an action.
 
-    Only unnamed product/label and nutrient bases fit this grammar. A named
-    product, numeric proposal, field scope or any follow-on directive does not.
+    Generic product/label and nutrient bases fit this grammar. A unit-basis
+    comparison may name a fertilizer material without choosing its amount.
+    Product-specific label queries, numeric proposals, field scope and
+    follow-on directives retain ordinary decision handling.
     """
+    unit_basis = r"(?:kilograms?|kg|pounds?|lb) of (?:[a-z-]+(?: product)?) per (?:hectare|acre)"
+    if not has_recognized_regulated_product(question) and re.fullmatch(
+        rf"\s*(?:what is|explain) the difference between {unit_basis} and {unit_basis}[.!?]*\s*", question, re.I,
+    ):
+        return True
     term = r"(?:(?:a|the)\s+)?(?:(?:pesticide\s+)?label|(?:(?:pesticide|fertili[sz]er)\s+)?product|(?:fertili[sz]er\s+)?nutrient)\s+rates?"
     request = (
         rf"(?:what is|define|explain)\s+{term}"
         rf"(?:\s+and how is it different from\s+{term})?"
         rf"|what does\s+{term}\s+mean"
+        rf"|(?:explain|describe) what\s+{term}\s+(?:is|means)"
         rf"|(?:what is|explain)\s+the difference between\s+{term}\s+and\s+{term}"
         rf"|how do\s+{term}\s+and\s+{term}\s+differ"
         rf"|(?:what is|explain|compare)\s+{term}\s+(?:versus|vs\.?|and|with)\s+{term}"
@@ -618,28 +623,9 @@ def is_mechanism_explanation(question: str) -> bool:
 
 
 def _is_benign_regulated_definition(question: str) -> bool:
-    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
-        return True
-    if not _BENIGN_DEFINITION_RE.search(question):
+    if _regulated_access_permission_requested(question):
         return False
-    lower = question.casefold()
-    action_request = bool(
-        (
-            _NAMED_PESTICIDE_RE.search(question)
-            and _REGULATED_CLAIM_TERMS_RE.search(question)
-        )
-        or _PRODUCT_CLASS_RATE_RE.search(question)
-        or _EXPLICIT_REGULATED_SELECTION_OR_AUTHORITY_RE.search(question)
-        or
-        re.search(
-            r"\b(?:can|may|should|could|do|does|is|are) "
-            r"(?:i|we|this|that|the product|my product|our product)\b"
-            r".{0,100}\b(?:apply|spray|use|mix|registered|allowed|permitted|legal)\b",
-            lower,
-        )
-        or re.search(r"\b(?:for|on) (?:my|this|our) (?:field|crop)\b", lower)
-    )
-    return not action_request
+    return bool(information_request_kind(question) or is_quantity_concept_explanation(question) or is_mechanism_explanation(question))
 
 
 def _is_fertilizer_only_request(question: str) -> bool:
@@ -669,6 +655,8 @@ def _regulated_pack_claim_intent(question: str) -> bool:
     pesticide evidence.  A product-aware route can still invoke the backstop.
     """
 
+    if _regulated_access_permission_requested(question):
+        return True
     if _is_benign_regulated_definition(question):
         return False
     if _EXPLICIT_REGULATED_SELECTION_OR_AUTHORITY_RE.search(question):
@@ -676,6 +664,22 @@ def _regulated_pack_claim_intent(question: str) -> bool:
     if _NAMED_PESTICIDE_RE.search(question) and _REGULATED_CLAIM_TERMS_RE.search(question):
         return True
     return bool(_PRODUCT_CLASS_RATE_RE.search(question))
+
+
+def _regulated_access_permission_requested(question: str) -> bool:
+    """Recognize a requested access/harvest permission, including a subclause."""
+    restriction_context = re.search(
+        r"\b(?:pesticide|sprayed|treated|label|re[- ]?entry|restricted[- ]entry|"
+        r"pre[- ]?harvest|rei|phi)\b|\bre[- ]?enter\s+(?:now|today|immediately)\b", question, re.I,
+    )
+    permission = re.search(
+        r"\b(?:(?:can|may|should|could)\s+(?:i|we|workers?|people)\s+|"
+        r"(?:i|we|workers?|people)\s+(?:can|may|should|could)\s+|"
+        r"(?:i|we|workers?|people)\s+(?:am|are)\s+(?:permitted|allowed|authorized)\s+to\s+|"
+        r"(?:authorize|approve|allow|permit)\s+(?:(?:the\s+)?(?:workers?|people)\s+to\s+)?)"
+        r"(?:enter|re[- ]?enter|harvest|graze)\b", question, re.I,
+    )
+    return bool(restriction_context and permission)
 
 
 def _regulated_route_backstop(question: str, route: Any | None) -> bool:
@@ -767,6 +771,7 @@ def non_prescriptive_help_requested(question: str) -> bool:
 
     return bool(
         is_quantity_concept_explanation(question)
+        or information_request_kind(question)
         or is_mechanism_explanation(question)
         or bounded_product_help_kind(question)
         or (root_inspection_requested(question)
@@ -883,6 +888,55 @@ def has_application_instruction(answer: str) -> bool:
         or re.search(rf"{start}(?:I|we) recommend(?: that you)?\s+(?:{operation}|{gerund})", answer, re.I)
         or re.search(rf"{start}(?:it is time to|the next step is to)\s+{operation}", answer, re.I)
     )
+
+
+def has_access_or_harvest_instruction(answer: str) -> bool:
+    """Detect unverified affirmative access/harvest permission in bounded help.
+
+    Inspect subordinate and passive permissions as well as imperatives. A
+    negated proposition or a statement that permission remains unknown does
+    not become an affirmative instruction merely by naming the operation.
+    """
+    from agronomy_agent.request_scope import proposition_assertion_status
+
+    operation = r"(?:enter|re[- ]?enter|harvest|graze|(?:start|begin|continue|resume)\s+(?:entering|harvesting|grazing|hand labour))"
+    subject = r"(?:(?:the|your|all)\s+)?(?:workers?|people|you|we|i|livestock)"
+    permission = (
+        rf"\b{subject}\s+(?:(?:may|can|should|must)\s+(?:safely\s+)?|"
+        rf"(?:are|is)\s+(?:allowed|permitted|authorized|safe)\s+to\s+){operation}\b|"
+        rf"\bit is safe(?:\s+for\s+{subject})?\s+to\s+{operation}\b|"
+        r"\b(?:the|your|this)\s+(?:treated\s+)?(?:field|crop|area|plants?)\s+"
+        r"(?:can|may|should|must)\s+(?:safely\s+)?be\s+(?:entered|harvested|grazed)\b|"
+        r"\b(?:entry|re[- ]?entry|harvest(?:ing)?|grazing)\s+is\s+(?:permitted|allowed|authorized|safe)\b"
+    )
+    label_condition = (
+        r"\s+only\s+(?:after|when)\s+(?:all\s+)?(?:the\s+)?"
+        r"(?:(?:current|applicable|product)\s+)+label\s+"
+        r"(?:restrictions|requirements|conditions)\s+(?:are\s+|have been\s+)?(?:satisfied|met|verified)\s*"
+    )
+    for clause in re.split(r"[;!?\n]|\.(?=\s|$)", answer):
+        direct = re.match(rf"\s*(?:(?:therefore|thus|so)[,:]?\s+)?(?:please\s+)?"
+            rf"(?:(?:go ahead and|proceed to|feel free to)\s+)?{operation}\b", clause, re.I)
+        if direct:
+            if not re.fullmatch(label_condition, clause[direct.end():], re.I):
+                return True
+        for match in re.finditer(permission, clause, re.I):
+            if re.fullmatch(label_condition, clause[match.end():], re.I):
+                continue
+            if re.fullmatch(
+                r"\s*when\s+(?:all\s+)?(?:the\s+)?(?:applicable|current|label[- ]specified)\s+"
+                r"(?:interval|restrictions|requirements)\s+(?:has|have)\s+(?:elapsed|ended|been satisfied),\s*",
+                clause[:match.start()], re.I,
+            ) and re.fullmatch(r"\s+according to\s+(?:the\s+)?(?:(?:current|applicable)\s+)?label\s*", clause[match.end():], re.I):
+                continue
+            if re.fullmatch(
+                r"\s*(?:the\s+)?(?:(?:current|applicable|product)\s+)*label\s+"
+                r"(?:determines|specifies|sets|governs)\s+when\s+", clause[:match.start()], re.I,
+            ):
+                continue
+            if proposition_assertion_status(clause[:match.start()], clause[match.end():]) == 'asserted':
+                return True
+    return False
 
 
 def _representative_sample_complete(field_context: Mapping[str, Any] | None) -> bool:
@@ -1365,11 +1419,17 @@ def matching_rule_pack(question: str) -> DomainRulePack:
         "conceptual.explanation.v1",
     )
     by_id = {pack.pack_id: pack for pack in DOMAIN_RULE_PACKS}
-    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
+    if _regulated_access_permission_requested(question):
+        return by_id["regulated.product_action.v1"]
+    if information_request_kind(question) or is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
         return by_id["conceptual.explanation.v1"]
     for pack_id in precedence:
         pack = by_id[pack_id]
         if pack.matches(question):
+            if pack_id == "conceptual.explanation.v1" and (
+                has_action_directive(question) or has_unqualified_followup(question)
+            ):
+                continue
             if pack_id == "regulated.product_action.v1" and (
                 _is_fertilizer_only_request(question) or _is_non_regulated_rate_request(question)
             ):

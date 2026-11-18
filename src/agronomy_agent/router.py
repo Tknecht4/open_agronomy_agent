@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.observation_guidance import observation_guidance, stored_grain_context, stored_grain_probe_monitoring
 from agronomy_agent.answerability import is_quantity_concept_explanation, is_mechanism_explanation, product_action_request_text
+from agronomy_agent.request_scope import information_request_kind
 from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup, seed_quality_workflow_requested
 from agronomy_agent.plant_health_scope import current_root_swelling_clauses
 
@@ -226,10 +227,18 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
 
     if stored_grain_probe_monitoring(question):
         return _stored_grain_probe_route(route.audience)
-    if is_quantity_concept_explanation(question):
+    if information_request_kind(question) == 'regulatory_information':
+        return QueryRoute(
+            question_type='field_data', risk_level='high',
+            namespaces=('field_data_boundary', 'regional_environment'), required_tools=(),
+            answer_style='plain', audience=route.audience, query_expansion=(),
+            guidance='Interpret the requested recordkeeping requirements from dated applicable regulator sources. Keep an unverified retention period unknown and preserve the source jurisdiction and activity scope.',
+            knowledge_bucket='farmer_knowledge', knowledge_domains=('farmer_knowledge',),
+        )
+    if information_request_kind(question) not in {None, "source_context", "regulatory_information"} or is_quantity_concept_explanation(question):
         return QueryRoute(
             question_type="exam_review", risk_level="low",
-            namespaces=("exam_review", "product_stewardship"), required_tools=(),
+            namespaces=("exam_review", "crop_management") if information_request_kind(question) else ("exam_review", "product_stewardship"), required_tools=(),
             answer_style="exam_review", audience=route.audience,
             query_expansion=(),
             guidance="Answer the requested explanation or analytical method directly; do not add a field operation, product choice or nutrient target.",
@@ -877,6 +886,8 @@ def _is_benign_conceptual_explanation(text: str) -> bool:
     diagnostic or product routes.
     """
 
+    if information_request_kind(text):
+        return information_request_kind(text) not in {"source_context", "regulatory_information"}
     if has_action_directive(text) or has_unqualified_followup(product_action_request_text(text)):
         return False
     if is_mechanism_explanation(text) or evidence_interpretation_kind(text):

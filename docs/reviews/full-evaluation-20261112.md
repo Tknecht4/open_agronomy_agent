@@ -4,6 +4,266 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
+On November 17, the evaluated serving candidate is `ea615e4`, with producer
+source hash `02a9f477c0bcf095868ecacb269d0af7d48bcbc8b45ac6b88bf0e0c998ce4995`.
+Its source checks passed: 5,996 backend tests on macOS with 58 skipped and
+6,095 in Linux CI with 27 skipped; 508 frontend tests, type checking, builds,
+documentation and public-package checks also passed. Independent production
+integration review preceded the broader zero-usefulness review described below,
+which found further task-scope and terminal-selection defects. These checks do
+not establish agronomic accuracy or installed-app qualification. The source
+repairs after this checkpoint require a fresh whole candidate assessment.
+
+All twelve planned whole-run collections are complete, with original-reader
+checks, common engineering analysis, archived raw evidence and verified whole-run
+scoring inputs. All task-owned Colab VMs are stopped. The study contains the
+unchanged 560 original cases and 48 regressions, two arms and two trials,
+across twelve source/model/cohort roles and 14,592 retained observations.
+Interrupted attempts retain their original identities and do not fill these
+slots. Each run's six foundation components passed, including twenty-repeat
+synthetic backend and storage performance checks; those timings do not measure
+model inference speed.
+
+Whole-suite automated label collection and all twelve corrected canonical reports
+are closed. The frozen scoring inputs cover 14,487 eligible answer observations:
+14,460 have review records and 27 retain unknown automated review outcomes.
+The other 105 observations remain visible as 69 execution failures and 36
+completed synthetic controls. Exact duplicate answer projections may share a
+judgement; repeated trials are dependent development observations.
+The earlier 4,279 unknown eligible bindings remain unknown and are not pooled
+into this study. Each current native full cohort retains six declared mock
+failures. Current hosted Luna retains six mock failures plus ten raw-arm
+question-contract failures and six production-arm canonical binding
+failures. Those interface failures are not model refusals. References and rubrics remain
+project-authored, exposed development material awaiting expert validation;
+automated review is not field validation or a general model ranking.
+
+The full cohort used 1,805 initial review jobs. Five protocol failures received
+the single successor permitted by the frozen protocol: three returned valid
+reviews and two remained protocol failures. A separate bounded-reader failure
+was nonretryable. These three unresolved jobs account for the 27 unknown answer
+bindings. No valid review was resampled. Tool-correctness unknowns and missing
+provider finish reasons are additional, distinct measurement limits.
+
+### Recorded execution paths
+
+The following counts describe completed, real-backend **production-arm**
+observations at `ea615e4`; they are not answer-quality or refusal scores.
+Each regression arm plans 96 observations. Each full production arm plans 1,114
+real-backend observations plus six completed synthetic controls, which are
+excluded from this table.
+
+| Model | Cohort | Real observations completed / planned | Configured path | Verifier fallback | Editor rewrite | Deterministic final |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| E2B | 48 regressions | 96 / 96 | 34 | 46 | 4 | 12 |
+| E4B | 48 regressions | 96 / 96 | 48 | 34 | 2 | 12 |
+| Luna | 48 regressions | 96 / 96 | 65 | 15 | 4 | 12 |
+| E2B | Original 560 | 1,114 / 1,114 | 468 | 316 | 56 | 274 |
+| E4B | Original 560 | 1,114 / 1,114 | 526 | 260 | 54 | 274 |
+| Luna | Original 560 | 1,108 / 1,114 | 549 | 148 | 137 | 274 |
+
+A configured-path origin does not prove every served character is an unchanged
+model return. A fallback is not necessarily a refusal: a model draft can precede
+a verifier fallback or editor rewrite. Native positive-generation telemetry and
+hosted completed-turn receipts are different instruments; neither gives the
+total attempted model-call count. Empty call lists and a native-only eligibility
+flag do not establish that a hosted model did not run. Independent metadata
+inventory `1b7808be…` and its arm/mock/failure addendum `eeb3c10a…` preserve these
+distinctions. None of these counters establishes inference-speed parity.
+
+### Hosted admission and attempt metadata
+
+The sixteen current hosted conversation failures expose a benchmark-adapter
+coverage limit. Its version-one contract admits one question and its exact
+compiled messages per case, while the worker retains the approved follow-up
+turns. Those later turns fail the first-question binding. Raw conversation
+history also exceeds the admitted single-user message shape, and the provider
+client permits one turn per instance. Relaxing one equality check would not
+establish sound conversation support. A future extension needs turn-aware
+admission, history and fact bindings, fresh single-use clients and a new whole
+hosted assessment. These failures are retained in the current denominator.
+
+The review also reproduced a reporting defect: a locally rejected follow-up
+could inherit the preceding client's completed/submitted state and thread IDs.
+The subsequent repair creates fresh attempt evidence before validation, while
+preserving actual current initialization and transport evidence. Seven added
+regression cases pass within the 161-test transport module; an independent
+review verified the rejection with zero client calls and confirmed that accepted
+generation, admission, prompts and native serving logic are unchanged.
+
+This is an instrumentation-only change after the evaluated `ea615e4` source.
+At that checkpoint, all 363 other producer files remained identical; the producer hash changed
+to `f2bf2281ca78c9769b0f0fbb8674a59160e73761cd46bf6c56f130a13af79126`.
+The source-equivalence receipt `692759ba…` preserves that boundary. The recorded
+model outputs keep their original `ea615e4`/`02a9f477…` identities; historical
+error records and scores are not rewritten or represented as new executions.
+The metadata repair grants no additional conversation or field-action authority.
+
+The repaired source subsequently passed 6,003 backend tests on macOS, with
+58 skipped, plus 508 frontend tests, type checking, builds, strict documentation
+and public-scope checks. An earlier backend invocation retained nine local HTTP
+fixture failures caused by denied loopback binding; the affected ten-test module
+and the complete suite passed with loopback access. No test or application code
+was changed to obtain that rerun. Final pull-request CI remains a separate check.
+
+### Applicability repair and separate whole-suite analysis
+
+Review of the complete frozen reports reproduced an evaluator defect. The
+original 560-case policy assigns a nominal weight to numeric accuracy, but only
+57 case rubrics contain a numeric criterion. The other 503 explicitly mark
+that dimension inapplicable. The original implementation nevertheless required
+a numeric label for those answers, producing artificial unknown composites
+even when every applicable outcome had been graded.
+
+The repair excludes only explicitly inapplicable dimensions and normalizes the
+declared weights over the remaining outcomes. Missing applicable labels and
+rubrics remain unknown; an empty set of applicable outcomes cannot produce a
+success. It preserves failure and truncation penalties, provider-termination
+unknowns, safety review, planned case/family denominators and the unequal-mask
+comparison block. The independent diagnostic `d8d74423…` and source review
+`12e8cf68…` include heterogeneous controls and 400 unchanged-path comparisons.
+
+This is a changed evaluator implementation and normalization interpretation,
+not a new set of semantic judgements. All twelve original reports, their
+original `c5a4c3e0…` metric implementation, labels, policies, rubrics and model
+answers remain retained. The complete twelve-run analysis was repeated
+with the maintained CLI into `whole-criterion-analysis-v25-applicability-r1`;
+the original output directory was not overwritten. All 108 corrected report
+files were byte-verified in both retained namespaces, with 228 receipt/report
+pins. All six four-dimension regression metric files are byte-identical to their
+original reports. Completion receipt `883b86a9…` preserves this verification.
+Genuine review and provider
+unknowns remain separate from the repaired applicability bug.
+
+The offline-scoring checkpoint producer hash is
+`65368aac3afc9c2a5c89e87620fbc481ee4df8d8660540712a8b1c8fcec6aae6`.
+Relative to the evaluated source, 362 producer files remain identical; the two
+changes are the attempt-metadata repair and this offline aggregation function.
+Independent review found no change to model prompts, generation or plan bytes.
+That source passed **6,010 backend tests**, with 58 skipped and 46 warnings
+in 418.33 seconds. The complete immutable log has SHA `64527c06…`; its fresh
+synthetic fixtures were cleaned after terminal execution and quiet checks.
+The source checks and corrected analysis do not turn the recorded `ea615e4`
+model outputs into executions of the final pull-request head.
+
+### Corrected original-cohort scores
+
+These are descriptive project-weighted scores for the 557 real-backend cases
+within the original 560-case cohort; the three synthetic control cases are
+separate. Both trials have the same displayed bounds. Bounds retain missing
+applicable judgements and termination evidence in their fixed denominators;
+they are neither confidence intervals nor percentages of correct answers.
+
+| Model | Raw bounds / 100 | Reference production bounds / 100 | Assessed `ea615e4` production bounds / 100 |
+| --- | ---: | ---: | ---: |
+| E2B | 26.44–26.87 | 68.78–69.47 | 75.97–76.28 |
+| E4B | 23.90–23.95 | 77.55–77.76 | 82.81–82.95 |
+| Luna | 0.00–97.22 | 25.07–92.11 | 25.94–95.10 |
+
+The hosted provider's missing finish reasons prevent a comparable primary
+point score. Model weights, runtime precision, effective hosted output caps and
+hardware are not all matched. No general model ranking follows from this table.
+The 27 missing review bindings, individual unknown criteria and entirely unknown
+tool-correctness labels remain distinct from numeric inapplicability.
+
+### Further serving defects found in the complete answer review
+
+Review of all 205 current production observations graded zero for usefulness
+separated false authority holds and task substitution from valid input holds,
+incomplete model knowledge and uncertain grading. Correct concept and method
+drafts could be replaced by diagnosis, fertilizer or spray templates because
+checks followed the topic rather than the requested task. The review also
+found unsupported entry/harvest permission variants and a terminal selector
+that could retain an already-flagged diagnosis when all candidates had defects.
+
+The successor repair shares recognized whole-request task ownership across
+admission, routing, obligations, verification and fallback selection. It keeps
+source and authority boundaries without creating unrequested field prerequisites.
+Mixed actions and exact product restrictions retain their checks. Independent
+permission and diagnostic assertions remain checked even on explanatory routes;
+reported or conditional diagnoses do not establish confirmed field truth.
+Calculator clarifications use readable input labels while retaining their typed
+identifiers in traces and validation.
+
+The first composed-source full run retained 33 failures, 6,053 passes and 58
+skips. Its failures exposed additional integration gaps, including clarification
+label linkage, source-specific interpretation routes and a child reaching its
+log limit with exit zero. They are being repaired and independently rechecked.
+Fresh frontend installation, type checking, all 508 tests and the build passed.
+These synthetic software checks do not supply new model observations or expert
+agronomic grades. A new whole candidate collection is pending; the table above
+continues to describe the original assessed source.
+
+### Completed regression scoring
+
+The six whole regression reports contain all 1,152 planned observations and
+the complete frozen automated-label export. The reference and current native
+production outcomes below use the unchanged four-dimension policy, equal
+scenario-family weights and explicit zero penalties for truncation. Both trials
+produce the same reported values; each arm contains 48 cases per trial. These
+are descriptive development scores, not percentages of agronomically correct
+answers or independently replicated estimates.
+
+| Model | Raw score / 100 | Reference production / 100 | Current production / 100 | Raw truncations per trial | Current production truncations per trial |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| E2B | 30.21 | 80.73 | 90.89 | 26 / 48 | 1 / 48 |
+| E4B | 32.81 | 85.16 | 93.23 | 29 / 48 | 0 / 48 |
+
+The native reference source is `6eddf53`; the hosted reference is `ac6cbab`.
+The current source is `ea615e4`. Raw native scores match between those reference
+and current runs; this does not establish matched hardware or model-file bytes.
+
+Luna has all expected regression review records and observed outcome-dimension
+labels, but its model-generated turns do not
+record the provider finish reason needed by the frozen truncation policy. A
+completed transport turn cannot establish an untruncated model answer. Its
+canonical primary scores therefore remain unknown, including the raw-arm
+fixed-denominator bounds of 0–100. Current production bounds are 11.20–98.70;
+reference production bounds are 10.42–95.83. No replacement composite or ranking
+is calculated. Deterministic turns retain their separate termination status.
+Tool-correctness labels remain unknown and outside this primary composite.
+The canonical report extraction `V25-six-regression-canonical-group-results-extraction-20261117.json`
+preserves all 24 source, arm and trial groups without averaging their scores.
+
+### Independent answer review
+
+A separate review read all 288 current production observations in the 48-case
+regression cohort, including every trial variant, without reading the new judge
+labels. Answers were bound to their original records and staged answer hashes.
+This is a bounded qualitative review, not expert certification or a manual review
+of all 560 original cases.
+
+The review retained conceptual errors and omissions: some native-model answers
+confuse formulated product, active ingredient, nutrient rate or concentration.
+The distinction matters when using [fertilizer nutrient analysis](https://www.gov.mb.ca/agriculture/crops/soil-fertility/soil-fertility-guide/print,calculating-fertilizer-rates.html)
+or [pesticide label directions](https://www.canada.ca/en/health-canada/services/consumer-product-safety/pesticides-pest-management/frequently-asked-questions.html).
+E2B also misstates [soil texture](https://content.ces.ncsu.edu/extension-gardener-handbook/1-soils-and-plant-nutrients),
+overstates what dose-response slope alone establishes, and invents an
+individual-plant-versus-field threshold purpose. A [soybean scouting example](https://extension.umn.edu/agriculture/crop-production/soybean/soybean-aphid)
+illustrates why a per-plant sampling unit can still inform a field decision;
+its numeric threshold is not transferred to another crop.
+Some explanations omit requested definitions or supplied date
+literals. Correct nutrient-basis guidance was present in the examined prompts;
+that guidance does not guarantee a correct generated explanation.
+
+Tracing two apparent mechanism problems changed their interpretation. An editor
+removed actual internal-process leakage but preserved a conceptual error already
+in the draft. A compound definition-and-rate request reached the model intact;
+its answer omitted the definition while appropriately declining an unsupported
+chosen field rate. The review did not establish a new shared incorrect runtime
+definition, dropped input mechanism, unsupported chosen field rate or unasked
+treatment in these 48 cases. Finite correction and completion checks still leave
+model-quality limits. The mapped review `5c7e7a93…` preserves these observations
+without changing frozen labels, references, masks or weights.
+
+## Historical execution checkpoints
+
+The sections below retain earlier observations and decisions. Their pending
+states and source identities describe those checkpoints; the current assessment
+is above. Historical failures and unknowns have not been rewritten.
+
+### November 16 source checkpoint
+
 On November 16, the `67e490e` source completed source verification: 5,951
 backend tests passed on macOS with 58 skipped; 6,050 passed in Linux CI with
 27 skipped. Its frontend passed 508 tests, type checking and building. These

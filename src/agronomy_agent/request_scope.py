@@ -24,6 +24,207 @@ FIELD_ACTION_PATTERN = (
 )
 
 
+def information_request_kind(text: str) -> str | None:
+    """Own a complete explanation, record method or pre-decision checklist.
+
+    This describes the work requested, not its agronomic topic or the truth of
+    an answer. In particular, an interval comparison is not harvest permission,
+    and recording observations is not diagnosing the crop. Unconsumed requests
+    retain ordinary decision handling. Output evidence/authority checks still
+    apply even when the user only requested information.
+    """
+    text = ' '.join(text.casefold().split())
+    text = re.sub(r"\bvs\.(?=\s)", 'versus', text)
+    from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
+    if is_map_component_explanation_question(text):
+        return None  # Supplied mapped attributes have an existing source-bound owner.
+    text = re.sub(r"^(?:please\s+)?(?:(?:can|could|would) you\s+)?(?:please\s+)?", '', text)
+    # A training/purpose wrapper is context, never a waiver of later actions.
+    text = re.sub(r"^for (?:a |the )?(?:[a-z-]+\s+){0,3}(?:training|checklist|notebook),\s*", '', text)
+    # A closed declined-prescription sentence is a constraint on the output,
+    # not a request for a rate. Keep every other sentence for scope checking.
+    text = re.sub(r"(?:^|(?<=[.!?;]))\s*(?:avoid prescribing|do not prescribe|do not recommend) "
+        r"a (?:(?:universal|field|application|amendment)\s+)*rate[.!?;]*(?=\s|$)", '', text)
+    # A nominal process subject in a declarative premise is not an imperative.
+    text = re.sub(r"(^|[.!?;]\s*)spray drift(?=(?:\s+(?:and|or)\s+[a-z-]+(?: [a-z-]+){0,3})?"
+        r"\s+(?:crosses|moves|occurs|affects|is|are)\b)", r'\1drift', text)
+    if re.search(r"\b(?:then|also)\b", text) or has_action_directive(text):
+        return None
+    if re.search(r"\b(?:today|tomorrow|tonight|currently|now|how much|how many)\b", text):
+        return None
+    # These are requested commitments, including embedded ones after 'explain'
+    # or 'tell me'. Do not mistake an explanation prefix for their authority.
+    if re.search(
+        r"\b(?:diagnose|prescribe|recommend|authorize|approve|choose|select|tell|"
+        r"apply|spray|irrigate|fertilize|harvest|graze|enter|mix|till|drive)\b|"
+        r"\b(?:safe|legal|permitted|allowed|registered|best|appropriate|required|suitable|optimal|recommended)\b",
+        re.sub(r"\btank[- ]mix\b", 'tank mixture', text),
+    ):
+        return None
+    # A request may cite a conceptual framework as the explanation's lens.
+    # Only consume the nominal lens; arbitrary 'use ...' instructions do not
+    # acquire this scope.
+    text = re.sub(r"^use (?:the |a |an )?(?:[a-z-]+\s+){1,6}to explain\b", 'explain', text)
+    clauses = [part.strip() for part in re.split(
+        r"[!?;]|\.(?=\s|$)|,\s*(?=(?:does|which|what)\b)|,?\s+and\s+(?=(?:explain|describe|define|compare|contrast|distinguish|does)\b)", text,
+    ) if part.strip()]
+    kinds: list[str] = []
+    contextual = False
+    for index, clause in enumerate(clauses):
+        # Declarative context may precede, but cannot follow, the owned task.
+        if not kinds and index < len(clauses) - 1 and re.fullmatch(
+            r"(?:(?:an?|the)\s+)?[a-z][a-z -]{0,90}\s+"
+            r"(?:is|are|was|were|has|have|points?|veers?|shows?|reports?|says?|crosses|handles|intersects)\s+[^!?;]+", clause,
+        ) and not re.search(r"\b(?:should|must|please|to|whether)\b", clause):
+            contextual = True
+            continue
+        if re.fullmatch(
+            r"(?:for (?:an? |the )?[a-z][a-z0-9 .-]{0,110} comparison,\s*)?"
+            r"(?:retrieve|find|summarize|summarise) (?:the )?(?:(?:analogue|regional|source|published) )?"
+            r"(?:context|evidence|information) (?:for|about|on) [a-z0-9][a-z0-9 -]{0,100}", clause,
+        ) and not re.search(r"\b(?:and|or|then|also|should|must|can|could|please|to)\b", clause):
+            kinds.append('source_context')
+            continue
+        source_subject = re.search(r"\b(?:map|survey|classification|dataset|layer|grid|inventory)\b", text)
+        inference = re.fullmatch(r"does (?:that|this|it) (?:prove|guarantee|confirm|establish) (.+)", clause)
+        if source_subject and inference:
+            proposition = re.sub(r"(?:[a-z-]+ ){1,3}and (?:[a-z-]+ ){1,3}(?=(?:conditions|properties)\b)",
+                'named ', inference[1])
+            if not has_unqualified_followup('Explain ' + proposition):
+                kinds.append('source_context')
+                continue
+        if source_subject and re.fullmatch(r"does (?:this|that|the) (?:product|dataset|survey|map|layer) "
+                r"(?:cover|include) (?:all of|the whole of|all) [a-z][a-z -]{0,60}", clause):
+            if not re.search(r"\b(?:and|or|then|also|should|must|can|could|to|my|our|your)\b", clause):
+                kinds.append('source_context')
+                continue
+        if re.fullmatch(r"which (?:[a-z-]+ )?records and (?:the )?retention period (?:are|is) relevant", clause):
+            kinds.append('regulatory_information')
+            continue
+        if re.fullmatch(r"(?:which|what) (?:evidence|source|record) should (?:control|govern|inform) "
+                r"(?:the )?(?:field|reported|measured) (?:result|estimate|value)", clause):
+            kinds.append('source_context')
+            continue
+        if re.fullmatch(r"which (?:design|experimental|statistical) assumption is (?:challenged|violated|tested)", clause):
+            kinds.append('study_design')
+            continue
+        records = re.match(r"(?:which|what) records (?:let|help|allow) (?:an? |the )?"
+            r"(?:adviser|advisor|grower|scout) (?:distinguish|compare|reconcile|trace|verify|check)\s+", clause)
+        if records and not has_unqualified_followup('Explain ' + clause[records.end():]):
+            kinds.append('record_method')
+            continue
+        study = re.fullmatch(
+            r"why (?:might|would|should|can|could)\s+(.+?)\s+be\s+"
+            r"(?:tested|studied|compared|measured|evaluated)\s+(.+)", clause,
+        )
+        if study:
+            if contextual or re.search(
+                r"\b(?:my|our|your|i|we|you|me|this|these|those|then|also|to|should|must|please)\b", ' '.join(study.groups()),
+            ) or has_unqualified_followup('Explain ' + study[2]):
+                return None
+            kinds.append('study_design')
+            continue
+        if re.search(r"\b(?:rates?|doses?|dosage)\b", clause):
+            return None  # Other quantity teaching has its complete typed scope.
+        if re.search(
+            r"\b(?:interval|phi|rei|label|registration|buffer(?: zone)?)\s+(?:for|of|on|in|with)\b", clause,
+        ):
+            return None  # An exact applicable restriction needs its own authority.
+        # A document's delivery location qualifies the reader, not an action
+        # or the meaning of its term. Consume only this complete nominal tail;
+        # a later permission or prescription still fails whole-request checks.
+        document_meaning = re.fullmatch(
+            r"what does ([a-z-]+(?: [a-z-]+){0,5}) mean (?:on|in) (?:an?|the) "
+            r"(?:document|label|record|report) (?:sent|addressed|provided) to "
+            r"(?:my|our|the) (?:[a-z-]+ ){0,3}(?:farm|field|office)", clause,
+        )
+        if document_meaning:
+            clause = 'define ' + document_meaning[1]
+        meaning = re.fullmatch(r"what does ([a-z-]+(?: [a-z-]+){0,11}) (?:mean|do|regulate|stand for)", clause)
+        definition = re.fullmatch(r"what (?:is|are) (.+)", clause)
+        if meaning or definition:
+            clause = 'define ' + (meaning or definition)[1]
+        embedded = re.fullmatch(r"(?:explain|describe) what ([a-z-]+(?: [a-z-]+){0,11}) (?:is|means)", clause)
+        if embedded:
+            clause = 'define ' + embedded[1]
+        definition_head = re.match(r"(?:define|explain|describe)\s+(.+)", clause)
+        restriction = r"(?:phi|rei|buffer zones?|(?:pre[- ]?harvest|restricted[- ]?entry) interval)"
+        if definition_head and re.search(rf"\b{restriction}$", definition_head[1]) and not re.fullmatch(
+            rf"(?:(?:an?|the)\s+)?{restriction}", definition_head[1],
+        ):
+            return None
+        if re.search(
+            r"\bthe\s+(?:pesticide|herbicide|fungicide|insecticide|product|treatment|tank[- ]mix)\s+(?:for|on|in|that)\b", clause,
+        ):
+            return None
+        comparison = re.fullmatch(
+            r"(?:(?:compare|contrast|distinguish)\s+|(?:explain|describe) (?:the )?differences? between )"
+            r"(.+?)\s+(?:from|with|and|versus|vs\.?)\s+(.+)", clause)
+        if comparison:
+            # Nominal concept operands, not selection/ranking of treatments.
+            forbidden = r"\b(?:products?|treatments?|varieties|options?|rates?|doses?|programs?|using|based|to|that|which|whether|if|when|is|are|can|should|must|and|or|my|our|your|i|we|you|me|needed|need|responsible)\b"
+            operands = [re.sub(r"\b[a-z-]+ or [a-z-]+ (?=(?:concepts?|traits?|properties|processes?|intervals?|thresholds?|levels?)\b)",
+                'coordinated', operand) for operand in comparison.groups()]
+            if not contextual and all(re.fullmatch(r"(?:an? |the )?[a-z-]+(?: [a-z-]+){0,9}", operand)
+                   and not re.search(forbidden, operand) for operand in operands):
+                kinds.append('explanation')
+                continue
+            return None
+        implication = re.fullmatch(r"what does ([a-z-]+(?: [a-z-]+){0,6}) imply for (.+)", clause)
+        if implication:
+            clause = 'explain ' + implication[1] + ' ' + implication[2]
+        if re.match(r"(?:explain|describe|define)\s+", clause):
+            if contextual or re.search(
+                r"\b(?:my|our|your|i|we|you|me|needed|need|responsible)\b|"
+                r"\b(?:this|these|that|those)\s+(?:field|farm|crop|plants?|roots?|leaves|lesions?|symptoms?|sample|test)\b", clause,
+            ):
+                return None
+            if re.search(r"\b(?:how to|whether|to\s+(?!explain\b)|should|must|please)\b", clause) or re.match(
+                r"(?:explain|describe)\s+(?:which|what|when)\b", clause,
+            ):
+                return None
+            # 'between X and Y' owns a nominal pair; a later command remains.
+            scoped = re.sub(r"\bbetween [a-z-]+ and [a-z-]+\b", 'between the subjects', clause)
+            if has_unqualified_followup(scoped):
+                return None
+            kinds.append('explanation')
+            continue
+        record_head = re.match(
+            r"how (?:should|can|would) (?:i|we|an? (?:adviser|advisor|scout|grower)) "
+            r"(?:organize|organise|store|record|document)\s+", clause)
+        checklist_head = re.match(
+            r"(?:what (?:should|must) (?:an? |the )?(?:adviser|advisor|scout|grower) (?:assess|check|record|consider)|"
+            r"what (?:observations|records|information|factors|checks) should (?:an? |the )?(?:adviser|advisor|scout|grower) (?:record|assess|check|consider))\s*", clause)
+        if record_head or checklist_head:
+            head = record_head or checklist_head
+            remainder = clause[head.end():]
+            if (not remainder or re.search(r"\b(?:to|can|could|should|must|would|please|whether)\b", remainder)
+                    or has_unqualified_followup('Explain ' + remainder)):
+                return None
+            if record_head and not re.search(r"\b(?:observations?|records?|dates?|notes?|scouting|samples?|results?)\b", remainder):
+                return None
+            if checklist_head and re.search(r"\b(?:spill|poison\w*|exposure|emergency|injured|injury)\b", text):
+                return None  # Acute incidents retain their response obligations.
+            kinds.append('record_method' if record_head else 'evidence_assessment')
+            continue
+        return None
+    kind = kinds[0] if kinds and len(set(kinds)) == 1 else None
+    causal = re.match(r"(?:explain|describe) (?:why|how)\b", text)
+    concept = (causal or re.search(r"\b(?:concepts?|meanings?|definitions?|differences?|relationships?|roles?|mechanisms?|process(?:es)?|methods?|models?|influences?|effects?)\b", text)
+        or re.fullmatch(r"(?:explain|describe) what .+ (?:is|means)[.!?]*", text))
+    forecast_read = (re.match(r"(?:explain|describe)\b|what (?:is|are) (?:the|this|that)\b", text)
+        and re.search(r"\bforecasts?\b", text) and not concept)
+    forecast_reference = (re.search(r"\b(?:the|this|that)\s+(?:weather\s+)?forecast\b", text)
+        and not re.fullmatch(r"define (?:(?:an?|the) )?(?:weather )?forecasts?[.!?]*", text))
+    current_data = re.search(
+        r"\b(?:current|latest|recent|local)\b[^.!?;]{0,60}\b"
+        r"(?:forecasts?|weather|conditions|observations|measurements|prices|markets?|alerts?|reports?|labels?|requirements)\b", text,
+    )
+    if kind == 'explanation' and (current_data or forecast_read or forecast_reference):
+        return 'source_context'  # Describing current data still requires its source.
+    return kind
+
+
 def proposition_assertion_status(prefix: str, suffix: str = '') -> str:
     """Classify adjacent assertion scope without certifying a fact as true."""
     if re.search(

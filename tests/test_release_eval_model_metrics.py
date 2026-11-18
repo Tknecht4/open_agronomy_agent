@@ -67,6 +67,89 @@ def test_equal_domain_common_outcomes_separate_tool_dimension():
     assert report["contrasts"][0]["ranking_authorized"] is False
 
 
+def heterogeneous_packet():
+    data = packet()
+    concept = data[2][0]
+    concept["criteria"] = [c for c in concept["criteria"] if c["dimension"] != "numeric_unit_accuracy"]
+    concept["rubric_sha256"] = rubric_digest(concept)
+    for review in data[3]:
+        if review["case_sha256"] == concept["case_sha256"]:
+            review["criterion_scores"].pop("numeric_unit_accuracy")
+            review["rubric_sha256"] = concept["rubric_sha256"]
+        else:
+            review["criterion_scores"]["numeric_unit_accuracy"] = 0
+    return data
+
+
+def test_declared_non_numeric_case_uses_applicable_weights_without_erasing_numeric_failure():
+    data = heterogeneous_packet()
+    report = run(data)
+    assert report["cells"][0]["dimension_status"]["numeric_unit_accuracy"] == "not_applicable"
+    assert report["cells"][0]["criterion_mask"]["numeric_unit_accuracy"] == []
+    assert report["cells"][2]["dimensions"]["numeric_unit_accuracy"] == 0
+    # Equal domains: concept 0.6/0.8; numeric case (four outcomes + numeric zero)/5.
+    assert report["groups"][0]["primary"]["score"] == pytest.approx((0.6 + 0.48) / 2)
+    assert report["groups"][1]["primary"]["score"] == pytest.approx((0.8 + 0.64) / 2)
+    assert report["groups"][0]["sensitivity"][0]["score"] == pytest.approx((2 * 0.6 + 0.5) / 3)
+    assert report["contrasts"][0]["paired_scored_n"] == 2
+    assert report["contrasts"][0]["interval"]["mean_delta"] == pytest.approx(0.18)
+    assert report["status"] == "descriptive_complete"
+    assert report["policy_bound_to_plan"] is True
+    assert report["promotion_allowed"] is False
+
+
+@pytest.mark.parametrize("observation,dimension,bounds", [
+    (0, "evidence_support", [0.24, 0.74]),
+    (2, "numeric_unit_accuracy", [0.3, 0.8]),
+])
+def test_applicable_missing_labels_remain_unknown_beside_declared_na(observation, dimension, bounds):
+    data = heterogeneous_packet()
+    data[3][observation]["criterion_scores"].pop(dimension)
+    report = run(data)
+    assert report["cells"][observation]["dimension_status"][dimension] == "unknown_labels"
+    assert report["groups"][0]["primary"]["score"] is None
+    assert report["groups"][0]["primary"]["fixed_denominator_bounds"] == pytest.approx(bounds)
+    assert report["status"] == "partial_unknown"
+
+
+def test_all_weighted_dimensions_inapplicable_does_not_create_success():
+    data = packet()
+    rubric = data[2][0]
+    rubric["criteria"] = [c for c in rubric["criteria"] if c["dimension"] == "tool_correctness"]
+    rubric["rubric_sha256"] = rubric_digest(rubric)
+    for review in data[3]:
+        if review["case_sha256"] == rubric["case_sha256"]:
+            review["criterion_scores"] = {k: v for k, v in review["criterion_scores"].items() if k == "tool"}
+            review["rubric_sha256"] = rubric["rubric_sha256"]
+    report = run(data)
+    assert all(report["cells"][0]["dimension_status"][dim] == "not_applicable" for dim in OUTCOME_DIMENSIONS)
+    assert report["groups"][0]["primary"]["score"] is None
+    assert report["groups"][0]["primary"]["fixed_denominator_bounds"] == pytest.approx([0.3, 0.8])
+
+
+@pytest.mark.parametrize("terminal", ["failed", "length", "unknown"])
+def test_declared_na_preserves_failed_truncated_and_unknown_termination_rules(terminal):
+    data = heterogeneous_packet()
+    data[4]["truncated_outcome"] = "zero"
+    for row in data[1]:
+        row["finish_reason"] = "stop"
+    if terminal == "failed":
+        data[1][0]["status"] = "failed"
+        data[3].pop(0)
+    elif terminal == "length":
+        data[1][0]["finish_reason"] = "length"
+    else:
+        data[1][0].pop("finish_reason")
+    report = run(data)
+    primary = report["groups"][0]["primary"]
+    if terminal == "unknown":
+        assert primary["score"] is None
+        assert primary["fixed_denominator_bounds"] == pytest.approx([0.24, 0.74])
+    else:
+        assert primary["score"] == pytest.approx(0.24)
+        assert report["cells"][0]["penalty_zero"] is True
+
+
 def test_no_policy_or_labels_remains_unknown():
     p, o, r, _, _ = packet()
     report = score_model_matrix(p, o, rubrics=r)
@@ -264,7 +347,9 @@ def test_different_outcome_mask_blocks_composite_pair():
     data[3][1]["criterion_scores"].pop("usefulness")
     report = run(data)
     assert report["contrasts"][0]["incomparable_n"] == 1
-    assert report["groups"][1]["primary"]["score"] is None
+    assert report["contrasts"][0]["paired_scored_n"] == 1
+    # Each group can describe its applicable outcomes; unequal masks cannot pair.
+    assert report["groups"][1]["primary"]["score"] == pytest.approx(0.8)
 
 
 def test_dependent_repeat_does_not_count_as_independent_cluster():

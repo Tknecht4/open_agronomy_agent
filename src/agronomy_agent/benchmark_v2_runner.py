@@ -20,7 +20,7 @@ from typing import Any, Protocol
 import yaml
 
 from agronomy_agent.agronomic_calculations import CalculationOperation
-from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, tool_version_for
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, tool_version_for, supplied_input_label
 from agronomy_agent.answerability import (
     ANSWERABILITY_POLICY_VERSION,
     assess_answerability,
@@ -1152,6 +1152,7 @@ def _validate_tool_trace(
             or not invocation.get("missing_inputs")
             or any(
                 str(missing).casefold() not in clarification_text
+                and supplied_input_label(str(missing)).casefold() not in clarification_text
                 for missing in invocation["missing_inputs"]
             )
             for invocation in invocations_by_id.values()

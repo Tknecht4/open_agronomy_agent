@@ -54,6 +54,11 @@ per case on pinned E2B and E4B models and hosted Luna. The cases are exposed
 development material; automated labels and different backend runtimes do not
 establish field accuracy or a general model ranking.
 
+All twelve original comparison runs and their corrected scoring reports are
+retained. Missing reviews, unknown criteria, failed executions and unavailable
+provider finish reasons keep their denominators. The campaign record identifies
+the evaluated source separately from subsequent source repairs and pending runs.
+
 Current workflows include:
 
 - **Calculate from supplied inputs:** field totals, seed rates, nutrient and
@@ -69,7 +74,9 @@ Current workflows include:
   known sample dates, depths and methods. Corrections preserve the original
   record; an unknown sample date stays unknown.
 - **Get explanations and scouting help:** ask about measurement methods,
-  comparisons, crop symptoms and evidence to collect. Current crop, disease
+  concept comparisons, study designs, crop symptoms and evidence to collect.
+  Supported explanations and record checklists retain their requested scope.
+  Current crop, disease
   history and the requested task keep their distinct roles. Model-generated
   explanations still need source and applicability review.
 
@@ -77,6 +84,8 @@ A compound question retains its additional requests: a calculation cannot
 silently replace a request for field advice. Product selection and use retain
 current crop, target, jurisdiction and authority checks. The report separates
 these software contracts and execution checks from judged answer quality.
+Readable calculator clarifications preserve the missing input's typed identity;
+an omitted budget component, date or measurement remains unknown.
 
 ## Evidence and licensing
 

@@ -69,6 +69,10 @@ def supplied_input_label(name: str) -> str:
         "target_moisture_pct": "target wet-basis moisture (%)",
         "mean_temp_c": "one supplied daily mean temperature in Celsius",
         "base_temp_c": "base temperature in Celsius",
+        "added_returns": "added revenue",
+        "reduced_costs": "saved costs",
+        "added_costs": "added costs",
+        "reduced_returns": "lost revenue (state zero explicitly if there is none)",
     }.get(name, name)
 
 
@@ -79,7 +83,7 @@ def format_calculator_clarification(missing_inputs: tuple[str, ...]) -> str:
         return "I can't calculate from these inputs: " + "; ".join(
             item.removeprefix("invalid ") for item in missing_inputs
         ) + "."
-    return "To calculate this, provide " + ", ".join(missing_inputs) + "."
+    return "To calculate this, provide " + ", ".join(supplied_input_label(item) for item in missing_inputs) + "."
 
 
 def calculation_request_text(question: str, operation: str) -> str:

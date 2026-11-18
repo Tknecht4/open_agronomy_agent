@@ -177,6 +177,11 @@ def _past_weather_record(question: str) -> bool:
 
 
 def observation_guidance(question: str) -> ObservationGuidance | None:
+    from agronomy_agent.request_scope import information_request_kind
+    if (information_request_kind(question) in {'explanation', 'study_design', 'source_context', 'record_method', 'regulatory_information'}
+            and not (is_rate_basis_explanation(question) or is_dose_response_explanation(question)
+                or is_sampling_basis_explanation(question) or is_evapotranspiration_explanation(question))):
+        return None  # A topic alone cannot request a field observation protocol.
     methods = tuple(_matching_observation_methods(question))
     if not methods:
         return None

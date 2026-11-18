@@ -512,6 +512,15 @@ def bounded_provider_attempt(value):
     return result
 
 
+def _new_provider_attempt():
+    return {
+        "state": "pre_dispatch",
+        "submitted": False,
+        "thread_acknowledged": False,
+        "turn_acknowledged": False,
+    }
+
+
 def _bounded_protocol_json(value, limit):
     pending=[value];nodes=0;estimate=0
     while pending:
@@ -793,9 +802,9 @@ class CodexAppServerClient:
         output_schema: dict[str, Any] | None = None,
         metadata: dict[str, str] | None = None,
     ) -> AppServerResult:
+        self.last_attempt_evidence = _new_provider_attempt()
         if len(user_text)>self.MAX_FRAME_BYTES or len(base_instructions)>self.MAX_FRAME_BYTES:
             raise CodexAppServerError("App Server input text bound")
-        self.last_attempt_evidence={"state":"pre_dispatch","submitted":False,"thread_acknowledged":False,"turn_acknowledged":False}
         if getattr(self,"_completed_once",False):raise CodexAppServerError("App Server client is single-turn; no implicit retry")
         started = perf_counter()
         self._pending_notifications.clear()
@@ -2743,8 +2752,13 @@ class CodexAppServerGenerator:
         self._attempt_id=getattr(self,"_attempt_id",0)+1
         evidence={"attempt_id":self._attempt_id,"phase":self.egress_phase,"arm":self.benchmark_arm,
             "eval_id":envelope.get("eval_id") if isinstance(envelope,Mapping) else None,
-            "state":"pre_dispatch","submitted":False}
+            **_new_provider_attempt()}
         try:
+            # A reused adapter can reject a new envelope before entering the
+            # client. Its fallback evidence must describe this attempt rather
+            # than the preceding completed thread/turn.
+            if self._client is not None:
+                self._client.last_attempt_evidence = _new_provider_attempt()
             evidence["envelope_sha256"]=_sha256(_bounded_protocol_json(envelope,1048576).decode("utf-8"))
             return self._generate_with_egress_impl(messages,envelope)
         except BaseException as exc:

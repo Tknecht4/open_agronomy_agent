@@ -883,7 +883,7 @@ def test_real_unavailable_draft_or_editor_blocks_quality_gate(
             if fault_location == "draft" or self.is_editor:
                 raise RuntimeError(f"fixture real {fault_location} backend unavailable")
             self.last_generation_stats = {"generation_tokens": 12, "prompt_tokens": 50}
-            return "Soil texture describes sand, silt, and clay proportions. Apply 71 kg/ha immediately."
+            return "Soil texture describes sand, silt, and clay proportions. The most likely diagnosis is clubroot."
 
     generators = []
     def build_generator(*args, **kwargs):

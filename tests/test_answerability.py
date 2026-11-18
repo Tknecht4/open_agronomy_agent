@@ -200,7 +200,7 @@ def test_missing_calculator_input_asks_one_specific_question() -> None:
 
     assert decision.state == AnswerabilityState.ASK_ONE_DISCRIMINATING_QUESTION
     assert decision.missing_inputs == ("nutrient_percent",)
-    assert "nutrient_percent" in str(decision.response_text)
+    assert "nutrient concentration" in str(decision.response_text)
 
 
 def test_regulated_action_requires_current_authority_but_conceptual_label_question_does_not() -> None:

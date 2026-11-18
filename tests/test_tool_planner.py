@@ -347,7 +347,7 @@ def test_planner_requests_only_missing_calculation_inputs() -> None:
     assert plan.status == "clarification_required"
     assert plan.invocations[0].operation == "fertilizer_product_mass"
     assert plan.invocations[0].missing_inputs == ("nutrient_percent",)
-    assert "nutrient_percent" in str(plan.clarification)
+    assert "nutrient concentration" in str(plan.clarification)
 
 
 def test_planner_identity_is_deterministic() -> None:

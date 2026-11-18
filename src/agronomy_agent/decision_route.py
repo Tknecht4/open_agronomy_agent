@@ -7,6 +7,7 @@ from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_caps
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind, is_quantity_concept_explanation
+from agronomy_agent.request_scope import information_request_kind
 from agronomy_agent.observation_guidance import sample_event_roles_stated, stored_grain_probe_monitoring
 from agronomy_agent.request_scope import seed_quality_workflow_requested, soil_test_repeatability_requested
 from agronomy_agent.plant_health_scope import root_inspection_only_request, foliar_symptoms_reported
@@ -699,7 +700,7 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
                 source_boundary = name
                 break
 
-    if (is_mechanism_explanation(question) or is_quantity_concept_explanation(question)
+    if (information_request_kind(question) or is_mechanism_explanation(question) or is_quantity_concept_explanation(question)
             or stored_grain_probe_monitoring(question) or soil_test_repeatability_requested(question)):
         return DecisionRouteState(
             question=question, decision="exam_review", crop=crop, country=signals.country,

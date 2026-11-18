@@ -202,6 +202,15 @@ without their antecedent.
 Retain application-message and transport-instruction hashes separately: the
 App Server text-only control also changes its raw-reference prompt recipe.
 
+The version-one canonical case contract binds the first question, supplied facts
+and exact compiled messages. Retained follow-up turns do not by themselves admit
+changed provider questions, history transcripts or updated facts. A raw history
+transcript also differs from the admitted single-user message shape; the provider
+client accepts one turn per instance. Deterministic product follow-ups may still
+complete locally. Extending hosted conversation coverage requires a versioned
+turn-aware contract, reviewed per-turn payloads, fresh single-use clients and a
+new whole hosted assessment. A contract rejection is not model refusal evidence.
+
 A live diagnostic needs fresh source-bound authorization for the exact cases,
 compiled prompts, synthetic facts, selected licensed evidence and verification
 payloads. Legacy authorizations do not grant the current production recipe or
@@ -260,6 +269,13 @@ unknown. Local process closeout does not establish remote cancellation. Record
 every draft and editor attempt, including failed and unknown outcomes, without
 automatic retries. Such diagnostics cannot satisfy native qualification or
 support a matched three-model performance claim.
+
+Current adapter and client invocations reset attempt evidence before local
+validation. A predispatch rejection must not inherit an earlier call's submitted
+state or thread/turn identifiers. Genuine current initialization and transport
+evidence remains attached to its own failure. Historical records retain their
+original bytes; qualify any stale-attempt metadata with source-order evidence
+rather than rewriting it or counting it as a new provider call.
 
 ### Complete comparison campaigns
 
@@ -360,6 +376,12 @@ known length failure or required unknown evidence, and contains its owned proces
 groups on cancellation. Attempted, unledgered and unstarted cells remain distinct;
 unstarted cells are not fabricated failed observations.
 
+A child can exit successfully after an OS-limited short write. A captured log
+that reaches its file ceiling therefore returns `file_hardcap_reached` rather
+than establishing complete output. The retained limited bytes are not repaired
+or treated as the full original log. The dispatch receipt records the effective
+ceiling, including a stricter inherited OS hard limit.
+
 Retain `run-clock.json`, `closeout.json`, `terminal-closeout.json` and any expected
 `closeout-failure.json` with the ordinary run artifacts. The terminal seal binds
 the report, retention, clock, closeout and expected failure presence/hash. Deleting
@@ -458,6 +480,15 @@ applicability remain separate dimensions. Tool correctness is reported
 separately; an explicitly inapplicable manual/no-attempt observation differs
 from an unassessable attempt or missing evidence.
 
+The release report's top-level `metrics.numeric_accuracy` and
+`counts.numeric_required` summarize `production_full` only. Missing numeric-score
+checks span all arms; lane/family numeric summaries pool them. Use arm-filtered
+observation records or arm-specific model-metric groups for comparisons.
+
+Keep the instruments distinct: recorded `numeric_tolerance` scores and rubric
+`numeric_unit_accuracy` labels can cover different cases. A finite parser zero
+is an observed proxy score, not a missing value or a diagnosis of the error.
+
 Supply an explicit versioned project policy for domain/dimension weights,
 failure, truncation, missingness and sensitivity profiles. Hash equality binds
 the policy to a plan but does not prove prospective preregistration. Unknown
@@ -466,6 +497,22 @@ safety remain visible; descriptive aggregates grant no promotion or ranking
 authority. Contrasts require recorded matching facts, criterion masks and cohort,
 with configuration/source/runtime and each arm's recipe identities retained.
 Hardware and timing comparability need their own evidence.
+
+For each observation, exclude only outcome dimensions explicitly marked
+`not_applicable` by the rubric/arm mask, and normalize the declared weights over
+the remaining dimensions. A non-numeric explanation therefore does not need a
+numeric label. Missing applicable labels or rubrics remain unknown; an empty
+set of applicable weighted outcomes does not create a success. Failure,
+truncation, termination, safety and fixed domain/cluster denominators retain
+their separate rules. Matching criterion masks remain required for contrasts.
+
+Earlier scorer code required every global policy dimension even when the rubric
+marked one inapplicable. Reports from that implementation can contain artificial
+unknown composites. Retain their original code and output identities, then run
+the maintained analyzer into a separately identified derived directory after
+the repair. Record the changed evaluator mechanics explicitly; unchanged policy
+bytes do not mean the historical implementation used this normalization.
+Do not replace labels, references or genuine unknowns to obtain a complete score.
 
 `configs/model_scoring_development_v1.json` supplies a provisional policy for
 the ten exposed agronomic development domains. Each domain has weight 0.1;
@@ -482,7 +529,7 @@ and truncated observations receive a descriptive outcome penalty of zero,
 while their semantic and safety labels can remain unknown. Report fatal failures
 and missing safety review separately; neither a high average nor complete
 synthetic labels authorize a ranking, rollout or promotion. Complete scores
-require every planned weighted domain/cluster/label or the declared execution
+require every planned applicable weighted domain/cluster/label or the declared execution
 penalty. Contrasts additionally require matching facts, criterion masks and
 recorded compatible conditions. This policy does not admit cases, run a model,
 or replace the release gate.
@@ -546,6 +593,12 @@ Model-metric files, retained private labels/policy, source bindings and fixture
 plans remain controller-only. They have no automatic public projection. Use a
 new output directory outside every immutable input directory. A later ordinary
 reanalysis does not silently inherit these optional criterion labels.
+
+Each model-metric input file is limited to 2 MiB. Check the complete export
+before starting reanalysis. Unlike `--reviews`, `--criterion-reviews` labels
+are not inherited or accumulated from parent analyses: each invocation needs
+the complete intended label set. Separate segment analyses retain only that
+invocation's labels and leave the remaining eligible labels unknown.
 
 Workspace feedback aggregation is a review summary, not executed regression
 evidence. An ideal answer or approved feedback cannot qualify a rollout-review

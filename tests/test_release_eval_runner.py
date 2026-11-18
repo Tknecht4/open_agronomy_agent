@@ -953,6 +953,29 @@ def test_order3_real_child_file_hardcap_and_descendant_containment(tmp_path):
     assert not sentinel.exists()
 
 
+def test_successful_short_write_at_inherited_file_limit_is_not_complete_output(tmp_path):
+    # Lower only an owned subprocess's limit, never the pytest controller's.
+    script = """
+import json,os,resource,sys,time
+from pathlib import Path
+from agronomy_agent.release_eval_runner import _command
+root=Path(sys.argv[1])
+resource.setrlimit(resource.RLIMIT_FSIZE,(2048,2048))
+policy={'retention_budget_bytes':131072,'finalization_reserve_bytes':4096,
+        'minimum_free_bytes':1,'file_hardcap_bytes':4096}
+status,reason=_command([sys.executable,'-c',"import os; os.write(1,b'x'*8192)"],
+    cwd=root,output=root/'limited.log',timeout=3,
+    execution_guard={'directory':str(root),'policy':policy,'deadline_monotonic':time.monotonic()+3})
+print(json.dumps({'status':status,'reason':reason,'bytes':(root/'limited.log').stat().st_size,
+    'applied_cap':json.loads((root/'child-dispatch.json').read_text())['effective_file_hardcap_bytes']}))
+"""
+    result = subprocess.run([sys.executable, '-c', script, str(tmp_path)],
+        cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+    observed = json.loads(result.stdout)
+    assert observed == {'status':125, 'reason':'file_hardcap_reached', 'bytes':2048, 'applied_cap':2048}
+
+
 def test_order3_legacy_cancel_propagates_without_later_dispatch(tmp_path, monkeypatch):
     import agronomy_agent.release_eval_runner as runner
     monkeypatch.setattr(runner, "_command", lambda *_a, **_k: (_ for _ in ()).throw(KeyboardInterrupt("cancel")))

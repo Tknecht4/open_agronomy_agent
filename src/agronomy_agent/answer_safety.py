@@ -5,7 +5,7 @@ from typing import Any
 
 from agronomy_agent.answer_verifier import bounded_decision_support
 from agronomy_agent.observation_guidance import stored_grain_context
-from agronomy_agent.answerability import preferred_response_language, is_quantity_concept_explanation, requests_regulated_action, non_prescriptive_help_requested, has_application_instruction
+from agronomy_agent.answerability import preferred_response_language, is_quantity_concept_explanation, requests_regulated_action, non_prescriptive_help_requested, has_application_instruction, has_access_or_harvest_instruction
 from agronomy_agent.quantity_claims import remove_numeric_application_instructions
 
 
@@ -47,6 +47,15 @@ def enforce_answer_safety_postconditions(
     answer_text = _normalize_field_trafficability_gaps(answer_text, question=question)
     answer_text = _normalize_salinity_terminology(answer_text, question=question, route=route)
     answer_text = _ensure_cross_border_fertility_authority_boundary(answer_text, question=question)
+    if has_access_or_harvest_instruction(answer_text) and re.search(
+        r"\b(?:re[- ]?entry|restricted[- ]entry|pre[- ]?harvest|rei|phi|pesticide|label|treated|sprayed)\b",
+        str(question or '') + '\n' + answer_text, re.I,
+    ):
+        answer_text = (
+            "Entry, harvest or grazing permission is not established by the available answer. "
+            "Verify the exact product's current applicable label and all activity-specific restrictions; "
+            "an explanation does not establish that those conditions have been met."
+        )
     if (non_prescriptive_help_requested(str(question or ""))
             or (_route_question_type(route) == "product_label"
                 and not requests_regulated_action(str(question or "")))):
@@ -56,7 +65,7 @@ def enforce_answer_safety_postconditions(
                 "The available answer does not support an application rate. "
                 "A general explanation or evidence comparison does not establish permission for a field operation."
             )
-        if has_application_instruction(answer_text):
+        if has_application_instruction(answer_text) or has_access_or_harvest_instruction(answer_text):
             answer_text = bounded_decision_support(str(question), _route_question_type(route)) or (
                 "A general explanation or evidence comparison does not establish a product choice or "
                 "permission for a field application. The application needs its own evidence and current authority."

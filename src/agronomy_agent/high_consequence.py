@@ -4,13 +4,14 @@ import re
 from typing import Any
 
 from agronomy_agent.answerability import is_quantity_concept_explanation, is_mechanism_explanation, product_action_request_text, has_recognized_regulated_product
+from agronomy_agent.request_scope import information_request_kind
 
 
 HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
 
 
 def fertility_quantity_requested(question: str) -> bool:
-    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
+    if information_request_kind(question) or is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
         return False
     # Fertilizer shorthand is case-sensitive here: a possessive "label's rate"
     # is not a sulphur request. Numeric proposals below have their own units.
@@ -57,7 +58,10 @@ def fertility_quantity_requested(question: str) -> bool:
 
 
 def classify_high_consequence_domains(question: str) -> list[str]:
-    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
+    task = information_request_kind(question)
+    if task == 'regulatory_information':
+        return ['regulatory_compliance']
+    if task != 'source_context' and (task or is_quantity_concept_explanation(question) or is_mechanism_explanation(question)):
         return []
     domains: list[str] = []
     product_term = has_recognized_regulated_product(question) or re.search(
@@ -107,7 +111,7 @@ def classify_high_consequence_domains(question: str) -> list[str]:
         and not re.search(r"\b(?:weather|rain\w*|wind|temperature|frost|storm|spray|météo|pluie|vent)\b", question, re.I)
     )
     if not financial_forecast_only and re.search(
-        r"\b(?:current weather|forecast|spray window|spray today|spray tomorrow|rain today|rain tomorrow|wind now|"
+        r"\b(?:(?:current|latest|recent|local) (?:[a-z-]+ ){0,2}weather|forecast|spray window|spray today|spray tomorrow|rain today|rain tomorrow|wind now|"
         r"météo actuelle|prévisions?|fenêtre de pulvérisation|pulvériser aujourd['’]hui|pulvériser demain|"
         r"pluie aujourd['’]hui|pluie demain|vent maintenant)\b",
         question,

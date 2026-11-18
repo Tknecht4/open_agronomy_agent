@@ -584,15 +584,16 @@ def _command(
         if time.monotonic() >= end:
             raise _PolicyStop("dispatch_deadline")
     with output.open("x", encoding="utf-8") as handle:
+        effective_file_cap = None
         if execution_guard:
             _capacity(Path(execution_guard["directory"]), execution_guard["policy"])
             if time.monotonic() >= end:
                 raise _PolicyStop("dispatch_deadline")
-        def file_limit():
             cap = execution_guard["policy"]["file_hardcap_bytes"]
             _, inherited = resource.getrlimit(resource.RLIMIT_FSIZE)
-            cap = cap if inherited == resource.RLIM_INFINITY else min(cap, inherited)
-            resource.setrlimit(resource.RLIMIT_FSIZE, (cap, cap))
+            effective_file_cap = cap if inherited == resource.RLIM_INFINITY else min(cap, inherited)
+        def file_limit():
+            resource.setrlimit(resource.RLIMIT_FSIZE, (effective_file_cap, effective_file_cap))
         child = None
         try:
             # Defer cancellation until creation/assignment is inside containment.
@@ -604,7 +605,8 @@ def _command(
                 )
             if execution_guard:
                 write_new_json(output.parent / "child-dispatch.json", {"pid": child.pid,
-                    "started_monotonic_seconds": time.monotonic(), "deadline_monotonic_seconds": end})
+                    "started_monotonic_seconds": time.monotonic(), "deadline_monotonic_seconds": end,
+                    "effective_file_hardcap_bytes": effective_file_cap})
             if execution_guard is None:
                 return child.wait(timeout=timeout), "completed"
             while True:
@@ -616,6 +618,11 @@ def _command(
                     return 124, "timeout"
                 status = child.poll()
                 if status is not None:
+                    # Some runtimes accept a short write at RLIMIT_FSIZE and
+                    # exit successfully. A log at the ceiling cannot establish
+                    # complete output, even if no later write raised EFBIG.
+                    if status == 0 and output.stat().st_size >= effective_file_cap:
+                        return 125, "file_hardcap_reached"
                     return status, "completed"
                 time.sleep(min(0.02, max(0, end - time.monotonic())))
         except subprocess.TimeoutExpired:

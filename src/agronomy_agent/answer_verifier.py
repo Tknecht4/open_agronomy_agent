@@ -34,6 +34,8 @@ from agronomy_agent.agronomic_concepts import correct_concept_claims
 from agronomy_agent.request_scope import seed_quality_workflow_requested, topic_is_supplied_arithmetic_context, proposition_assertion_status
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
 from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, non_prescriptive_help_requested, has_application_instruction
+from agronomy_agent.request_scope import information_request_kind
+from agronomy_agent.answerability import has_access_or_harvest_instruction
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -197,7 +199,7 @@ _EMPHASIZED_TERM_RE = re.compile(r"\*\*([^*\n]{2,80})\*\*")
 _NAMED_CONDITION_RE = re.compile(
     r"\b((?:(?:gray leaf|grey leaf|early|late|stem|stripe|leaf|root|seedling|downy|powdery|white|gray|grey|bacterial|"
     r"fusarium|verticillium)\s+)(?:blight|rust|mildew|rot|spot|wilt|mosaic|canker|smut|mold|scab|anthracnose)"
-    r"|(?:blight|rust|mildew|rot|wilt|mosaic|canker|smut|mold|scab|anthracnose))\b",
+    r"|(?:clubroot|blight|rust|mildew|rot|wilt|mosaic|canker|smut|mold|scab|anthracnose))\b",
     re.IGNORECASE,
 )
 _NAMED_PEST_RE = re.compile(
@@ -1540,7 +1542,7 @@ def assess_claim_risk(
         reasons.append("unsupported_named_condition")
     if unsupported_pests:
         reasons.append("unsupported_named_pest")
-    if _unsupported_diagnostic_assertion(candidate, evidence_text):
+    if _unsupported_diagnostic_assertion(candidate, evidence_text, reported_context=question):
         reasons.append("unsupported_diagnostic_certainty")
     if _destroys_diagnostic_sampling_contrast(question, candidate):
         reasons.append("diagnostic_sampling_contrast_destroyed")
@@ -1552,6 +1554,8 @@ def assess_claim_risk(
         reasons.append("named_product_source_contradiction")
     if non_prescriptive_help_requested(question) and has_application_instruction(candidate):
         reasons.append("unrequested_application_instruction")
+    if non_prescriptive_help_requested(question) and has_access_or_harvest_instruction(candidate):
+        reasons.append("unsupported_regulated_permission")
     if _UNSUPPORTED_CERTAINTY_RE.search(candidate):
         reasons.append("unsupported_field_certainty")
     if (
@@ -2494,13 +2498,29 @@ def _verify_answer_impl(
         final_assessment = rewrite_assessment
     else:
         fallback = fallback_answer()
+        candidates = [
+            (draft, draft_assessment),
+            *([(editor_output, rewrite_assessment)] if not record_losses else []),
+            (fallback, assess(fallback)),
+        ]
+        if 'unsupported_diagnostic_certainty' in draft_assessment.reasons:
+            retained = ' '.join(sentence for sentence in re.split(r'(?<=[.!?])\s+', draft.strip())
+                if not _unsupported_diagnostic_assertion(sentence, evidence_text, reported_context=question))
+            bounded = (retained + '\n\n' if retained else '') + (
+                'The question alone does not confirm a field diagnosis. '
+                'Keep reported observations and diagnostic reports attributed to their source.'
+            )
+            candidates.append((bounded, assess(bounded)))
+        if all(_blocking_claim_reasons(assessment) for _, assessment in candidates):
+            bounded = (
+                'The available response does not support a reliable conclusion. '
+                'I cannot confirm a diagnosis or authorize a field action from it. '
+                'A relevant reviewed source or representative observation is needed to resolve the missing claim.'
+            )
+            candidates.append((bounded, assess(bounded)))
         final_answer, final_assessment = _select_best_degraded_answer(
             question=question,
-            candidates=(
-                (draft, draft_assessment),
-                *(((editor_output, rewrite_assessment),) if not record_losses else ()),
-                (fallback, assess(fallback)),
-            ),
+            candidates=candidates,
         )
     return AnswerVerificationResult(
         answer=final_answer,
@@ -3309,6 +3329,7 @@ def _blocking_claim_reasons(assessment: ClaimRiskAssessment) -> tuple[str, ...]:
         "high_consequence_claim_review",
         "missing_decision_content",
         "weak_primary_evidence_alignment",
+        "decision_capsule_anchor_missing",
     }
     return tuple(reason for reason in assessment.reasons if reason not in advisory)
 
@@ -3476,6 +3497,11 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
 
     def add(name: str, instruction: str, *patterns: str) -> None:
         requirements.append(_IntentRequirement(name=name, instruction=instruction, patterns=tuple(patterns)))
+
+    if information_request_kind(question):
+        # Topic vocabulary cannot create an unrequested diagnosis, treatment
+        # or nutrient recommendation. Independent claim checks remain active.
+        return ()
 
     help_kind = bounded_product_help_kind(question)
     if clubroot_workflow_applicable(question):
@@ -5510,6 +5536,8 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
     concept = bounded_concept_prefix(question)
     def with_concept(body: str) -> str:
         return concept + "\n\n" + body if concept and concept not in body else body
+    if information_request_kind(question):
+        return concept
     mixed = _mixed_rate_support(question)
     if mixed:
         return with_concept(mixed)
@@ -5541,7 +5569,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "", _inc
             return concept + "\n\n" + _conservative_failure_answer(question_type, question=question, _include_concept=False)
     if _looks_like_french(question):
         return _french_conservative_failure_answer(question_type, question=question)
-    if is_mechanism_explanation(question):
+    if information_request_kind(question) or is_mechanism_explanation(question):
         return _exam_review_failure_answer(question)
     if simple_definition_subject(question) in {"soil texture", "crop rotation"}:
         return _exam_review_failure_answer(question)
@@ -6311,13 +6339,34 @@ def _integrated_specialty_decision_answer() -> str:
     )
 
 
-def _unsupported_diagnostic_assertion(answer: str, evidence: str) -> bool:
+def _unsupported_diagnostic_assertion(answer: str, evidence: str, *, reported_context: str = '') -> bool:
     """A named organism is not evidence of an asserted field diagnosis.
 
     Only an explicit source exclusion can support the narrow negative form.
     Positive certainty still requires review; mere name overlap is insufficient.
     Questions are deliberately not a source of diagnostic confirmation.
     """
+    from agronomy_agent.query_context import extract_crop_entities
+
+    field_assertion = re.compile(
+        r"\b(?:your|this|these)\s+(?P<subject>[a-z-]+(?: [a-z-]+){0,3}?)\s+"
+        r"(?:has|have|is infected with|are infected with|suffers? from)\s+"
+        r"(?P<condition>" + _NAMED_CONDITION_RE.pattern + r")", re.I,
+    )
+    for match in field_assertion.finditer(answer):
+        if not extract_crop_entities(match['subject']) and not re.search(
+            r"\b(?:crops?|plants?|fields?|roots?|leaves|seedlings?)\b", match['subject'], re.I,
+        ):
+            continue
+        prefix = answer[:match.start()]
+        if proposition_assertion_status(prefix) != 'asserted':
+            continue
+        attributed = re.search(r"\byou (?:reported|said|described)(?: that)?\s+$", prefix, re.I)
+        lab_attributed = re.search(r"\baccording to (?:your|the supplied) (?:lab(?:oratory)? )?report,\s*$", prefix, re.I)
+        if (attributed or lab_attributed) and match['condition'].casefold() in reported_context.casefold():
+            if not lab_attributed or re.search(r"\b(?:lab|laboratory|report)\b", reported_context, re.I):
+                continue
+        return True
     for match in _DIAGNOSIS_ASSERTION_RE.finditer(answer):
         tail = answer[match.end():].split(";", 1)[0].split("\n", 1)[0]
         negative = re.match(r"\s+not\s+([^.!?]+)", tail, re.IGNORECASE)

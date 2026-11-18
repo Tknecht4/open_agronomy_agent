@@ -80,6 +80,20 @@ an explicitly requested affected-versus-normal soil sampling contrast, even if
 a later disclaimer follows. These bounded rules and lexical checks do not form
 a general scientific correctness verifier; model answers still require review.
 
+`request_scope.information_request_kind` binds recognized whole requests for
+explanations, concept comparisons, study designs, record organization and
+pre-decision checklists. Answerability, route repair, decision obligations,
+observation methods, verifier completeness and fallback selection share that task scope. Source
+lookups keep their source route; recordkeeping requirements retain current
+regulatory-evidence checks. Incidental
+nutrient, disease or label vocabulary cannot create an unrequested operational
+checklist. Mixed actions, field-specific diagnoses, exact restriction queries
+and unconsumed instructions retain ordinary decision handling. These lexical
+contracts do not establish general language understanding or factual accuracy.
+Independent output checks still reject unsupported measurements, diagnoses,
+application instructions and entry/harvest permissions. Explicitly conditional
+label guidance is not evidence that its conditions have been satisfied.
+
 Explicit SoilERI interpretation keeps general erosion context separate from the
 named specification. `named_regional_product_coverage` records whether that
 source is indexed and retrieved; missing coverage is disclosed in the prompt
@@ -260,12 +274,12 @@ it cannot infer individually capped temperature extremes. These operations
 share non-executing readiness validators and whole-request guards for extra
 decisions, permission requests and unhandled questions. The historical v1
 operation family remains distinct from the current calculator contract. Seed-mass
-arithmetic requires an explicit denominator for a selected scalar result. The v4
+arithmetic requires an explicit denominator for a selected scalar result. The v6
 planner wrapper can execute two labelled conditional calculations when the sole
 gap is unqualified survival and all other inputs, including germination, are
 valid. Its `seed_survival_clarification.v1` parent remains unresolved, has no
 primary value and retains PARTIAL evidence coverage. Both children use the
-unchanged v3 calculator and preserve metric or imperial method, supplied
+current v5 calculator and preserve metric or imperial method, supplied
 percentages and assumptions. Preview plans without executing them; the adjacent
 user-only denominator reply still resolves the original calculation. Missing,
 invalid, explicitly excluded bases and mixed operational requests retain their

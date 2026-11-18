@@ -1648,6 +1648,120 @@ def test_canonical_failed_attempt_keeps_known_acknowledgements_not_stale_stats(t
     assert attempt["event_diagnostic"]["params_shape"] == {"message": "str"}
 
 
+@pytest.mark.parametrize("rejection", ["question", "envelope_bound", "config"])
+def test_rejected_attempt_after_success_does_not_inherit_provider_submission(tmp_path, monkeypatch, rejection):
+    import agronomy_agent.codex_app_server as module
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+
+    class CompletedClient(_FakeClient):
+        def generate(self, **kwargs):
+            result = super().generate(**kwargs)
+            result.receipt["selected_model"] = "gpt-6-luna"
+            self.last_attempt_evidence = {
+                "state": "protocol_completed", "submitted": True,
+                "thread_acknowledged": True, "turn_acknowledged": True,
+                "thread_id": "previous-thread", "turn_id": "previous-turn",
+            }
+            return result
+
+    monkeypatch.setattr(module, "CodexAppServerClient", CompletedClient)
+    generator = _canonical_generator(tmp_path)
+    messages = [{"role": "system", "content": "Synthetic system"},
+                {"role": "user", "content": "What should I check?"}]
+    envelope = _build_benchmark_egress_envelope(
+        generator=generator, messages=messages, eval_id=_EVAL_ID,
+        question="What should I check?", field_context={}, context=None, resources=None)
+    assert generator.generate_with_egress(messages, envelope) == "bounded answer"
+    previous = generator._client.last_attempt_evidence
+    rejected = copy.deepcopy(envelope)
+    if rejection == "question":
+        rejected["question_fragment"] = "An unapproved follow-up"
+    elif rejection == "envelope_bound":
+        rejected["unclassified"] = "x" * (1048576 + 1)
+    else:
+        generator._model_config_path.write_text("changed")
+
+    with pytest.raises(CodexAppServerError) as raised:
+        generator.generate_with_egress(messages, rejected)
+    attempt = raised.value.provider_attempt
+    assert len(generator._client.calls) == 1
+    assert attempt["attempt_id"] == 2 and attempt["state"] == "pre_dispatch"
+    assert attempt["submitted"] is False
+    assert attempt["thread_acknowledged"] is False and attempt["turn_acknowledged"] is False
+    assert "thread_id" not in attempt and "turn_id" not in attempt
+    assert generator.last_generation_stats is None
+    assert previous["submitted"] is True and previous["turn_id"] == "previous-turn"
+
+
+def test_current_client_failure_evidence_survives_without_exception_annotation(tmp_path, monkeypatch):
+    import agronomy_agent.codex_app_server as module
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+
+    class FailedClient(_FakeClient):
+        def generate(self, **kwargs):
+            self.last_attempt_evidence = {
+                "state": "turn_acknowledged", "submitted": True,
+                "thread_acknowledged": True, "turn_acknowledged": True,
+                "thread_id": "current-thread", "turn_id": "current-turn",
+            }
+            raise CodexAppServerError("current transport failure")
+
+    monkeypatch.setattr(module, "CodexAppServerClient", FailedClient)
+    generator = _canonical_generator(tmp_path)
+    messages = [{"role": "system", "content": "Synthetic system"},
+                {"role": "user", "content": "What should I check?"}]
+    envelope = _build_benchmark_egress_envelope(
+        generator=generator, messages=messages, eval_id=_EVAL_ID,
+        question="What should I check?", field_context={}, context=None, resources=None)
+    with pytest.raises(CodexAppServerError) as raised:
+        generator.generate_with_egress(messages, envelope)
+    attempt = raised.value.provider_attempt
+    assert attempt["submitted"] is True and attempt["state"] == "turn_acknowledged"
+    assert attempt["thread_id"] == "current-thread" and attempt["turn_id"] == "current-turn"
+
+
+def test_current_client_initialization_failure_retains_its_own_evidence(tmp_path, monkeypatch):
+    import agronomy_agent.codex_app_server as module
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+
+    def failed_client(**kwargs):
+        error = CodexAppServerError("current initialization failure")
+        error.provider_attempt = {"state": "initializing", "submitted": False, "request_id": "current-init"}
+        raise error
+
+    monkeypatch.setattr(module, "CodexAppServerClient", failed_client)
+    generator = _canonical_generator(tmp_path)
+    messages = [{"role": "system", "content": "Synthetic system"},
+                {"role": "user", "content": "What should I check?"}]
+    envelope = _build_benchmark_egress_envelope(
+        generator=generator, messages=messages, eval_id=_EVAL_ID,
+        question="What should I check?", field_context={}, context=None, resources=None)
+    with pytest.raises(CodexAppServerError) as raised:
+        generator.generate_with_egress(messages, envelope)
+    assert generator._client is None
+    assert raised.value.provider_attempt["state"] == "initializing"
+    assert raised.value.provider_attempt["request_id"] == "current-init"
+    assert raised.value.provider_attempt["submitted"] is False
+
+
+@pytest.mark.parametrize("oversized", ["user_text", "base_instructions"])
+def test_client_input_bound_resets_previous_attempt_evidence(oversized):
+    client = object.__new__(CodexAppServerClient)
+    previous = {"state": "protocol_completed", "submitted": True,
+                "thread_id": "previous-thread", "turn_id": "previous-turn"}
+    client.last_attempt_evidence = previous
+    values = {"user_text": "question", "base_instructions": "bounded"}
+    values[oversized] = "x" * (client.MAX_FRAME_BYTES + 1)
+    with pytest.raises(CodexAppServerError, match="input text bound"):
+        client.generate(**values)
+    assert client.last_attempt_evidence["state"] == "pre_dispatch"
+    assert client.last_attempt_evidence["submitted"] is False
+    assert client.last_attempt_evidence["thread_acknowledged"] is False
+    assert client.last_attempt_evidence["turn_acknowledged"] is False
+    assert "thread_id" not in client.last_attempt_evidence and "turn_id" not in client.last_attempt_evidence
+    assert previous["submitted"] is True and previous["turn_id"] == "previous-turn"
+
+
 @pytest.mark.parametrize("change",["doc","graph","guard","missing","rights","eligibility"])
 def test_canonical_direct_egress_shares_membership_and_completeness_validation(tmp_path,change):
     from agronomy_agent.agent import _build_benchmark_egress_envelope

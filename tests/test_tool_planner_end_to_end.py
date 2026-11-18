@@ -96,7 +96,7 @@ def test_missing_calculator_input_returns_only_the_minimal_clarification() -> No
     )
 
     assert metadata["generation_path"] == "deterministic_tool_clarification"
-    assert answer == "To calculate this, provide nutrient_percent."
+    assert answer == "To calculate this, provide nutrient concentration on the stated basis (%)."
     assert "soil test" not in answer.casefold()
     assert "cannot" not in answer.casefold()
     assert metadata["answer_verification"]["status"] == "needs_input"
