@@ -56,6 +56,22 @@ No default profile, field authority, training or evaluation admission follows.
 
 ## Invariants
 
+For a wording correction confined to existing project context records,
+`build_active_offline_corpus.py --refresh-project-context-from <previous-store>
+--output <new-store>` verifies the complete previous release before generating
+a separate store. It preserves external shards, duplicate membership and source
+receipts byte for byte, regenerates project source hashes and the quality ledger,
+and rejects ID or duplicate changes requiring a full raw-source rebuild. Inspect
+the result before replacing the active store, then rebuild the composite runtime
+policy and run corpus, provenance and retrieval gates. The base composite builder
+does not replay the separate Ask Science context admission: preserve that
+hash-bound overlay and the current config when refreshing the active store.
+Confirm that only the project shard and active-store hashes change in the policy.
+Refresh the active runtime profile's policy and knowledge-release manifest pins
+in `configs/runtime_profiles.json` before testing app startup.
+This is a source wording
+maintenance path; it does not admit new external evidence or evaluation content.
+
 - Builders are deterministic where source bytes/config are fixed.
 - Preflights and audits do not generate, judge, mutate authority, or claim readiness beyond their stated gate.
 - Benchmark runners preserve exact questions, responses, identities, and traces in ignored run bundles.
@@ -289,10 +305,10 @@ deterministic registry/executor gate is:
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/run_benchmark_capability_conformance.py \
-  --contract configs/benchmark_capability_conformance_v2.json
+  --contract configs/benchmark_capability_conformance_v5.json
 ```
 
-The v1 contract is retained as historical evidence and intentionally fails
+The v1–v4 contracts are retained as historical evidence and intentionally fail
 current-version conformance. The [follow-up record](../docs/reviews/production-foundations-benchmark-20260927.md)
 distinguishes calculator gain from corpus gain and records interrupted model
 runs as incomplete.

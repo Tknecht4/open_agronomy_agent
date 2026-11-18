@@ -16,7 +16,7 @@ from pathlib import Path
 from agronomy_agent.codex_app_server import validate_canonical_backend
 
 from agronomy_agent import local_tools
-from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION
+from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, calculation_request_is_complete
 from agronomy_agent.agent import (
     MockGenerator,
     MLXGenerator,
@@ -47,11 +47,23 @@ from agronomy_agent.capability_registry import capability_registry
 from agronomy_agent.agronomic_calculations import (
     _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs,
     validate_unit_conversion_inputs, validate_fertilizer_field_total_inputs,
+    validate_field_product_total_inputs,
     validate_soil_water_storage_inputs,
+    validate_supplied_nutrient_inputs,
+    validate_fertilizer_product_mass_inputs, validate_sprayer_application_volume_inputs,
+    validate_grain_moisture_inputs,
+    validate_grain_harvest_index_inputs,
+    validate_circular_sampling_area_inputs,
+    validate_single_nozzle_inputs,
+    validate_mean_temperature_gdd_inputs,
+    validate_seed_calculation_inputs,
 )
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
+from agronomy_agent.water_arithmetic import WATER_INPUTS, validate_water_arithmetic_inputs
+from agronomy_agent.supplied_model_arithmetic import MODEL_INPUTS, validate_model_arithmetic_inputs
+from agronomy_agent.calculator_contracts import SEED_ESTABLISHMENT_OPERATIONS
 from agronomy_agent.router import classify_query, refine_query_route
 from agronomy_agent.answer_verifier import _EditorObservation, context_evidence_text, validate_editor_max_words, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
@@ -106,7 +118,7 @@ from agronomy_agent.server.services.conversation_context import (
 )
 from agronomy_agent.server.services.conversation_resolution import (
     ConversationResolution,
-    resolve_numeric_follow_up,
+    resolve_calculation_follow_up,
 )
 from agronomy_agent.server.settings import ServerSettings
 from agronomy_agent.server.storage.db import TraceStore
@@ -357,7 +369,7 @@ def prepare_turn_question(
     elif not reference_history_verified:
         conversation_resolution = ConversationResolution(message, "conversation_reference_gap")
     else:
-        conversation_resolution = resolve_numeric_follow_up(message, resolution_turns)
+        conversation_resolution = resolve_calculation_follow_up(message, resolution_turns)
     return {
         "model_config": model_config, "conversation_config": conversation_config,
         "history_cutoff": history_cutoff, "recent_turns": recent_turns,
@@ -398,6 +410,9 @@ def preview_turn_readiness(
                        and calculator.operation == selected.operation and dict(calculator.inputs) == dict(selected.inputs))
     reason = "calculator_planned" if independent else "generation_required"
     unverified = False
+    if independent and not calculation_request_is_complete(question, calculator.operation):
+        independent = False
+        reason = "additional_request_requires_generation"
     if independent and tool_plan.status == "ready":
         # The legacy ready plan is not a complete numerical validation contract.
         # Keep other complete operations unknown until their canonical validators
@@ -412,6 +427,59 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
+        elif calculator.operation == "field_product_total":
+            try:
+                values = validate_field_product_total_inputs(calculator.inputs)
+                area, rate = values["area_ha"], values["product_rate_kg_per_ha"]
+                # Bound the existing Decimal/JSON formatter without multiplying
+                # operands or executing a capability during readiness preview.
+                if any(len(value.as_tuple().digits) > 28 or
+                       (value and not -300 <= value.adjusted() <= 23)
+                       for value in values.values()):
+                    raise ValueError("field total operands exceed preview precision")
+                if rate and not -300 <= area.adjusted() + rate.adjusted() + 1 <= 23:
+                    raise ValueError("field total exceeds preview precision")
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
+        elif calculator.operation in SEED_ESTABLISHMENT_OPERATIONS:
+            try:
+                validate_seed_calculation_inputs(calculator.operation, calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
+        elif calculator.operation in MODEL_INPUTS:
+            try:
+                validate_model_arithmetic_inputs(calculator.operation, calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
+        elif calculator.operation in WATER_INPUTS or calculator.operation in {"fertilizer_product_mass", "sprayer_application_volume", "grain_moisture_adjustment", "single_nozzle_application_volume", "mean_temperature_gdd", "grain_harvest_index", "circular_sampling_area"}:
+            try:
+                if calculator.operation in WATER_INPUTS:
+                    validate_water_arithmetic_inputs(calculator.operation, calculator.inputs)
+                else:
+                    {"fertilizer_product_mass": validate_fertilizer_product_mass_inputs,
+                     "grain_moisture_adjustment": validate_grain_moisture_inputs,
+                     "grain_harvest_index": validate_grain_harvest_index_inputs,
+                     "circular_sampling_area": validate_circular_sampling_area_inputs,
+                     "single_nozzle_application_volume": validate_single_nozzle_inputs,
+                     "mean_temperature_gdd": validate_mean_temperature_gdd_inputs,
+                     "sprayer_application_volume": validate_sprayer_application_volume_inputs}[calculator.operation](calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
+        elif calculator.operation in {"nutrient_basis_conversion", "apparent_nutrient_balance", "liquid_product_total"}:
+            try:
+                validate_supplied_nutrient_inputs(calculator.operation, calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
         elif calculator.operation in {"tank_coverage", "fertilizer_field_total", "soil_water_storage"}:
             try:
                 validators = {"tank_coverage": validate_tank_coverage_inputs,
@@ -1282,7 +1350,15 @@ def _run_turn_impl_inner(
             deepcopy(identity), model_to_use if draft_completed else None,
         )
 
-    safety_answer = enforce_answer_safety_postconditions(
+    # Revalidate the exact deterministic response, not a path flag supplied by
+    # a backend. A topical product-label route must not append a refusal to
+    # authentic supplied-input arithmetic that already retains its boundary.
+    checked_answer, checked_path = deterministic_tool_response(context, question=message)
+    deterministic_calculation_path = (
+        checked_answer is not None and answer == checked_answer
+        and generation_metadata.get("generation_path") == checked_path
+    )
+    safety_answer = answer if deterministic_calculation_path else enforce_answer_safety_postconditions(
         answer,
         question=message,
         route=None if context is None else context.route,
@@ -1292,10 +1368,6 @@ def _run_turn_impl_inner(
     if safety_postconditions_changed:
         trace_store_payload["metadata"]["answer_safety_normalized"] = True
         answer = safety_answer
-    deterministic_calculation_path = generation_metadata.get("generation_path") in {
-        "deterministic_tool_result",
-        "deterministic_tool_clarification",
-    }
     high_consequence_policy = (
         {
             "schema_version": "open_agronomy_agent.high_consequence_policy.v1",
@@ -1804,12 +1876,24 @@ def _production_stage_observations(
             tool_execution_state = "executed"
             tool_execution_reason = "typed_capability_execution_completed"
         elif tool_plan_status == "clarification_required":
-            if not tool_invocation_ids or tool_result_ids:
-                raise ValueError(
-                    "clarification-required tool-plan has incompatible execution records"
-                )
-            tool_execution_state = "bypassed"
-            tool_execution_reason = "missing_typed_inputs"
+            if not tool_invocation_ids:
+                raise ValueError("clarification-required tool-plan has no invocation")
+            if tool_result_ids:
+                from agronomy_agent.answerability import validated_deterministic_tool_clarification
+                resolution = metadata.get("conversation_resolution") or {}
+                question = resolution.get("effective_question")
+                if (not isinstance(question, str)
+                        or sha256_text(question) != resolution.get("effective_question_sha256")
+                        or len(tool_result_records) != 1
+                        or tool_result_records[0].get("status") != "clarification_scenarios"
+                        or validated_deterministic_tool_clarification(
+                            question, tool_plan_record, tool_result_records) is None):
+                    raise ValueError("clarification scenario execution has no exact replay")
+                tool_execution_state = "executed"
+                tool_execution_reason = "conditional_arithmetic_scenarios_no_selected_result"
+            else:
+                tool_execution_state = "bypassed"
+                tool_execution_reason = "missing_typed_inputs"
         else:
             if tool_invocation_ids or tool_result_ids:
                 raise ValueError(

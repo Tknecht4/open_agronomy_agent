@@ -82,7 +82,7 @@ def test_tank_readiness_and_execution_reject_the_same_invalid_operands(changes):
                 "target_plants_per_m2": 250,
                 "tkw_g": 40,
                 "germination_pct": 92,
-                "field_survival_pct": 88,
+                "survival_basis": "germinated_seeds", "field_survival_pct": 88,
             },
             123.5178,
             "kg/ha",
@@ -225,7 +225,7 @@ def test_imperial_seed_methods_preserve_the_published_approximation() -> None:
         "target_plants_per_ft2": 28,
         "tkw_g": 39,
         "germination_pct": 99,
-        "field_survival_pct": 85,
+        "survival_basis": "germinated_seeds", "field_survival_pct": 85,
     }
     published = calculate_agronomic("seed_rate_mass_imperial", {**inputs, "method": "published_factor_10"})
     dimensional = calculate_agronomic("seed_rate_mass_imperial", {**inputs, "method": "dimensional"})
@@ -266,7 +266,7 @@ def test_weighted_average_rejects_unaccounted_area() -> None:
         ("seed_rate_mass", {"target_plants_per_m2": 250}, "missing required fields"),
         (
             "seed_rate_mass",
-            {"target_plants_per_m2": 250, "tkw_g": 40, "germination_pct": 110, "field_survival_pct": 88},
+            {"target_plants_per_m2": 250, "tkw_g": 40, "germination_pct": 110, "survival_basis": "germinated_seeds", "field_survival_pct": 88},
             "germination_pct",
         ),
         (
@@ -363,8 +363,8 @@ def test_display_keeps_nonzero_results_and_exact_total_separate_from_rounding() 
 
 
 @pytest.mark.parametrize("operation,inputs", [
-    ("seed_rate_mass", {"target_plants_per_m2": 250, "tkw_g": 40, "germination_pct": 92, "field_survival_pct": 88}),
-    ("seed_rate_mass_imperial", {"target_plants_per_ft2": 28, "tkw_g": 39, "germination_pct": 99, "field_survival_pct": 85, "method": "dimensional"}),
+    ("seed_rate_mass", {"target_plants_per_m2": 250, "tkw_g": 40, "germination_pct": 92, "survival_basis": "germinated_seeds", "field_survival_pct": 88}),
+    ("seed_rate_mass_imperial", {"target_plants_per_ft2": 28, "tkw_g": 39, "germination_pct": 99, "survival_basis": "germinated_seeds", "field_survival_pct": 85, "method": "dimensional"}),
 ])
 def test_seed_formula_marks_nonterminating_result_as_approximate(operation, inputs) -> None:
     result = calculate_agronomic(operation, inputs)

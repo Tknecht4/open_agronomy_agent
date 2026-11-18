@@ -13,15 +13,22 @@ import json
 import re
 from typing import Any, Mapping
 
-from agronomy_agent.agronomic_calculations import calculation_tool_schema
+from agronomy_agent.agronomic_calculations import calculation_tool_schema, calculate_agronomic, validate_field_product_total_inputs
+from agronomy_agent.request_scope import has_unqualified_followup
+from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, SPACED_SIGNED_NUMBER, area_unit_extension_gaps, unit_owned_area_mass_total
 from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 from agronomy_agent.foundation_math_parser import AREA, _unsafe_action_request, parse_foundation_calculation
+from agronomy_agent.supplied_nutrient_parser import parse_supplied_nutrient_calculation
+from agronomy_agent.supplied_water_parser import parse_supplied_water_calculation
+from agronomy_agent.supplied_grain_parser import parse_supplied_grain_calculation
+from agronomy_agent.supplied_geometry_biomass_parser import parse_supplied_geometry_biomass_calculation
+from agronomy_agent.supplied_model_parser import parse_supplied_model_calculation
 
 
 PLANNER_VERSION = TOOL_PLANNER_VERSION
 TOOL_PLAN_SCHEMA_VERSION = "open_agronomy_agent.tool_plan.v1"
 CALCULATOR_ID = "agronomic_calculator"
-_NUMBER = r"([0-9][0-9,]*(?:\.[0-9]+)?)"
+_NUMBER = rf"({SUPPLIED_NUMBER})"
 
 
 def _canonical(value: Any) -> str:
@@ -114,6 +121,7 @@ def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None)
     if parsed is None:
         return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION, "not_applicable", ())
     operation, inputs, missing = parsed
+    missing += area_unit_extension_gaps(question)
     tool_version = tool_version_for(operation)
     seed = {
         "planner_version": PLANNER_VERSION,
@@ -148,18 +156,24 @@ def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None)
     return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION, "ready", (invocation,))
 
 
-def execute_tool_plan(plan: ToolPlan) -> tuple[ToolResult, ...]:
+def execute_tool_plan(plan: ToolPlan, *, question: str) -> tuple[ToolResult, ...]:
     results: list[ToolResult] = []
     for invocation in plan.invocations:
+        conditional = False
         if invocation.status != "planned":
-            continue
+            from agronomy_agent.seed_survival_scenarios import conditional_seed_payload
+            payload = conditional_seed_payload(invocation, question=question)
+            if payload is None:
+                continue
+            conditional = True
         from agronomy_agent.capability_registry import capability_registry, execute_registered_capability
         spec = capability_registry().require(invocation.tool_id)
         if spec.kind not in {"calculator", "local_data"}:
             raise ValueError(f"unsupported planned tool: {invocation.tool_id}")
-        payload = execute_registered_capability(invocation.tool_id, {
-            "operation": invocation.operation, "inputs": dict(invocation.inputs),
-        })
+        if not conditional:
+            payload = execute_registered_capability(invocation.tool_id, {
+                "operation": invocation.operation, "inputs": dict(invocation.inputs),
+            })
         payload_sha256 = hashlib.sha256(_canonical(payload).encode("utf-8")).hexdigest()
         results.append(
             ToolResult(
@@ -180,7 +194,7 @@ def execute_tool_plan(plan: ToolPlan) -> tuple[ToolResult, ...]:
                 payload_sha256=payload_sha256,
                 authority_role=invocation.authority_role,
                 freshness_status="not_time_sensitive",
-                provenance=("agronomy_agent.agronomic_calculations" if invocation.tool_id == CALCULATOR_ID else spec.executor_ref.split(":")[0]),
+                provenance=("agronomy_agent.seed_survival_scenarios" if conditional else "agronomy_agent.agronomic_calculations" if invocation.tool_id == CALCULATOR_ID else spec.executor_ref.split(":")[0]),
                 limitations=(str(payload.get("boundary") or ""), *(str(item) for item in payload.get("limitations", ()))),
             )
         )
@@ -193,7 +207,7 @@ def plan_and_execute_tools(
     field_context: Mapping[str, Any] | None = None,
 ) -> tuple[ToolPlan, tuple[ToolResult, ...]]:
     plan = plan_tools(question, field_context=field_context)
-    return plan, execute_tool_plan(plan)
+    return plan, execute_tool_plan(plan, question=question)
 
 
 def calculator_contract() -> dict[str, Any]:
@@ -203,11 +217,25 @@ def calculator_contract() -> dict[str, Any]:
 def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     text = " ".join(question.replace("−", "-").split())
     lower = text.casefold()
+    supplied = parse_supplied_model_calculation(text) or parse_supplied_nutrient_calculation(text) or parse_supplied_water_calculation(text) or parse_supplied_grain_calculation(text) or parse_supplied_geometry_biomass_calculation(text)
+    if supplied is not None:
+        # A new incomplete per-area recognizer cannot hide an already complete
+        # field-total request. Invalid/ambiguous inputs never fall through.
+        if (supplied[0] in {'fertilizer_product_mass', 'fertilizer_field_total'} and supplied[2]
+                and not any(item.startswith('invalid ') for item in supplied[2])):
+            existing = parse_foundation_calculation(text)
+            if existing is not None and existing[0] == 'fertilizer_field_total' and not existing[2]:
+                return existing
+        return supplied
     if _unsafe_action_request(lower):
         return None
     if _explanation_or_method_request(lower) or _record_lookup_request(lower):
         return None
     foundation = parse_foundation_calculation(text)
+    # Legacy daily GDD can contribute verified arithmetic to a compound
+    # question. Whole-answer completion is checked separately by the agent.
+    if has_unqualified_followup(text, calculation=True) and not (foundation and foundation[0] == 'daily_gdd'):
+        return None
     if foundation is not None and not foundation[2]:
         # The foundation parser has bound every required numeric input. Its
         # complete operation is stronger evidence of arithmetic intent than a
@@ -220,7 +248,6 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
         return foundation
     parsers = (
         _parse_unit_conversion,
-        _parse_seed_rate,
         _parse_sprayer_volume,
         _parse_tank_coverage,
         _parse_daily_gdd,
@@ -277,7 +304,7 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
             "target plants/m²",
             "TKW in grams",
             "germination percent",
-            "field survival or emergence percent",
+            "overall emergence, or survival with a seeds-sown/post-germination denominator",
         )
     return None
 
@@ -366,24 +393,6 @@ def _parse_unit_conversion(text: str, lower: str):  # noqa: ANN202
     }, ()
 
 
-def _parse_seed_rate(text: str, lower: str):  # noqa: ANN202
-    if "tkw" not in lower or "plants/m²" not in lower:
-        return None
-    target = re.search(rf"(?:target stand is|targets?)\s*{_NUMBER}\s*plants/m²", text, re.IGNORECASE)
-    tkw = re.search(rf"tkw\s+is\s*{_NUMBER}\s*g", text, re.IGNORECASE)
-    germination = re.search(rf"germination\s+is\s*{_NUMBER}%", text, re.IGNORECASE)
-    survival = re.search(rf"expected (?:field survival|emergence)\s+is\s*{_NUMBER}%", text, re.IGNORECASE)
-    values = {
-        "target_plants_per_m2": target,
-        "tkw_g": tkw,
-        "germination_pct": germination,
-        "field_survival_pct": survival,
-    }
-    missing = tuple(key for key, value in values.items() if value is None)
-    inputs = {key: _number(value.group(1)) for key, value in values.items() if value is not None}
-    return "seed_rate_mass", inputs, missing
-
-
 def _parse_fertilizer_product_mass(text: str, lower: str):  # noqa: ANN202
     if not any(token in lower for token in ("supplies that", "urea supplies", "product-mass", "from urea", "from potash", "from a liquid product")):
         return None
@@ -451,7 +460,7 @@ def _parse_tank_coverage(text: str, lower: str):  # noqa: ANN202
         return None
     # This operation must bind signs rather than find a positive substring.
     # _parse_calculation already normalizes Unicode minus and whitespace.
-    number = r"(?<![\w.,+-])([+-]?\s*[0-9][0-9,]*(?:\.[0-9]+)?)"
+    number = rf"({SPACED_SIGNED_NUMBER})"
     tank = re.search(rf"{number}\s*L sprayer tank", text, re.IGNORECASE)
     rate = re.search(rf"applying\s*{number}\s*L/ha", text, re.IGNORECASE)
     values = {"tank_volume_l": tank, "application_volume_l_per_ha": rate}
@@ -515,6 +524,13 @@ def _parse_row_population(text: str, lower: str):  # noqa: ANN202
 
 
 def _parse_field_product_total(text: str, lower: str):  # noqa: ANN202
+    supplied = unit_owned_area_mass_total(text)
+    if supplied is not None:
+        try:
+            validate_field_product_total_inputs(supplied)
+        except ValueError as error:
+            return 'field_product_total', supplied, ('invalid ' + str(error),)
+        return 'field_product_total', supplied, ()
     if "whole field" not in lower or "kg/ha of a fertilizer product" not in lower:
         return None
     area = re.search(rf"field is\s*{_NUMBER}\s*ha", text, re.IGNORECASE)

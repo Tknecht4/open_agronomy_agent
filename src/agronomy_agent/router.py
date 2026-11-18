@@ -4,8 +4,11 @@ import re
 from dataclasses import dataclass
 
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
-from agronomy_agent.observation_guidance import observation_guidance
-from agronomy_agent.answerability import is_rate_basis_explanation, product_action_request_text
+from agronomy_agent.observation_guidance import observation_guidance, stored_grain_context, stored_grain_probe_monitoring
+from agronomy_agent.answerability import is_quantity_concept_explanation, is_mechanism_explanation, product_action_request_text
+from agronomy_agent.request_scope import information_request_kind
+from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup, seed_quality_workflow_requested
+from agronomy_agent.plant_health_scope import current_root_swelling_clauses
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -203,6 +206,16 @@ def _is_named_product_permission_request(question: str) -> bool:
     )
 
 
+def _stored_grain_probe_route(audience: str = "farmer") -> QueryRoute:
+    return QueryRoute(
+        question_type="crop_management", risk_level="medium",
+        namespaces=("crop_management",), required_tools=(), answer_style="plain", audience=audience,
+        query_expansion=("stored grain", "grain bin", "probe traps", "grain temperature", "insect identification", "monitoring intervals"),
+        guidance="Answer stored-grain probe-trap monitoring and count interpretation using the applicable stored-grain method and measured grain temperature. Detection counts do not authorize treatment; do not substitute field-edge sweeps or a crop-spraying decision.",
+        knowledge_bucket="farmer_knowledge", knowledge_domains=("farmer_knowledge",),
+    )
+
+
 def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     """Reconcile high-signal user intents after the broad lexical route.
 
@@ -212,13 +225,23 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     field evidence. It does not encode benchmark answers.
     """
 
-    if is_rate_basis_explanation(question):
+    if stored_grain_probe_monitoring(question):
+        return _stored_grain_probe_route(route.audience)
+    if information_request_kind(question) == 'regulatory_information':
+        return QueryRoute(
+            question_type='field_data', risk_level='high',
+            namespaces=('field_data_boundary', 'regional_environment'), required_tools=(),
+            answer_style='plain', audience=route.audience, query_expansion=(),
+            guidance='Interpret the requested recordkeeping requirements from dated applicable regulator sources. Keep an unverified retention period unknown and preserve the source jurisdiction and activity scope.',
+            knowledge_bucket='farmer_knowledge', knowledge_domains=('farmer_knowledge',),
+        )
+    if information_request_kind(question) not in {None, "source_context", "regulatory_information"} or is_quantity_concept_explanation(question):
         return QueryRoute(
             question_type="exam_review", risk_level="low",
-            namespaces=("exam_review", "product_stewardship"), required_tools=(),
+            namespaces=("exam_review", "crop_management") if information_request_kind(question) else ("exam_review", "product_stewardship"), required_tools=(),
             answer_style="exam_review", audience=route.audience,
-            query_expansion=("product rate", "nutrient basis"),
-            guidance="Explain the named rate bases directly; do not choose a product dose or a field nutrient target.",
+            query_expansion=(),
+            guidance="Answer the requested explanation or analytical method directly; do not add a field operation, product choice or nutrient target.",
             knowledge_bucket="farmer_knowledge", knowledge_domains=("farmer_knowledge",),
         )
     q = _routing_text(question)
@@ -231,6 +254,21 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     expansions = set(route.query_expansion)
     risk = route.risk_level
     guidance = route.guidance
+    operational_directive = (
+        has_action_directive(question)
+        or has_unqualified_followup(product_action_request_text(question))
+        or (
+            has(r"\b(?:calculate|compute|convert|work out)\b", question)
+            and has_unqualified_followup(question, calculation=True)
+        )
+    )
+    if operational_directive and risk == "low":
+        risk = "medium"
+    if operational_directive and qtype in {"conceptual", "exam_review"}:
+        qtype = "crop_management"
+        namespaces.discard("exam_review")
+        namespaces.add("crop_management")
+        guidance = "Answer the explanatory portion directly. Assess any additional request separately against its own scope and evidence; do not infer a field operation from an explanatory prefix."
 
     pesticide_terms = has(r"\b(?:herbicide|fungicide|insecticide|pesticide|spray|tank mix)\b", q)
     explicit_agrochemical_context = has(
@@ -369,7 +407,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             else variety_guidance
         )
 
-    biological_problem = has(
+    biological_problem = bool(current_root_swelling_clauses(question)) or has(
         r"\b(?:clubroot|swollen roots?|disease|lesions?|blight|mildew|rust|aphids?|grasshoppers?|"
         r"drosophila|insects?|pests?|ravageurs?|l[eé]sions?|maladie)\b",
         q,
@@ -553,13 +591,29 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         if risk == "regulated":
             risk = "medium"
 
+    # Reconcile the affected object and task before any domain-wide fallback.
+    if stored_grain_context(question) and not explicit_agrochemical_context:
+        qtype = "crop_management"
+        namespaces.difference_update({"fertility", "soil_health", "plant_health"})
+        namespaces.add("crop_management")
+        guidance = "Assess representative grain moisture, temperature, drying/cooling, airflow and changing storage conditions; do not substitute a live-crop nutrient differential."
+    if (has(r"\b(?:SoilERI|soil erosion risk)\b", question)
+            and qtype in {"soil_water", "regional_context", "field_data", "conceptual", "exam_review"}
+            and not has_action_directive(question) and not explicit_agrochemical_context
+            and not has(r"\b(?:choose|select|recommend|apply|spray|drain|till|cultivate|irrigate|plant)\b", request_focus(q))):
+        qtype = "field_data"
+        namespaces = {"field_data_boundary", "regional_environment", "soil_health"}
+        guidance = "Interpret the named erosion indicator's measure, class, trend and support from its specification. Unavailable thresholds remain unknown; a trend is not proof of restored soil."
+
     protected_boundary_explanation = (
         mapped_soil_field_boundary
         or nutrient_plan_decision
         or variety_decision
         or regulated_boundary_explanation
     )
-    if benign_conceptual_explanation and not protected_boundary_explanation:
+    if benign_conceptual_explanation and (
+        not protected_boundary_explanation or is_mechanism_explanation(question)
+    ):
         qtype = "exam_review"
         namespaces.difference_update(
             {"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"}
@@ -580,7 +634,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         risk_level=risk,
         namespaces=tuple(sorted(namespaces)),
         required_tools=tuple(sorted(tools)),
-        answer_style="exam_review" if benign_conceptual_explanation else route.answer_style,
+        answer_style="plain" if operational_directive else "exam_review" if benign_conceptual_explanation else route.answer_style,
         audience=route.audience,
         query_expansion=tuple(sorted(expansions)),
         guidance=guidance,
@@ -730,6 +784,8 @@ def evidence_interpretation_kind(text: str) -> str | None:
     Use the complete request so a final comparison clause cannot erase an
     application or product request elsewhere in the question.
     """
+    if has_action_directive(text):
+        return None
     q = _routing_text(text)
     # "Treat these measurements as equivalent" is a comparison, not a
     # pesticide/treatment request. Only remove that bounded grammatical use.
@@ -830,7 +886,11 @@ def _is_benign_conceptual_explanation(text: str) -> bool:
     diagnostic or product routes.
     """
 
-    if evidence_interpretation_kind(text):
+    if information_request_kind(text):
+        return information_request_kind(text) not in {"source_context", "regulatory_information"}
+    if has_action_directive(text) or has_unqualified_followup(product_action_request_text(text)):
+        return False
+    if is_mechanism_explanation(text) or evidence_interpretation_kind(text):
         return True
     q = _routing_text(text).strip()
     focus = request_focus(q).strip()
@@ -1179,7 +1239,7 @@ def _resolve_primary_question_type(text: str, current: str) -> str:
     ):
         return "product_label"
 
-    if has(r"\b(seed lots?|seed quality|germination|germ test|cold test|accelerated aging|seed vigor|vigor test)\b", text) and has(
+    if seed_quality_workflow_requested(text) and has(
         r"\b(plant|planting|stand|replant|seeding rate)\b", text
     ):
         return "crop_management"
@@ -1386,6 +1446,8 @@ def _infer_knowledge_domains(q: str, namespaces: set[str]) -> set[str]:
 
 
 def classify_query(question: str) -> QueryRoute:
+    if stored_grain_probe_monitoring(question):
+        return _stored_grain_probe_route()
     q = _routing_text(question)
     namespaces: set[str] = set()
     required_tools: set[str] = set()
@@ -2174,7 +2236,7 @@ def classify_query(question: str) -> QueryRoute:
             expansions.update({"disease severity", "scouting", "hybrid susceptibility", "growth stage", "weather", "yield potential", "economics", "label"})
             guidance = "For fungicide ROI decisions, explicitly cover disease severity or scouting, hybrid or variety susceptibility, growth stage, weather, yield potential or economics, and label fit. State that price alone is not enough."
         elif qtype == "plant_health":
-            guidance = "Diagnose first. If identification or threshold data are missing, ask for them before treatment advice."
+            guidance = "For symptoms, establish the likely cause before choosing treatment. For preventive disease planning, use crop-specific risk and current local forecasting guidance; visible infection is not always a prerequisite. Check current crop, target and product-label fit. Ask for action thresholds where applicable, rather than assuming every disease has one."
 
     if has(r"\b(insect|insects|aphid|threshold|scout|sampling|count|beneficial|natural enemies|insecticide justified)\b", q) and has(
         r"\b(insecticide|treatment|spray|justified|threshold|scout|count|crop stage)\b",
@@ -2336,7 +2398,7 @@ def classify_query(question: str) -> QueryRoute:
         expansions.update({"seed treatment", "insecticide seed treatment", "early planting", "soil temperature", "cool wet soils", "pest history", "field history", "planting conditions", "pest pressure", "seedcorn maggot", "bean leaf beetle", "wireworm", "grub", "threshold", "risk"})
         guidance = "Frame seed-treatment need as risk-based, not automatic. Explicitly ask for field history, planting conditions, and pest pressure; cover planting date, soil temperature or cool-wet soils, residue or manure history, target pest risk, threshold where available, and label fit."
 
-    if has(r"\b(seed quality|germination|vigor|vigour|seed lot|seedling vigor)\b", q):
+    if seed_quality_workflow_requested(q):
         namespaces.update({"crop_management", "plant_health", "field_data_boundary"})
         pass
         if has(r"\b(weather|cold|cool|wet|heat|stress|planting conditions|storage)\b", q):
@@ -2653,6 +2715,10 @@ def classify_query(question: str) -> QueryRoute:
         namespaces.update({"crop_management", "soil_health", "exam_review"})
 
     qtype = _resolve_primary_question_type(q, qtype)
+    if current_root_swelling_clauses(question) and qtype in {"conceptual", "exam_review", "plant_health"}:
+        qtype = "plant_health"
+        namespaces.update({"plant_health", "field_data_boundary"})
+        guidance = "Inspect representative intact roots and record crop and field pattern; swelling alone does not identify a cause."
     benign_conceptual_explanation = _is_benign_conceptual_explanation(question)
     if _is_named_product_permission_request(question):
         qtype = "product_label"
@@ -3136,7 +3202,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             pass
             expansions.update({"bloom timing", "flowering", "pollination", "pollinator activity", "temperature during bloom", "soil moisture", "tissue test", "disease scouting", "crop-specific extension"})
             guidance = "Build a crop-specific reproductive-set differential spanning pollination biology, bloom weather, water status, nutrition, and disease; do not assume one cause."
-        if has(r"\b(seed lots?|seed quality|germination|germ test|vigor|cold test|accelerated aging)\b", q):
+        if seed_quality_workflow_requested(q):
             expansions.update({"germination percentage", "vigor test", "seed lot", "soil temperature", "planting date", "seedbed", "stand establishment", "replant risk"})
             guidance = "Use lot-specific germination and vigor evidence with planting conditions to estimate stand-establishment risk; do not invent a seeding-rate adjustment."
         if has(r"\b(trait packages?|technology traits?|trait stewardship|refuge)\b", q):
@@ -3371,7 +3437,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
     # Reconcile the final decision object after broad retrieval signals have
     # been collected. These rules keep diagnosis ahead of treatment and make
     # missing-evidence guards consistent across unfamiliar question formats.
-    diagnosis_first = has(
+    diagnosis_first = bool(current_root_swelling_clauses(question)) or has(
         r"\b(?:is it|confirm|diagnos|not sure what|drift or|tank injury|"
         r"swollen roots?|yellow[- ]orange stripes?|rapidly expanding .*lesions?|"
         r"dying .*roots?|twisted after spraying|stand can recover)\b|\bclubroot\?",

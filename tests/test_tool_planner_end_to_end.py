@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from agronomy_agent.agent import generate_answer, load_agent_resources
 from agronomy_agent.server.services.chat_service import run_turn
 from agronomy_agent.server.settings import build_settings
@@ -44,6 +46,17 @@ def test_all_frozen_calculations_use_one_result_identity_through_the_full_agent_
         )
 
         invocation = metadata["tool_invocations"][0]
+        if row["eval_id"] == "ca_calc_seed_rate_01":
+            assert row["reference_numeric"] == 122.8
+            assert metadata["generation_path"] == "deterministic_tool_clarification"
+            assert len(metadata["tool_results"]) == 1
+            scenarios = metadata["tool_results"][0]["payload"]
+            assert scenarios["status"] == "clarification_scenarios"
+            assert "value" not in scenarios and scenarios["selected_scenario"] is None
+            assert [item["calculation"]["value"] for item in scenarios["scenarios"]] == pytest.approx([116.6666667, 122.8070175])
+            assert "seeds sown" in answer
+            assert metadata["answer_verification"]["status"] == "needs_input"
+            continue
         result = metadata["tool_results"][0]
         result_id = result["result_id"]
         evidence_rows = metadata["evidence_fabric"]["evidence_packet"]["capability_evidence"]
@@ -54,7 +67,14 @@ def test_all_frozen_calculations_use_one_result_identity_through_the_full_agent_
         assert invocation["invocation_id"] == result["invocation_id"]
         assert result["status"] == "calculated"
         assert answer == result["payload"]["answer"]
-        assert abs(float(result["payload"]["value"]) - float(row["reference_numeric"])) <= float(
+        reference = row["reference_numeric"]
+        if row["eval_id"] == "ca_calc_seed_rate_02":
+            # Emergence is already plants established per seeds sown. Retain
+            # the frozen 5.0 reference but verify the corrected 4.8 result.
+            assert reference == 5.0
+            reference = 4.8
+            assert result["payload"]["inputs"]["survival_basis"] == "seeds_sown"
+        assert abs(float(result["payload"]["value"]) - float(reference)) <= float(
             row["absolute_tolerance"]
         )
         assert tool_evidence[0]["result_id"] == result_id
@@ -76,7 +96,7 @@ def test_missing_calculator_input_returns_only_the_minimal_clarification() -> No
     )
 
     assert metadata["generation_path"] == "deterministic_tool_clarification"
-    assert answer == "To calculate this, provide nutrient_percent."
+    assert answer == "To calculate this, provide nutrient concentration on the stated basis (%)."
     assert "soil test" not in answer.casefold()
     assert "cannot" not in answer.casefold()
     assert metadata["answer_verification"]["status"] == "needs_input"

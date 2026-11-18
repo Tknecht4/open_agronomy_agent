@@ -200,7 +200,7 @@ def test_missing_calculator_input_asks_one_specific_question() -> None:
 
     assert decision.state == AnswerabilityState.ASK_ONE_DISCRIMINATING_QUESTION
     assert decision.missing_inputs == ("nutrient_percent",)
-    assert "nutrient_percent" in str(decision.response_text)
+    assert "nutrient concentration" in str(decision.response_text)
 
 
 def test_regulated_action_requires_current_authority_but_conceptual_label_question_does_not() -> None:
@@ -1059,3 +1059,18 @@ def test_verifier_replacement_audit_binds_defect_rules_claims_and_evidence() -> 
     assert record["evidence_ids"] == [evidence.doc_id]
     assert all(item["rule_id"] in record["failed_rule_ids"] for item in record["defect_records"])
     assert all(item["evidence_ids"] == [evidence.doc_id] for item in record["defect_records"])
+
+
+@pytest.mark.parametrize("question", [
+    "Why can applying manure affect phosphorus accumulation? Should we add more?",
+    "How can a grower apply fertilizer safely?",
+    "Explain the mechanism and apply lime.",
+    "Why does crop development change? Can the grower shorten the spray interval?",
+    "Explain how my yellow crop can be treated today.",
+    "Which alternative causes should be checked, and which product should be applied?",
+    "How can applying manure help, and would more be advisable?",
+    "Can a field be sprayed? Explain the mechanism.",
+])
+def test_mechanism_wording_cannot_remove_follow_on_action_obligations(question):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    assert not is_mechanism_explanation(question)

@@ -1,6 +1,6 @@
 {
   "schema_version": "open_agronomy_agent.release_evaluation_registry.v1",
-  "suite_id": "open_agronomy_release_foundation_v1",
+  "suite_id": "open_agronomy_release_foundation_v2",
   "claim_eligible": false,
   "model_config": "configs/model.yaml",
   "rag_config": "configs/rag.yaml",
@@ -28,8 +28,8 @@
   },
   "suites": [
     {
-      "id": "release_harness_v1",
-      "path": "data/eval/release_harness_v1.jsonl",
+      "id": "release_harness_v2",
+      "path": "data/eval/release_harness_v2.jsonl",
       "format": "scenario",
       "profiles": [
         "ci",

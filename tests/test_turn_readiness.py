@@ -21,7 +21,29 @@ AREA_CONVERSION = "How many acres are in 40 hectares?"
 TANK = "Calculate how much area will a 1000 L sprayer tank cover applying 100 L/ha, ignoring unusable tank volume?"
 FIELD_N_TOTAL = "A field covers 24 hectares. The fertilizer is 46% nitrogen. Calculate the total product for 40 kg N/ha."
 WATER_STORAGE = "Convert 0.24 m3/m3 over a uniform 30 cm layer to mm of water stored."
-SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, expected field survival is 90%."
+P_CONVERSION = "Convert 75 kg P2O5/ha to elemental phosphorus."
+P_BALANCE = "Calculate the apparent balance: 45 kg P/ha applied and 28 kg P/ha removed."
+LIQUID_TOTAL = "Compute total product volume at 3 L product/ha over 16 ha."
+WATER_CAPACITY = "For a uniform 0.8 m root zone, field capacity is 0.32 and wilting point 0.12 m3/m3. Compute total available water."
+WATER_REFILL = "Under a uniform profile, measured volumetric water is 0.21, target field capacity 0.31 and rooting depth 0.4 m. Compute water needed to refill storage, ignoring losses."
+CROP_ET = "For a standard-conditions model ETc = Kc × ETo, Kc is 1.1 and ETo is 4 mm/day. Compute ETc."
+GROSS_DEPTH = "A teaching plan needs 24 mm net irrigation and assumes 80% application efficiency. Calculate gross depth."
+DEPTH_VOLUME = "How many cubic metres supply 15 mm uniformly over 8 ha, ignoring losses?"
+NOZZLE_VOLUME = "A nozzle delivers 1.2 L/min, travel speed is 10 km/h and nozzle spacing 0.5 m. Calculate application volume."
+PRODUCT_MASS = "How much 25%-N fertilizer supplies 75 kg N/ha in a product-mass calculation?"
+GRAIN_MASS = "Grain mass is 12 t at 25% wet-basis moisture. Calculate dry matter and equivalent mass at 10% moisture, ignoring losses."
+MEAN_GDD = "Daily mean temperature is 17 C, base 6 C, no upper cap and negative values are floored at zero. Calculate GDD."
+JOINT_PRODUCT = "Calculate fertilizer product rate and total product: how much 25%-N fertilizer supplies 75 kg N/ha over 16 ha?"
+SUPPLIED_MASS = "For 120 ha at 75 kg/ha, what is the total mass?"
+SUPPLIED_PRODUCT_MASS = "For 120 ha at 75 kg/ha, what is the total product mass?"
+HARVEST_INDEX = "Total above-ground dry biomass is 12 t/ha and grain dry mass is 4.2 t/ha. Compute harvest index."
+SAMPLING_AREA = "Calculate area of a circular sampling plot with radius 12 metres. Explain why this is not the field area."
+SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, post-germination field survival is 90%."
+SEED_OVERALL = "Calculate seed rate: target stand is 80 plants/m², TKW is 4.5 g, germination is 96%, expected emergence is 75% overall of seeds sown (already including germination)."
+SEED_CONDITIONAL = "Calculate seed rate: target stand is 80 plants/m², TKW is 4.5 g, germination is 96%, field survival is 75% of germinated seeds."
+SEED_NO_LAB = "Calculate seed rate: target stand is 80 plants/m², TKW is 4.5 g, overall emergence is 75%."
+SEED_IMPERIAL = "Calculate seed rate: target stand is 8 plants/ft², TKW is 4.5 g, overall emergence is 75%."
+SEED_AMBIGUOUS = "Calculate seed rate: target stand is 80 plants/m², TKW is 4.5 g, germination is 96%, field survival is 75%."
 
 
 @pytest.fixture(scope="module")
@@ -56,11 +78,182 @@ def no_generator(*args, **kwargs):
     raise AssertionError("calculator readiness/execution must not construct a generator")
 
 
+@pytest.mark.parametrize('question,answer', [
+    ('Laboratory germination is 92%. Calculate wheat seed rate for 270 plants/m2, TKW 36 g and survival 90% of germinated seeds.', '117.391 kg/ha'),
+    ('Average daily temperature is 16 C. Calculate daily GDD with base temperature 6 C, no temperature caps and negative accumulation floored at zero.', '10'),
+    ('Root-zone depth is 0.4 m. For a uniform profile, field capacity is 0.30 and permanent wilting point is 0.15. Calculate total available water.', '60 mm'),
+])
+@pytest.mark.parametrize('backend', ['mlx', 'http'])
+def test_shared_agronomic_roles_agree_in_readiness_and_persisted_execution(runtime, monkeypatch, question, answer, backend):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    monkeypatch.setenv('AGRONOMY_AGENT_MODEL_BACKEND', backend)
+    monkeypatch.delenv('AGRONOMY_AGENT_MODEL_BASE_URL', raising=False)
+    sid = session(client)
+    view = preview(client, turn(question), sid)
+    assert view['requires_model'] is False and view['status'] == 'ready'
+    result = client.post(f'/api/sessions/{sid}/turns', headers=OWNER,
+                         json={**turn(question), 'readiness_binding':view['readiness_binding']})
+    assert result.status_code == 200, result.text
+    saved = store.get_turn(result.json()['turn_id'])
+    assert saved['answer'].startswith(answer)
+    assert saved['trace']['metadata']['generation_path'] == 'deterministic_tool_result'
+    assert saved['trace']['metadata'].get('generation_stats') is None
+
+
+def test_legacy_daily_gdd_role_aliases_keep_unvalidated_readiness_unknown(runtime):
+    # Legacy daily_gdd has no independently callable canonical input validator.
+    # A ready parser plan must not invent model-free readiness qualification.
+    client, _ = runtime
+    view = preview(client, turn('Calculate daily GDD from high 25 C, low 9 C and base 7 C.'))
+    assert view['requires_model'] is None and view['status'] == 'unknown'
+    assert view['calculator']['operation'] == 'daily_gdd'
+
+
+@pytest.mark.parametrize('question', [
+    'For 120 ha at 75 kg/ha/day, what is the total product mass?',
+    'For 120 ha at 75 kg N/ha, what is the total product mass?',
+    'For 120 ha at 75 kg/ha and 20% loss, what is the total product mass?',
+    'For 120 ha at 75 kg/ha, what is the total product mass? Then spray it.',
+    'For 120 ha at 75 kg/ha, what is the total product mass? Also flarn the crop.',
+    'For 120 ha at 7.5e1 kg/ha, what is the total product mass?',
+])
+def test_supplied_mass_preview_cannot_own_extra_units_quantities_or_tasks(runtime, monkeypatch, question):
+    client, _ = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    assert preview(client, turn(question))['requires_model'] is not False
+
+
+@pytest.mark.parametrize('question', [
+    'For 0 ha at 75 kg/ha, what is the total mass?',
+    'For -120 ha at 75 kg/ha, what is the total mass?',
+    'For 120 ha at -75 kg/ha, what is the total product mass?',
+])
+def test_supplied_mass_invalid_ranges_preview_as_input_clarification(runtime, monkeypatch, question):
+    client, _ = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    view = preview(client, turn(question))
+    assert view['requires_model'] is False and view['status'] == 'clarification_required'
+
+
+def test_supplied_mass_preview_keeps_unqualified_decimal_magnitude_unknown(runtime, monkeypatch):
+    client, _ = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    view = preview(client, turn('For 999999999999999999999999 ha at 75 kg/ha, what is the total mass?'))
+    assert view['requires_model'] is None and view['status'] == 'unknown'
+    assert view['calculator']['operation'] == 'field_product_total'
+
+
+@pytest.mark.parametrize('question', [SUPPLIED_MASS, SUPPLIED_PRODUCT_MASS])
+def test_mass_preview_does_not_execute_the_planners_imported_calculator(runtime, monkeypatch, question):
+    import agronomy_agent.tool_planner as planner
+    client, _ = runtime
+    def forbidden(*args, **kwargs):
+        raise AssertionError('planning must validate inputs without executing arithmetic')
+    monkeypatch.setattr(planner, 'calculate_agronomic', forbidden)
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    view = preview(client, turn(question))
+    assert view['requires_model'] is False and view['status'] == 'ready'
+
+
+@pytest.mark.parametrize("backend", ["mlx", "http"])
+@pytest.mark.parametrize("question,reply,answer", [
+    (SEED_AMBIGUOUS, "Overall, of seeds sown.", "4.8 kg/ha"),
+    (SEED_AMBIGUOUS, "Only germinated seeds.", "5 kg/ha"),
+    (SEED_AMBIGUOUS, "The 75% survival is among germinated seeds.", "5 kg/ha"),
+    (SEED_AMBIGUOUS, "The 75.0% survival refers to all seeds sown.", "4.8 kg/ha"),
+    (SEED_AMBIGUOUS.replace("germination is 96%, ", ""), "All seeds sown.", "4.8 kg/ha"),
+])
+def test_seed_denominator_clarification_reply_previews_and_persists_without_model(runtime, monkeypatch, backend, question, reply, answer):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
+    monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
+    sid = session(client)
+    first = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=turn(question))
+    assert first.status_code == 200, first.text
+    original = store.get_turn(first.json()["turn_id"])
+    assert original["trace"]["metadata"]["generation_path"] == "deterministic_tool_clarification"
+    view = preview(client, turn(reply), sid)
+    assert view["requires_model"] is False
+    assert view["calculator"]["operation"] == "seed_rate_mass"
+    assert view["calculator"]["missing_inputs"] == []
+    result = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                         json={**turn(reply), "readiness_binding": view["readiness_binding"]})
+    assert result.status_code == 200, result.text
+    saved = store.get_turn(result.json()["turn_id"])
+    assert saved["user_message"] == reply and saved["answer"].startswith(answer)
+    assert saved["trace"]["metadata"]["generation_path"] == "deterministic_tool_result"
+    resolution = saved["trace"]["metadata"]["conversation_resolution"]
+    assert resolution["status"] == "resolved_seed_survival_basis"
+    assert resolution["source_turn_id"] == original["turn_id"]
+    assert resolution["effective_question"].startswith(question)
+    assert store.get_turn(original["turn_id"]) == original
+
+
+def test_seed_basis_reply_cannot_use_another_session_or_stale_conversation_head(runtime, monkeypatch):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    sid = session(client)
+    first = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=turn(SEED_AMBIGUOUS))
+    assert first.status_code == 200, first.text
+    other = session(client)
+    reply = turn("Overall, of seeds sown.")
+    assert preview(client, reply, other)["requires_model"] is True
+    assert preview(client, turn("Overall, and apply it tomorrow."), sid)["requires_model"] is True
+    view = preview(client, reply, sid)
+    assert view["requires_model"] is False
+    intervening = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=turn(CONVERSION))
+    assert intervening.status_code == 200, intervening.text
+    for suffix in ("", "/stream"):
+        result = client.post(f"/api/sessions/{sid}/turns{suffix}", headers=OWNER,
+                             json={**reply, "readiness_binding": view["readiness_binding"]})
+        assert result.status_code == 409, result.text
+        assert result.json()["detail"]["code"] == "turn_readiness_stale"
+    assert store.count_session_turns(sid) == 2
+
+
+@pytest.mark.parametrize("backend", ["mlx", "http"])
+def test_conditional_seed_basis_and_missing_lab_germination_complete_without_model(runtime, monkeypatch, backend):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
+    monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
+    sid = session(client)
+    question = SEED_AMBIGUOUS.replace("germination is 96%, ", "")
+    first = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=turn(question))
+    assert first.status_code == 200, first.text
+    for message, expected_path in [("Only germinated seeds.", "deterministic_tool_clarification"),
+                                    ("Germination is 96%.", "deterministic_tool_result")]:
+        view = preview(client, turn(message), sid)
+        assert view["requires_model"] is False
+        response = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                               json={**turn(message), "readiness_binding": view["readiness_binding"]})
+        assert response.status_code == 200, response.text
+        saved = store.get_turn(response.json()["turn_id"])
+        assert saved["user_message"] == message
+        assert saved["trace"]["metadata"]["generation_path"] == expected_path
+        if expected_path.endswith("clarification"):
+            assert "germination percent" in saved["answer"]
+        else:
+            assert saved["answer"].startswith("5 kg/ha")
+            resolution = saved["trace"]["metadata"]["conversation_resolution"]
+            assert resolution["status"] == "resolved_seed_germination" and resolution["chain_depth"] == 2
+
+
 @pytest.mark.parametrize("question,path", [(CONVERSION, "deterministic_tool_result"),
                                           (AREA_CONVERSION, "deterministic_tool_result"),
                                           (TANK, "deterministic_tool_result"),
                                           (FIELD_N_TOTAL, "deterministic_tool_result"),
                                           (WATER_STORAGE, "deterministic_tool_result"),
+                                          (P_CONVERSION, "deterministic_tool_result"),
+                                          (P_BALANCE, "deterministic_tool_result"),
+                                          (LIQUID_TOTAL, "deterministic_tool_result"),
+                                          (SUPPLIED_MASS, "deterministic_tool_result"),
+                                          (SUPPLIED_PRODUCT_MASS, "deterministic_tool_result"),
+                                          *[(q, "deterministic_tool_result") for q in (WATER_CAPACITY, WATER_REFILL, CROP_ET, GROSS_DEPTH, DEPTH_VOLUME, NOZZLE_VOLUME, PRODUCT_MASS, GRAIN_MASS, MEAN_GDD, HARVEST_INDEX, SAMPLING_AREA, JOINT_PRODUCT)],
+                                          *[(q, "deterministic_tool_result") for q in (SEED_OVERALL, SEED_CONDITIONAL, SEED_NO_LAB, SEED_IMPERIAL)],
+                                          (SEED_AMBIGUOUS, "deterministic_tool_clarification"),
                                           (SEED_MISSING, "deterministic_tool_clarification")])
 @pytest.mark.parametrize("backend", ["mlx", "http"])
 def test_actual_missing_model_calculation_and_clarification_persist_without_constructor(runtime, monkeypatch, question, path, backend):
@@ -85,10 +278,17 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
     assert saved["trace"]["metadata"]["generation_path"] == path
     if path.endswith("result"):
         expected = {TANK: "10 ha", CONVERSION: "112.085 kg/ha", AREA_CONVERSION: "98.842 ac",
-                    FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm"}
+                    FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm",
+                    P_CONVERSION: "32.73 kg P/ha", P_BALANCE: "17 kg P/ha", LIQUID_TOTAL: "48 L product",
+                    SUPPLIED_MASS: "9,000 kg", SUPPLIED_PRODUCT_MASS: "9,000 kg",
+                    WATER_CAPACITY: "160 mm", WATER_REFILL: "40 mm", CROP_ET: "4.4 mm/day", GROSS_DEPTH: "30 mm",
+                    DEPTH_VOLUME: "1,200 m³", NOZZLE_VOLUME: "144 L/ha", PRODUCT_MASS: "300 kg product/ha", GRAIN_MASS: "10 t", MEAN_GDD: "11 GDD", HARVEST_INDEX: "0.35 harvest index", SAMPLING_AREA: "452.389 m²", JOINT_PRODUCT: "4,800 kg",
+                    SEED_OVERALL: "4.8 kg/ha", SEED_CONDITIONAL: "5 kg/ha", SEED_NO_LAB: "4.8 kg/ha", SEED_IMPERIAL: "4.61 lb/ac"}
         assert saved["answer"].startswith(expected[question])
+    elif question == SEED_AMBIGUOUS:
+        assert "seeds sown" in saved["answer"] and "germinated seeds" in saved["answer"]
     else:
-        assert "tkw_g" in saved["answer"]
+        assert "thousand-kernel weight in grams" in saved["answer"]
 
 
 def test_preview_is_read_only_and_does_not_create_a_session(runtime, monkeypatch):
@@ -111,7 +311,16 @@ def test_preview_is_read_only_and_does_not_create_a_session(runtime, monkeypatch
 
 @pytest.mark.parametrize("question,operation", [(TANK, "tank_coverage"),
                                                (FIELD_N_TOTAL, "fertilizer_field_total"),
-                                               (WATER_STORAGE, "soil_water_storage")])
+                                               (WATER_STORAGE, "soil_water_storage"),
+                                               (P_CONVERSION, "nutrient_basis_conversion"),
+                                               (P_BALANCE, "apparent_nutrient_balance"),
+                                               (LIQUID_TOTAL, "liquid_product_total"),
+                                               (SUPPLIED_MASS, "field_product_total"),
+                                               (SUPPLIED_PRODUCT_MASS, "field_product_total"),
+                                               (WATER_CAPACITY, "water_storage_difference"), (WATER_REFILL, "water_storage_difference"),
+                                               (CROP_ET, "crop_evapotranspiration"), (GROSS_DEPTH, "gross_irrigation_depth"),
+                                               (DEPTH_VOLUME, "water_depth_volume"), (NOZZLE_VOLUME, "single_nozzle_application_volume"),
+                                               (PRODUCT_MASS, "fertilizer_product_mass"), (GRAIN_MASS, "grain_moisture_adjustment"), (MEAN_GDD, "mean_temperature_gdd")])
 def test_qualified_calculation_preview_never_executes_an_adapter_or_creates_a_receipt(runtime, monkeypatch, question, operation):
     import agronomy_agent.agronomic_calculations as calculations
     import agronomy_agent.capability_registry as registry
@@ -324,7 +533,7 @@ def test_disabled_mock_mode_cannot_claim_real_calculator_availability(runtime):
 
 @pytest.mark.parametrize("question", [
     "Calculate how much area will a 1000 L sprayer tank cover applying 0 L/ha, ignoring unusable tank volume?",
-    "Calculate application volume for 20 nozzles flowing 1.1 L/min, travels at 10 km/h on an 11 m boom.",
+    "Calculate current ratio from current assets CAD 300,000 and current liabilities CAD 120,000.",
 ])
 def test_a_complete_plan_without_separate_canonical_validation_stays_unknown(runtime, monkeypatch, question):
     client, store = runtime
@@ -526,3 +735,165 @@ def test_preview_waiting_for_session_guard_keeps_other_api_requests_responsive(r
         release.set()
         thread.join(timeout=2)
     assert not thread.is_alive()
+
+
+
+@pytest.mark.parametrize('prefix', ['', 'Can you ', 'Could you please '])
+def test_partial_gdd_arithmetic_does_not_mark_the_whole_request_model_free(runtime, monkeypatch, prefix):
+    import agronomy_agent.agronomic_calculations as calculations
+    client, store = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    def forbidden(*args, **kwargs):
+        raise AssertionError('preview must not execute arithmetic')
+    monkeypatch.setattr(calculations, 'calculate_agronomic', forbidden)
+    question = prefix + 'Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C, mulch beds.'
+    view = preview(client, turn(question))
+    assert view['requires_model'] is True and view['status'] == 'model_required'
+    assert view['reason'] == 'additional_request_requires_generation'
+
+
+@pytest.mark.parametrize('base', [SEED_CONDITIONAL.rstrip('.'), GROSS_DEPTH.rstrip('.'), FIELD_N_TOTAL.rstrip('.')])
+def test_prepositional_followup_stays_in_model_readiness_and_persisted_request(runtime, monkeypatch, base):
+    client, store = runtime
+    prompts = []
+    class Backend:
+        backend_id = 'synthetic_scope_review'
+        intervention_profile = 'balanced'
+        draft = ('The supplied arithmetic does not set transplanting instructions. '
+                 'For transplanting help, specify the crop and seedling stage; '
+                 'seed mass does not prescribe transplant spacing.')
+        def generate(self, messages):
+            prompts.append(messages)
+            return self.draft
+        def close(self):
+            pass
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *args, **kwargs: Backend())
+    sid = session(client)
+    question = base + ', with instructions to transplant seedlings.'
+    view = preview(client, turn(question), sid)
+    assert view['requires_model'] is True and view['status'] == 'model_required'
+    response = client.post(f'/api/sessions/{sid}/turns', headers=OWNER,
+                           json={**turn(question), 'readiness_binding': view['readiness_binding']})
+    assert response.status_code == 200, response.text
+    saved = store.get_turn(response.json()['turn_id'])
+    assert saved['user_message'] == question
+    assert prompts and any('with instructions to transplant seedlings' in message['content']
+                           for messages in prompts for message in messages if message['role'] == 'user')
+    assert saved['trace']['metadata'].get('generation_path') != 'deterministic_tool_result'
+    # This imposed backend intentionally omits the requested arithmetic. Its
+    # final fallback is not a model-accuracy fixture; preserve the actual draft.
+    assert saved['trace']['metadata']['answer_verification']['draft_output'] == Backend.draft
+
+
+@pytest.mark.parametrize('water_phrase', ['carrier-water volume', 'carrier water volume'])
+def test_product_total_negative_output_boundary_remains_model_free(runtime, monkeypatch, water_phrase):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    question = ('A hypothetical field is 16 ha and a teaching example uses 3 L product/ha. '
+                'Calculate the total product volume, not a recommended rate or ' + water_phrase + '.')
+    sid = session(client)
+    payload = turn(question)
+    view = preview(client, payload, sid)
+    assert view['requires_model'] is False and view['status'] == 'ready'
+    result = client.post(f'/api/sessions/{sid}/turns', headers=OWNER,
+                        json={**payload, 'readiness_binding':view['readiness_binding']})
+    assert result.status_code == 200, result.text
+    saved = store.get_turn(result.json()['turn_id'])
+    assert saved['answer'].startswith('48 L product.')
+    assert saved['trace']['metadata']['generation_path'] == 'deterministic_tool_result'
+
+
+@pytest.mark.parametrize("backend", ["mlx", "http"])
+@pytest.mark.parametrize("weight_clause", [
+    "TKW 36 g", "thousand kernel weight 36 g",
+    "thousand-kernel weight 36 g", "36 g thousand kernel weight",
+])
+def test_ambiguous_seed_scenarios_persist_partial_evidence_without_model_or_provincial_tail(runtime, monkeypatch, backend, weight_clause):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
+    monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
+    sid = session(client)
+    question = (f"Calculate seed rate for an Alberta field: target 240 plants/m2, {weight_clause}, "
+                "germination 92%, and field survival 80%.")
+    from agronomy_agent import capability_registry as registry
+    with monkeypatch.context() as preview_patch:
+        preview_patch.setattr(registry, "execute_registered_capability", no_generator)
+        readiness = preview(client, turn(question), sid)
+    assert readiness["requires_model"] is False
+    assert "survival denominator" in readiness["calculator"]["missing_inputs"][0]
+    response = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                          json={**turn(question), "readiness_binding":readiness["readiness_binding"]})
+    assert response.status_code == 200, response.text
+    stored = store.get_turn(response.json()["turn_id"])
+    metadata = stored["trace"]["metadata"]
+    assert metadata["tool_plan"]["status"] == "clarification_required"
+    structured = stored["trace"]["structured_answer"]
+    gaps = metadata["tool_plan"]["invocations"][0]["missing_inputs"]
+    assert structured["missing_data"] == structured["missing_data_prompts"] == gaps
+    assert structured["recommended_next_steps"] == [f"Provide {item}." for item in gaps]
+    assert not any("label" in item.lower() for item in structured["recommended_next_steps"])
+    result = next(item for item in stored["trace"]["tool_invocations"] if item.get("result_id"))
+    assert result["status"] == "clarification_scenarios"
+    assert "value" not in result["payload"] and result["payload"]["selected_scenario"] is None
+    assert [item["calculation"]["value"] for item in result["payload"]["scenarios"]] == pytest.approx([108, 108/.92])
+    assert "108 kg/ha" in stored["answer"] and "117.391 kg/ha" in stored["answer"]
+    assert "only germinated seeds" in stored["answer"]
+    assert "Alberta-specific applied guidance" not in stored["answer"]
+    assert "Soil Fertility Overview" not in stored["answer"]
+    assert "does not choose an agronomic target" in stored["answer"]
+    coverage = metadata["evidence_fabric"]["evidence_packet"]["coverage"]
+    assert next(item for item in coverage if item["slot_key"] == "capability_result")["status"] == "PARTIAL"
+    stage = next(item for item in metadata["execution_stage_receipts"] if item["stage_id"] == "tool_execution")
+    assert stage["state"] == "executed"
+    assert stage["evidence"]["reason"] == "conditional_arithmetic_scenarios_no_selected_result"
+    assert metadata.get("generation_stats") is None
+    from agronomy_agent.server.services.answer_renderer import _validated_calculator_answer, render_structured_answer
+    changed = stored["answer"].replace("108 kg/ha", "109 kg/ha", 1)
+    assert not _validated_calculator_answer(changed, stored["trace"], question)
+    rendered = render_structured_answer(changed, trace=stored["trace"], question=question)
+    assert "current Alberta agricultural guidance" in rendered.answer
+    mixed = question + " Should I use this rate on my field?"
+    assert preview(client, turn(mixed), sid)["requires_model"] is True
+    assert not _validated_calculator_answer(stored["answer"], stored["trace"], mixed)
+    # A later explicit basis uses only the prior USER operands and selects the
+    # ordinary canonical scalar; the original two-scenario receipt is immutable.
+    original = deepcopy(stored)
+    reply = "Only germinated seeds."
+    view = preview(client, turn(reply), sid)
+    follow = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                        json={**turn(reply),"readiness_binding":view["readiness_binding"]})
+    assert follow.status_code == 200, follow.text
+    assert store.get_turn(follow.json()["turn_id"])["answer"].startswith("117.391 kg/ha")
+    assert store.get_turn(original["turn_id"]) == original
+
+
+@pytest.mark.parametrize("backend", ["mlx", "http"])
+def test_seedling_loss_stage_cannot_become_a_supplied_overall_survival_fact(runtime, monkeypatch, backend):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
+    monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
+    sid = session(client)
+    question = "Calculate seed rate for 240 plants/m2, TKW 36 g, germination 90%, and 20% seedling mortality of all seeds sown."
+    view = preview(client, turn(question), sid)
+    assert view["requires_model"] is False
+    response = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                          json={**turn(question), "readiness_binding":view["readiness_binding"]})
+    assert response.status_code == 200, response.text
+    original = deepcopy(store.get_turn(response.json()["turn_id"]))
+    plan = original["trace"]["metadata"]["tool_plan"]
+    assert plan["status"] == "clarification_required"
+    assert "field_survival_pct" not in plan["invocations"][0]["inputs"]
+    assert "seedling-loss definition" in original["answer"]
+    assert not any(item.get("result_id") for item in original["trace"]["tool_invocations"])
+    assert preview(client, turn("Overall, of seeds sown."), sid)["requires_model"] is True
+    # A complete explicitly conditional restatement remains ordinary arithmetic.
+    qualified = question.replace("of all seeds sown", "among germinated seeds")
+    ready = preview(client, turn(qualified), sid)
+    assert ready["requires_model"] is False
+    completed = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                            json={**turn(qualified), "readiness_binding":ready["readiness_binding"]})
+    assert completed.status_code == 200, completed.text
+    assert store.get_turn(completed.json()["turn_id"])["answer"].startswith("120 kg/ha")
+    assert store.get_turn(original["turn_id"]) == original

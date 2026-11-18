@@ -40,6 +40,76 @@ Start with the [architecture](docs/public/architecture.md), [customization guide
 
 See [contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md). Public screenshots and reports must use synthetic or redacted examples. Keep private records, credentials, and local filesystem paths out of publication.
 
+## Evaluate the current agent
+
+The [evaluation guide](docs/public/operations/release-evaluation.md) explains the
+complete comparison of raw models, the full system and hosted Luna. Results bind
+the exact source, model, cohort, arm and runtime. The [current campaign record](docs/reviews/full-evaluation-20261112.md)
+separates completed observations, diagnostic attempts and pending scientific
+review. Historical smoke panels retain their original scope.
+
+The separately frozen development campaign contains 560 original cases and 48 refusal and
+crop-scope regressions. It compares raw and full-system answers with two trials
+per case on pinned E2B and E4B models and hosted Luna. The cases are exposed
+development material; automated labels and different backend runtimes do not
+establish field accuracy or a general model ranking.
+
+The latest complete three-model comparison evaluated serving source `ea615e4`
+(November 17). Its original 560-case cohort includes 557 real-backend cases and
+three synthetic controls. The recorded project-weighted bounds below are on a
+0–100 scale; they are **not accuracy percentages or confidence intervals**.
+
+| Model | Raw model | Full system at `ea615e4` |
+| --- | ---: | ---: |
+| Gemma E2B | 26.44–26.87 | 75.97–76.28 |
+| Gemma E4B | 23.90–23.95 | 82.81–82.95 |
+| Hosted Luna | 0.00–97.22 | 25.94–95.10 |
+
+Luna lacks provider finish reasons required by the frozen scoring policy, so it
+has no comparable primary point score. Different runtimes and output budgets
+also limit comparisons. The [complete CSV](docs/public/assets/benchmarks/20261118-canonical-comparison.csv)
+retains all twelve reports, both trials, reference sources, controls and unknown
+conditions. The [campaign report](docs/reviews/full-evaluation-20261112.md)
+explains the separate 48-case regression results and execution paths.
+
+The later `d4def84` collections finished for E2B and Luna, including their recorded
+failures. Both E4B attempts lost their Colab assignments with partial full-cohort
+results; they cannot be combined into a whole run. Later serving repairs have
+source tests and retained-answer replay checks, without a fresh model assessment.
+There are no new whole-study scores for those repairs. Superseded generations
+were deleted at the owner's request; current results, required baselines, the
+latest complete comparison and compact findings remain.
+
+Current workflows include:
+
+- **Calculate from supplied inputs:** field totals, seed rates, nutrient and
+  product quantities, water, sprayer calibration, grain moisture and thermal
+  time. Recognized calculations with validated complete inputs can run without
+  loading a model. For
+  example, 120 ha at a supplied 75 kg/ha gives a total of 9,000 kg; the
+  calculation does not choose the rate.
+- **Clarify seed establishment:** when a survival percentage could mean overall
+  emergence or survival after germination, inspect both labelled calculations.
+  A short reply can select the intended basis and complete the calculation.
+- **Keep useful field records:** save observations and soil tests with their
+  known sample dates, depths and methods. Corrections preserve the original
+  record; an unknown sample date stays unknown. Unconfirmed saves keep the exact
+  captured request for retry after reopening, including corrections whose
+  original record has already been replaced.
+- **Get explanations and scouting help:** ask about measurement methods,
+  concept comparisons, study designs, crop symptoms and evidence to collect.
+  Supported explanations and record checklists retain their requested scope.
+  Current crop, disease
+  history and the requested task keep their distinct roles. Model-generated
+  explanations still need source and applicability review.
+
+A compound question retains its additional requests: a calculation cannot
+silently replace a request for field advice. Product selection and use retain
+current crop, target, jurisdiction and authority checks. The report separates
+these software contracts and execution checks from judged answer quality.
+Readable calculator clarifications preserve the missing input's typed identity;
+an omitted budget component, date or measurement remains unknown.
+
 ## Evidence and licensing
 
 This is development and research software. Regional map context is a prior, calculated area is an estimate, and model output is not field truth or pesticide-label authority. Confirm consequential decisions with current local evidence and qualified professional judgment.

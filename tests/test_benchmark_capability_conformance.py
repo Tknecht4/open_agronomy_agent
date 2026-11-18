@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run_benchmark_capability_conformance.py"
-CONTRACT = ROOT / "configs/benchmark_capability_conformance_v2.json"
+CONTRACT = ROOT / "configs/benchmark_capability_conformance_v5.json"
 
 
 def _module():
@@ -25,16 +25,20 @@ def test_all_calculator_operations_execute_through_canonical_registry() -> None:
     assert report["failures"] == []
     calculator = report["capabilities"][0]
     assert calculator["capability_id"] == "agronomic_calculator"
-    assert calculator["declared_operation_count"] == 19
-    assert calculator["implemented_operation_count"] == 19
+    assert calculator["declared_operation_count"] == 46
+    assert calculator["implemented_operation_count"] == 46
     assert calculator["conformance_exercised"] is True
     assert calculator["performance_benchmark_exercised"] is False
     assert all(row["passed"] for row in calculator["positive_fixtures"])
     assert all(row["passed"] for row in calculator["negative_fixtures"])
 
 
-def test_frozen_v1_conformance_cannot_impersonate_current_calculator() -> None:
-    report = _module().run_conformance(ROOT / "configs/benchmark_capability_conformance_v1.json")
+import pytest
+
+
+@pytest.mark.parametrize("version", [1, 2, 3, 4])
+def test_frozen_conformance_cannot_impersonate_current_calculator(version) -> None:
+    report = _module().run_conformance(ROOT / f"configs/benchmark_capability_conformance_v{version}.json")
 
     assert report["status"] == "blocked"
     assert "agronomic_calculator:version_mismatch" in report["failures"]

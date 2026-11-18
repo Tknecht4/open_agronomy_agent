@@ -10,10 +10,14 @@ from pathlib import Path
 
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.decision_route import build_decision_route_state
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_question_scope, clubroot_workflow_applicable, foliar_symptoms_reported
 from agronomy_agent.evidence_handshake import (
     EvidenceHandshake,
     build_evidence_handshake,
     evidence_grounded_fallback,
+    named_regional_product_matches,
+    crop_health_requested_facets,
+    crop_health_model_inputs_supported,
 )
 from agronomy_agent.query_context import (
     CANADIAN_PROVINCE_NAMES_TO_CODE,
@@ -25,9 +29,13 @@ from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_recei
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeric_application_instructions
 from agronomy_agent.execution_core import stable_sha256
-from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER
+from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, sample_event_date_pattern, POTATO_MONITORING_ANSWER, bounded_concept_prefix, stored_grain_probe_monitoring
+from agronomy_agent.agronomic_concepts import correct_concept_claims
+from agronomy_agent.request_scope import seed_quality_workflow_requested, topic_is_supplied_arithmetic_context, proposition_assertion_status
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
-from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation
+from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, non_prescriptive_help_requested, has_application_instruction
+from agronomy_agent.request_scope import information_request_kind
+from agronomy_agent.answerability import has_access_or_harvest_instruction
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -191,7 +199,7 @@ _EMPHASIZED_TERM_RE = re.compile(r"\*\*([^*\n]{2,80})\*\*")
 _NAMED_CONDITION_RE = re.compile(
     r"\b((?:(?:gray leaf|grey leaf|early|late|stem|stripe|leaf|root|seedling|downy|powdery|white|gray|grey|bacterial|"
     r"fusarium|verticillium)\s+)(?:blight|rust|mildew|rot|spot|wilt|mosaic|canker|smut|mold|scab|anthracnose)"
-    r"|(?:blight|rust|mildew|rot|wilt|mosaic|canker|smut|mold|scab|anthracnose))\b",
+    r"|(?:clubroot|blight|rust|mildew|rot|wilt|mosaic|canker|smut|mold|scab|anthracnose))\b",
     re.IGNORECASE,
 )
 _NAMED_PEST_RE = re.compile(
@@ -212,6 +220,26 @@ _MAP_ASSERTION_RE = re.compile(
     r"\b(?:hydrologic group|drainage class)\b[\s\S]{0,60}\b(?:likely|confirms?|is|are)\b)",
     re.IGNORECASE,
 )
+
+
+def _map_assertion_view(answer: str) -> str:
+    """Mask only explicitly negated predicates, retaining their positions.
+
+    A negated confirmation is not an affirmative claim. Masking just that
+    predicate lets the ordinary matcher still find a separate positive claim
+    before or after it; a disclaimer cannot excuse another field inference.
+    """
+    negated = (
+        r"\b(?:cannot|can['’]t|could not|couldn['’]t|do not|don['’]t|does not|doesn['’]t|"
+        r"did not|didn['’]t|will not|won['’]t|would not|wouldn['’]t|never)\s+"
+        r"(?:(?:yet|currently|reliably|independently|directly|necessarily|conclusively|fully|"
+        r"by itself|on its own)\s+){0,3}"
+        r"(?:confirms?|indicates?|identif(?:y|ies)|supports?|"
+        r"typically (?:corresponds to|consists of|has|contains))\b"
+    )
+    return re.sub(negated, lambda match: " " * len(match.group()), answer, flags=re.I)
+
+
 _REGULATED_ASSERTION_RE = re.compile(
     r"\b(?:safe to (?:spray|apply)|the (?:spray|application|operation) window is acceptable|"
     r"(?:you )?can (?:spray|apply)(?: (?:today|now))?\s+because|"
@@ -465,7 +493,7 @@ def _uses_named_product_fidelity(
 ) -> bool:
     if evidence_handshake is None or not _NAMED_AAFC_REGIONAL_PRODUCT_RE.search(question):
         return False
-    return any(_named_product_doc_matches_question(question, doc) for doc in docs)
+    return any(named_regional_product_matches(question, doc) for doc in docs)
 
 
 def _is_aafc_crop_health_product_doc(doc: RetrievedDoc) -> bool:
@@ -504,31 +532,13 @@ def _is_named_regional_context_doc(doc: RetrievedDoc) -> bool:
     )
 
 
-def _named_product_doc_matches_question(question: str, doc: RetrievedDoc) -> bool:
-    question_lower = question.lower()
-    identity = " ".join((doc.doc_id, doc.source_id, doc.title, doc.source)).lower()
-    if re.search(r"\b(?:crop[- ]health (?:index|indices|grids?|layers?|products?)|crop stress index|csi)\b", question_lower) or _CROP_STAGE_PRODUCT_RE.search(question_lower):
-        return _is_aafc_crop_health_product_doc(doc)
-    matches = (
-        (r"\b(?:quebec|québec) agro[- ]pedological atlas\b|\bagro[- ]pedological atlas of (?:quebec|québec)\b", r"ca_aafc_qc_agropedological_atlas_specification|agro[- ]pedological atlas of (?:quebec|québec)"),
-        (r"\bbritish columbia detailed soil survey\b", r"ca_aafc_bc_detailed_soil_survey_specification|british columbia detailed soil survey"),
-        (r"\bnova scotia detailed soil survey\b", r"ca_aafc_ns_detailed_soil_survey_specification|nova scotia detailed soil survey"),
-        (r"\b(?:prince edward island|pei) detailed soil survey\b", r"ca_aafc_pei_detailed_soil_survey_specification|prince edward island detailed soil survey"),
-        (r"\b(?:geonb|new brunswick) agricultural soil classes\b", r"nb_geonb_agricultural_soil_classes|new brunswick agricultural soil classes"),
-        (r"\bnewfoundland and labrador weather station climate monitoring data\b", r"nl_historical_weather_station_climate_metadata|newfoundland and labrador weather station climate monitoring data"),
-        (r"\b(?:estimated )?historical crop[- ]?yields?\b|\bhistorical[- ]?yield[- ]?by[- ]?slc\b", r"ca_aafc_historical_crop_yield_slc_specification|historical crop yield"),
-        (r"\b(?:soil )?(?:erosion|erision|eroshun)(?: risk)? (?:map|layer|indicator)\b|\bsoileri\b", r"ca_aafc_soil_erosion_risk_technical_chapter_2021|soil erosion risk indicator|soileri"),
-    )
-    return any(re.search(q_pattern, question_lower) and re.search(doc_pattern, identity) for q_pattern, doc_pattern in matches)
-
-
 def _missing_named_product_terms(
     question: str,
     answer: str,
     docs: Iterable[RetrievedDoc],
 ) -> tuple[str, ...]:
     all_docs = tuple(docs)
-    matching_docs = tuple(doc for doc in all_docs if _named_product_doc_matches_question(question, doc))
+    matching_docs = tuple(doc for doc in all_docs if named_regional_product_matches(question, doc))
     product_docs = tuple(doc for doc in matching_docs if _is_aafc_crop_health_product_doc(doc))
     regional_docs = tuple(doc for doc in matching_docs if _is_named_regional_context_doc(doc))
     if not product_docs and not regional_docs:
@@ -573,31 +583,32 @@ def _missing_named_product_terms(
             missing.append("field decisions require current crop and soil-water observations")
 
     if (
-        re.search(r"\bcrop health (?:index|indices)\b", question_lower)
+        re.search(r"\bcrop health (?:index|indices|grids?|layers?|products?)\b", question_lower)
         and not re.search(r"\b(?:crop stress index|csi|crop development stage|growth stage raster)\b", question_lower)
     ):
-        if not re.search(r"\b5\s*km\b", answer_lower):
+        if 'resolution' in crop_health_requested_facets(question) and not re.search(r"\b5\s*km\b", answer_lower):
             missing.append("5 km modelled regional raster")
-        if not re.search(
+        if ('model_inputs' in crop_health_requested_facets(question) or re.match(r'\s*(?:what (?:is|are)|describe|explain)\b', question_lower)) and not re.search(
             r"\b(?:station|precipitation|temperature|crop[- ]specific coefficients?|VSMB)\b",
             answer,
             re.IGNORECASE,
         ):
             missing.append("station weather and crop-model inputs")
         if not re.search(
-            r"\b(?:affected and normal|field observations?|scout(?:ing)?|roots?|tissue|plant sample)\b",
+            r"\b(?:affected and normal|field observations?|scout(?:ing)?|roots?|tissue|plant sample|not (?:a )?(?:direct )?field measurement)\b",
             answer_lower,
         ):
             missing.append("field crop, root-zone, and diagnostic observations")
 
     if _CROP_STAGE_PRODUCT_RE.search(question_lower):
-        if not re.search(r"\b5\s*km\b", answer_lower):
+        if 'resolution' in crop_health_requested_facets(question) and not re.search(r"\b5\s*km\b", answer_lower):
             missing.append("5 km modelled regional raster")
         if not re.search(r"\b(?:modelled|modeled|regional)\b", answer_lower):
             missing.append("modelled regional context")
         if not re.search(
             r"\b(?:not (?:an )?observation of every plant|cannot prove every plant|"
-            r"does not prove every plant|representative (?:field )?(?:areas?|zones?)|scout(?:ing)?)\b",
+            r"does not prove every plant|not (?:a )?(?:direct )?field measurement|"
+            r"representative (?:field )?(?:areas?|zones?)|scout(?:ing)?)\b",
             answer_lower,
         ):
             missing.append("not an observation of every plant; scout representative field areas")
@@ -636,6 +647,19 @@ def _missing_named_product_terms(
     return _dedupe(missing)
 
 
+def _crop_health_source_contradiction(question: str, answer: str, docs: Iterable[RetrievedDoc]) -> bool:
+    matching = tuple(doc for doc in docs if _is_aafc_crop_health_product_doc(doc)
+                     and named_regional_product_matches(question, doc))
+    if not any(crop_health_model_inputs_supported(doc) for doc in matching):
+        return False
+    subject = r"(?:AAFC(?:['’]s)?\s+(?:crop[- ]health\s+)?(?:grids?|rasters?|products?|indices)|crop[- ]health\s+(?:indices|grids?|rasters?|products?))"
+    text = re.sub(r'[*_`]', '', answer)
+    for match in re.finditer(rf'\b{subject}\s+(?:are|is)\s+(?:remotely[- ]sensed|satellite[- ](?:derived|based)|not\s+(?:station[- ]driven|VSMB))\b', text, re.I):
+        if proposition_assertion_status(text[:match.start()], text[match.end():]) == 'asserted':
+            return True
+    return False
+
+
 def _named_product_editor_docs(
     question: str,
     docs: Iterable[RetrievedDoc],
@@ -645,7 +669,7 @@ def _named_product_editor_docs(
     wants_stage = bool(_CROP_STAGE_PRODUCT_RE.search(question_lower))
     selected: list[RetrievedDoc] = []
     for doc in docs:
-        matches_question = _named_product_doc_matches_question(question, doc)
+        matches_question = named_regional_product_matches(question, doc)
         is_crop_health = matches_question and _is_aafc_crop_health_product_doc(doc)
         is_soil_survey = matches_question and _is_named_regional_context_doc(doc)
         if not is_crop_health and not is_soil_survey:
@@ -676,7 +700,8 @@ def _named_product_field_decision_fallback(
 ) -> str | None:
     if not _NAMED_AAFC_REGIONAL_PRODUCT_RE.search(question) or not _NAMED_PRODUCT_FIELD_DECISION_RE.search(question):
         return None
-    product_docs = tuple(doc for doc in docs if _is_aafc_crop_health_product_doc(doc))
+    product_docs = tuple(doc for doc in docs if _is_aafc_crop_health_product_doc(doc)
+                         and named_regional_product_matches(question, doc))
     if not product_docs:
         return None
     product_text = " ".join(doc.text for doc in product_docs)
@@ -787,7 +812,7 @@ def _named_crop_stage_interpretation_fallback(
         doc
         for doc in docs
         if _is_aafc_crop_health_product_doc(doc)
-        and _named_product_doc_matches_question(question, doc)
+        and named_regional_product_matches(question, doc)
         and "stage" in " ".join((doc.doc_id, doc.title, *doc.tags)).lower()
     )
     if not stage_docs:
@@ -805,9 +830,16 @@ def _named_crop_health_interpretation_fallback(
         return None
     if _NAMED_PRODUCT_FIELD_DECISION_RE.search(question) and not _NAMED_PRODUCT_BOUNDARY_QUESTION_RE.search(question):
         return None
-    product_docs = tuple(doc for doc in docs if _is_aafc_crop_health_product_doc(doc))
+    product_docs = tuple(doc for doc in docs if _is_aafc_crop_health_product_doc(doc)
+                         and named_regional_product_matches(question, doc))
     if not product_docs:
         return None
+    if 'model_inputs' in crop_health_requested_facets(question):
+        if any(crop_health_model_inputs_supported(doc) for doc in product_docs):
+            return (
+                "The AAFC Crop Health Indices are modelled regional products derived from station temperature and precipitation with crop-specific models including the Versatile Soil Moisture Budget (VSMB). They are not remotely sensed field measurements. "
+                "Keep the metric, date and crop-family interpretation explicit. Use representative field observations to establish actual crop and root-zone conditions; these model estimates cannot establish them or authorize a field input."
+            )
     lower = question.lower()
     preferred_suffix = (
         "semantic_0001"
@@ -853,7 +885,7 @@ def _named_regional_context_fallback(
     survey_docs = tuple(
         doc
         for doc in docs
-        if _is_named_regional_context_doc(doc) and _named_product_doc_matches_question(question, doc)
+        if _is_named_regional_context_doc(doc) and named_regional_product_matches(question, doc)
     )
     if not survey_docs:
         return None
@@ -1021,7 +1053,7 @@ def _aafc_historical_crop_yield_slc_fallback(
             "No. An AAFC historical crop-yield-by-SLC value cannot authorize or establish suitable conditions for "
             "an application. It is regional historical context, not a current field observation, weather source, or "
             "product-use authority.\n\n"
-            "Require the exact current Health Canada PMRA label, product, crop and target, current local wind, rain, "
+            "Require the exact current product label for the treatment jurisdiction, product, crop and target, current local wind, rain, "
             "temperature and other label-relevant weather, plus field-specific drift, runoff, buffer, crop-stage, and "
             "site conditions. If any required evidence or label condition is unresolved, delay or do not proceed."
         )
@@ -1170,7 +1202,7 @@ def _aafc_soil_erosion_risk_fallback(
         return (
             "No. An AAFC SoilERI class cannot authorize or establish safe conditions for a pesticide application; "
             "it is a 2021 census-year regional erosion model, not a current spray assessment. Before spraying, identify "
-            "the exact product, crop, and target, and verify the current PMRA product label for that use. Check current "
+            "the exact product, crop, and target, and verify the current jurisdiction-specific product label for that use. Check current "
             "on-site wind and gusts, inversion and rain or rainfast timing, plus label-specific temperature or humidity "
             "limits, drift exposure, runoff paths, sensitive areas, setbacks, and buffers. If the label or current field "
             "and weather conditions cannot be verified and satisfied, delay or do not spray."
@@ -1295,18 +1327,132 @@ def _destroys_diagnostic_sampling_contrast(question: str, answer: str) -> bool:
     return False
 
 
-def _sample_analysis_date_supplied(question: str) -> bool:
-    """A question about an analysis date is not a supplied analysis event."""
-    month = (
-        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|"
-        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+def _sample_analysis_date_value_mentions(text: str) -> Iterable[re.Match[str]]:
+    """Locate dated analysis propositions without assigning them truth."""
+    date = sample_event_date_pattern()
+    return re.finditer(
+        rf"\b(?:(?:(?:processing|analysis) date\s*(?:(?:was|is)\s+|:\s*)?|"
+        rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b|"
+        rf"(?:processing|analysis)\s*\(\s*{date}\s*\))", text, re.I,
     )
-    day = r"\d{1,2}(?:st|nd|rd|th)?"
-    date = rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}|{day}\s+{month})"
+
+
+def _sample_event_proposition_disclaimed(clause: str, proposition: re.Match[str]) -> bool:
+    """Bind a denial to one proposition rather than the surrounding clause."""
+    before = clause[:proposition.start()]
+    local = re.split(r"\b(?:but|however|yet|so|alongside)\b|,", before, flags=re.I)[-1]
+    value = proposition.group().casefold()
+    kind = "processing" if "process" in value else "collection" if "collection" in value else "analysis"
+    after = clause[proposition.end():]
     return bool(re.search(
-        rf"\b(?:(?:processing|analysis) date\s*(?:(?:was|is)\s+|:\s*)?|"
-        rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b", question, re.I,
+        r"\b(?:no|unconfirmed|unverified|unknown|proposed)\s+(?:the\s+)?$|"
+        r"\b(?:not true|false|incorrect|wrong)\s+(?:that\s+)?(?:the\s+)?$|"
+        r"\b(?:not|never|cannot|can't)\s+(?:confirm(?:ed)?|verify|verified|establish(?:ed)?|"
+        r"report(?:ed)?|know|known|say|state(?:d)?|use|record|take|treat|assume|infer)\s+(?:that\s+)?(?:the\s+)?$",
+        local, re.I,
+    ) or re.match(
+        rf"\s*,?\s*(?:(?:but|and|although)\s+)?(?:that|it|this|the {kind} date)\s+"
+        r"(?:is|was|remains)\s+(?:unconfirmed|unverified|unknown|false|incorrect|wrong|"
+        r"not (?:true|confirmed|verified|established))\b",
+        after, re.I,
     ))
+
+
+def _sample_event_question_clause(clause: str) -> bool:
+    """A Do-use imperative is not a Do-I inquiry."""
+    return clause.rstrip().endswith("?") or bool(re.match(
+        r"\s*(?:(?:is|was|are|were|what|when|which|how|why)\b|"
+        r"(?:can|could|may|would|should|do|does|did)\s+(?:I|we|you|they|it|this|that|the|an?)\b)",
+        clause, re.I,
+    ))
+
+
+def _nominal_report_event_role_reassigned(clause: str) -> bool:
+    """A dated report item cannot borrow another event's role.
+
+    This concerns role assignment, not whether independently supplied calendar
+    dates coincide. Parallel labelled items remain distinct events.
+    """
+    if _sample_event_question_clause(clause):
+        return False
+    item = rf"report issuance\s*\(\s*{sample_event_date_pattern()}\s*\)"
+    role = r"(?:(?:sample )?collection|sampling|analysis|processing) date"
+    link = r"(?:is|was|equals?|means?|as|(?:must|should|will) be)\s+(?:the\s+)?"
+    for assignment in re.finditer(
+        rf"\b(?:{item}\s+{link}{role}\b|{role}\s+{link}{item})", clause, re.I,
+    ):
+        if _sample_event_proposition_disclaimed(clause, assignment):
+            continue
+        before = re.split(r"\b(?:but|however|yet)\b|,", clause[:assignment.start()], flags=re.I)[-1]
+        if re.search(r"\b(?:if|whether|assuming|hypothetic\w*)\b", before, re.I):
+            continue
+        return True
+    return False
+
+
+def _sample_event_clauses(text: str) -> Iterable[tuple[str, str]]:
+    """Keep date-owned abbreviation dots inside their original event clause."""
+    protected: set[int] = set()
+    for event in re.finditer(sample_event_date_pattern(), text, re.I):
+        closed_item = bool(re.match(r"\s*\)", text[event.end():]))
+        for offset, character in enumerate(event.group()):
+            if character == "." and (offset < len(event.group()) - 1 or closed_item):
+                protected.add(event.start() + offset)
+    start = 0
+    for ending in re.finditer(r"[.!?;\n]", text):
+        if ending.start() not in protected:
+            yield text[start:ending.start()], ending.group()
+            start = ending.end()
+    if start < len(text):
+        yield text[start:], ""
+
+
+def _sample_analysis_date_supplied(question: str) -> bool:
+    """Only affirmative supplied events establish an analysis date.
+
+    A proposed date in a question or conditional is not observed information,
+    even when it happens to match an independently supplied report date.
+    """
+    for clause, end in _sample_event_clauses(question):
+        if _sample_event_question_clause(clause + end):
+            continue
+        for event in _sample_analysis_date_value_mentions(clause):
+            if _sample_event_proposition_disclaimed(clause, event):
+                continue
+            before, after = clause[:event.start()], clause[event.end():]
+            if re.search(r"\b(?:if|whether|maybe|perhaps|assum(?:e|ing)|hypothetic\w*)\b", before, re.I):
+                continue
+            if re.match(r"\s*,?\s*(?:if|unless|assuming|provided that)\b", after, re.I):
+                continue
+            return True
+    return False
+
+
+def _unprovided_sample_analysis_event_claim(clause: str) -> bool:
+    """Separate asserted event attribution from acquiring an unknown date.
+
+    A request to check the laboratory is useful information gathering, not a
+    claim that analysis occurred on the report date. Conversely, unrelated
+    negation or a suggestion to check cannot excuse an invented dated event.
+    """
+    if _sample_event_question_clause(clause):
+        return False
+    if any(not _sample_event_proposition_disclaimed(clause, event)
+           for event in _sample_analysis_date_value_mentions(clause)):
+        return True
+    event = r"(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?(?:processing|analysis) date)"
+    report = r"(?:lab(?:oratory)? )?report (?:issuance |issue )?date"
+    attribution = r"(?:is|was|equals?|means?|as|(?:must|should|will) be)\s+(?:the\s+)?"
+    date = sample_event_date_pattern()
+    # These are positive assignments. A later request to ask the laboratory
+    # or negation of the collection role does not revoke the assignment.
+    assignments = re.finditer(
+        rf"\b(?:{report})\s+{attribution}{event}\b|"
+        rf"\b{event}\s+{attribution}(?:{report})\b|"
+        rf"\b{date}\s*,?\s*(?:(?:which|that)\s+)?{attribution}{event}\b",
+        clause, re.I,
+    )
+    return any(not _sample_event_proposition_disclaimed(clause, assignment) for assignment in assignments)
 
 
 def assess_claim_risk(
@@ -1341,10 +1487,13 @@ def assess_claim_risk(
     unsupported_stages = _unsupported_values(_CROP_STAGE_RE, candidate, allowed)
     unsupported_names = _unsupported_values(_ITALIC_BINOMIAL_RE, candidate, allowed)
     unsupported_names = _dedupe((*unsupported_names, *_unsupported_values(_PAREN_BINOMIAL_RE, candidate, allowed)))
-    unsupported_conditions = _unsupported_values(_NAMED_CONDITION_RE, candidate, condition_allowed)
+    observation_method = observation_guidance(question)
+    unsupported_conditions = _unsupported_condition_values(
+        candidate, condition_allowed,
+        root_inspection=observation_method is not None and observation_method.has_method("current_root_inspection"),
+    )
     unsupported_pests = _unsupported_values(_NAMED_PEST_RE, candidate, allowed)
     missing_intent_facets = _missing_intent_facets(candidate, question=question, question_type=question_type)
-    observation_method = observation_guidance(question)
     decision_state = build_decision_route_state(question, question_type)
     route_violations = decision_state.answer_violations(candidate)
     premise_coverage = decision_state.premise_coverage(candidate)
@@ -1360,15 +1509,25 @@ def assess_claim_risk(
         else None
     )
     evidence_commit_score = evidence_handshake.answer_alignment(candidate) if evidence_handshake else None
+    named_product_fidelity = _uses_named_product_fidelity(question, evidence_handshake, docs)
+    scoped_product_fidelity = named_product_fidelity and any(
+        _is_aafc_crop_health_product_doc(doc) and named_regional_product_matches(question, doc)
+        for doc in docs
+    )
+    # Crop-health checks bind the requested facet to matching sources.
+    # Generic tags of the first retrieved passage can describe another facet
+    # (for example stress rather than development) and are not answer duties.
     missing_evidence_terms = _dedupe(
-        (
+        _missing_named_product_terms(question, candidate, docs)
+        if scoped_product_fidelity else (
             *(evidence_handshake.missing_decisive_terms(candidate) if evidence_handshake else ()),
             *_missing_named_product_terms(question, candidate, docs),
         )
     )
-    named_product_fidelity = _uses_named_product_fidelity(question, evidence_handshake, docs)
 
     reasons: list[str] = []
+    _, concept_edits = correct_concept_claims(candidate, question)
+    reasons.extend(edit["reason"] for edit in concept_edits)
     if observation_method is not None and observation_method.unsupported_inference(candidate):
         reasons.append("unsupported_observation_inference")
     if _looks_like_french(question) and not _looks_like_french_output(candidate):
@@ -1383,13 +1542,19 @@ def assess_claim_risk(
         reasons.append("unsupported_named_condition")
     if unsupported_pests:
         reasons.append("unsupported_named_pest")
-    if _unsupported_diagnostic_assertion(candidate, evidence_text):
+    if _unsupported_diagnostic_assertion(candidate, evidence_text, reported_context=question):
         reasons.append("unsupported_diagnostic_certainty")
     if _destroys_diagnostic_sampling_contrast(question, candidate):
         reasons.append("diagnostic_sampling_contrast_destroyed")
-    if _MAP_ASSERTION_RE.search(candidate):
+    if _MAP_ASSERTION_RE.search(_map_assertion_view(candidate)):
         reasons.append("map_prior_presented_as_field_truth")
     if _REGULATED_ASSERTION_RE.search(candidate):
+        reasons.append("unsupported_regulated_permission")
+    if _crop_health_source_contradiction(question, candidate, docs):
+        reasons.append("named_product_source_contradiction")
+    if non_prescriptive_help_requested(question) and has_application_instruction(candidate):
+        reasons.append("unrequested_application_instruction")
+    if non_prescriptive_help_requested(question) and has_access_or_harvest_instruction(candidate):
         reasons.append("unsupported_regulated_permission")
     if _UNSUPPORTED_CERTAINTY_RE.search(candidate):
         reasons.append("unsupported_field_certainty")
@@ -1424,17 +1589,14 @@ def assess_claim_risk(
         reasons.append("scope_drift")
     if missing_intent_facets:
         reasons.append("missing_decision_content")
-    if is_rate_basis_explanation(question) and remove_numeric_application_instructions(candidate)[1]:
+    if non_prescriptive_help_requested(question) and remove_numeric_application_instructions(candidate)[1]:
         reasons.append("unasked_application_instruction")
-    if sample_event_roles_stated(question) and not _sample_analysis_date_supplied(question):
-        for clause in re.split(r"[.!?;\n]", candidate):
-            if re.search(
-                r"\b(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?(?:processing|analysis) date)\b",
-                clause, re.I,
-            ) and not re.search(
-                r"\b(?:not|unknown|unprovided|unavailable|unspecified|unreported|"
-                r"cannot(?: be)? infer\w*|can't(?: be)? infer\w*|if provided|if supplied)\b", clause, re.I
-            ):
+    if sample_event_roles_stated(question):
+        analysis_supplied = _sample_analysis_date_supplied(question)
+        for clause, ending in _sample_event_clauses(candidate):
+            clause += ending
+            if (_nominal_report_event_role_reassigned(clause)
+                    or (not analysis_supplied and _unprovided_sample_analysis_event_claim(clause))):
                 reasons.append("sample_event_role_conflation")
     definition = simple_definition_subject(question)
     if definition in {"soil texture"}:
@@ -1453,7 +1615,7 @@ def assess_claim_risk(
             ))
         if len(drift_terms) >= 3:
             reasons.append("definition_topic_drift")
-    if evidence_commit_score is not None and evidence_commit_score < 0.4:
+    if not scoped_product_fidelity and evidence_commit_score is not None and evidence_commit_score < 0.4:
         reasons.append("weak_primary_evidence_alignment")
     if named_product_fidelity and missing_evidence_terms:
         reasons.append("missing_named_product_fidelity")
@@ -1955,6 +2117,7 @@ def _verify_answer_impl(
     named_product_reasons = {
         "missing_named_product_fidelity",
         "contradictory_formula_paraphrase",
+        "named_product_source_contradiction",
     }
     selective_decisions = {
         "ambiguous_pump_direction",
@@ -2335,13 +2498,29 @@ def _verify_answer_impl(
         final_assessment = rewrite_assessment
     else:
         fallback = fallback_answer()
+        candidates = [
+            (draft, draft_assessment),
+            *([(editor_output, rewrite_assessment)] if not record_losses else []),
+            (fallback, assess(fallback)),
+        ]
+        if 'unsupported_diagnostic_certainty' in draft_assessment.reasons:
+            retained = ' '.join(sentence for sentence in re.split(r'(?<=[.!?])\s+', draft.strip())
+                if not _unsupported_diagnostic_assertion(sentence, evidence_text, reported_context=question))
+            bounded = (retained + '\n\n' if retained else '') + (
+                'The question alone does not confirm a field diagnosis. '
+                'Keep reported observations and diagnostic reports attributed to their source.'
+            )
+            candidates.append((bounded, assess(bounded)))
+        if all(_blocking_claim_reasons(assessment) for _, assessment in candidates):
+            bounded = (
+                'The available response does not support a reliable conclusion. '
+                'I cannot confirm a diagnosis or authorize a field action from it. '
+                'A relevant reviewed source or representative observation is needed to resolve the missing claim.'
+            )
+            candidates.append((bounded, assess(bounded)))
         final_answer, final_assessment = _select_best_degraded_answer(
             question=question,
-            candidates=(
-                (draft, draft_assessment),
-                *(((editor_output, rewrite_assessment),) if not record_losses else ()),
-                (fallback, assess(fallback)),
-            ),
+            candidates=candidates,
         )
     return AnswerVerificationResult(
         answer=final_answer,
@@ -2392,7 +2571,21 @@ def _verify_answer_policy(
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
     required = tuple(required_entities)
-    if is_rate_basis_explanation(question):
+    corrected, concept_edits = correct_concept_claims(draft, question)
+    if concept_edits:
+        original_assessment = assess_claim_risk(draft, question=question, evidence_text=evidence_text,
+            question_type=question_type, risk_level=risk_level, evidence_docs=docs,
+            preserve_entities=entities, required_entities=required)
+        corrected_assessment = assess_claim_risk(corrected, question=question, evidence_text=evidence_text,
+            question_type=question_type, risk_level=risk_level, evidence_docs=docs,
+            preserve_entities=entities, required_entities=required)
+        if not corrected_assessment.reasons:
+            return AnswerVerificationResult(answer=corrected, triggered=True, rewrite_accepted=False,
+                draft_assessment=original_assessment, final_assessment=corrected_assessment,
+                draft_output=draft, selection_policy="localized_agronomic_concept_correction_v1",
+                localized_cleanup={"kind": "agronomic_concept_correction", "edits": list(concept_edits),
+                    "other_prose_unchanged": True, "editor_invoked": False})
+    if non_prescriptive_help_requested(question):
         application_cleaned, application_removed = remove_numeric_application_instructions(draft)
         if application_removed:
             retained = application_cleaned or bounded_decision_support(question, question_type)
@@ -2572,6 +2765,9 @@ def _defect_claims(answer: str, assessment: ClaimRiskAssessment, reason: str) ->
     This attribution does not prove the whole sentence false, or assign a
     source as claim-level support. Those semantic relationships are unknown.
     """
+    if reason == "unrequested_application_instruction":
+        return tuple(value.strip() for value in re.split(r"(?<=[.!?])\s+|\n+", answer)
+                     if value.strip() and has_application_instruction(value))
     if reason == "internal_process_leakage":
         _, removed = _remove_leading_control_capsule(answer)
         if removed:
@@ -2588,11 +2784,18 @@ def _defect_claims(answer: str, assessment: ClaimRiskAssessment, reason: str) ->
         "unsupported_regulated_permission": _REGULATED_ASSERTION_RE,
         "map_prior_presented_as_field_truth": _MAP_ASSERTION_RE,
         "unsupported_field_certainty": _UNSUPPORTED_CERTAINTY_RE,
+        "drydown_drought_conflation": re.compile(r"\bdry[- ]?down\b", re.I),
+        "lodging_standability_conflation": re.compile(r"\blodging\b", re.I),
+        "soybean_maturity_identifier_changed": re.compile(r"\b(?:maturity|MG)\b", re.I),
+        "nutrient_active_ingredient_conflation": re.compile(r"\bactive[- ]ingredient", re.I),
+        "named_product_source_contradiction": re.compile(r"\b(?:remotely[- ]sensed|satellite|station[- ]driven|VSMB)\b", re.I),
     }.get(reason)
     claims = tuple(value.strip() for value in re.split(r"(?<=[.!?])\s+|\n+", answer) if value.strip())
     return tuple(claim for claim in claims if (
         any(re.search(rf"(?<!\w){re.escape(marker)}(?!\w)", claim, re.IGNORECASE) for marker in markers)
-        or (pattern is not None and pattern.search(claim))
+        or (pattern is not None and pattern.search(
+            _map_assertion_view(claim) if reason == "map_prior_presented_as_field_truth" else claim
+        ))
     ))
 
 
@@ -3085,9 +3288,12 @@ def _rewrite_rejection_reasons(
         and rewrite_assessment.evidence_commit_score < 0.4
     ):
         reasons.append("weak_rewrite_evidence_commit")
-    if draft_assessment.missing_intent_facets:
-        draft_missing = set(draft_assessment.missing_intent_facets)
-        rewrite_missing = set(rewrite_assessment.missing_intent_facets)
+    draft_missing = set(draft_assessment.missing_intent_facets)
+    rewrite_missing = set(rewrite_assessment.missing_intent_facets)
+    reasons.extend(f"decision_content_lost:{facet}" for facet in sorted(rewrite_missing - draft_missing))
+    if require_complete_decision_content and rewrite_missing:
+        reasons.append("decision_content_still_incomplete")
+    if draft_missing:
         decision_content_improved = (
             len(rewrite_missing) <= len(draft_missing)
             and bool(draft_missing - rewrite_missing)
@@ -3101,8 +3307,6 @@ def _rewrite_rejection_reasons(
         )
         if not decision_content_improved and not stronger_evidence_commit:
             reasons.append("decision_content_not_improved")
-        if require_complete_decision_content and rewrite_missing:
-            reasons.append("decision_content_still_incomplete")
     if _protocol_kind(question) and rewrite_assessment.missing_intent_facets:
         reasons.append("protocol_decision_incomplete")
     if set(rewrite_assessment.unsupported_numbers) - set(draft_assessment.unsupported_numbers):
@@ -3125,6 +3329,7 @@ def _blocking_claim_reasons(assessment: ClaimRiskAssessment) -> tuple[str, ...]:
         "high_consequence_claim_review",
         "missing_decision_content",
         "weak_primary_evidence_alignment",
+        "decision_capsule_anchor_missing",
     }
     return tuple(reason for reason in assessment.reasons if reason not in advisory)
 
@@ -3186,9 +3391,11 @@ def _risk_excerpts(answer: str, assessment: ClaimRiskAssessment) -> tuple[str, .
         risky = any(marker.lower() in sentence.lower() for marker in markers)
         risky = risky or bool(
             _DIAGNOSIS_ASSERTION_RE.search(sentence)
-            or _MAP_ASSERTION_RE.search(sentence)
+            or _MAP_ASSERTION_RE.search(_map_assertion_view(sentence))
             or _REGULATED_ASSERTION_RE.search(sentence)
             or _UNSUPPORTED_CERTAINTY_RE.search(sentence)
+            or ("unrequested_application_instruction" in assessment.reasons
+                and has_application_instruction(sentence))
         )
         if risky:
             excerpts.append(sentence[:500])
@@ -3242,6 +3449,47 @@ def _is_wet_forage_establishment_question(question: str) -> bool:
     )
 
 
+def _water_balance_method_requested(question: str) -> bool:
+    """A broad soil domain does not establish an irrigation task.
+
+    Select only this completeness checklist, never an authority or numeric
+    exception. Keep explicit earlier commands when the final question changes
+    subject; incidental irrigation history or a map attribute is insufficient.
+    """
+    water = r"(?:irrigation|watering)"
+    method = r"(?:decisions?|schedul\w*|timing|depth|plans?|management|needs?|requirements?|frequency|amount|calendrier|profondeur|quantit[eé]|fr[eé]quence)"
+    clauses = re.split(r"[!?;]|\.(?=\s|$)|\b(?:then|also)\b", question, flags=re.I)
+    # Inspect the full clause as well as coordinated commands: an 'and'
+    # inside the requested evidence list must not lose its shared question.
+    clauses += [part for clause in tuple(clauses) for part in re.split(r"\band\b", clause, flags=re.I)[1:]]
+    supplied_depth_context = bool(re.search(r'\birrigation\b', question, re.I) and re.search(
+        r'\b(?:calculate|compute)\b[^.!?;]{0,50}\b(?:gross|net|irrigation)[- ]depth\b', question, re.I))
+    for clause in clauses:
+        clause = re.sub(r"^\s*(?:(?:can|could|would|will) you\s+)?(?:please\s+)?", "", clause, flags=re.I)
+        if re.match(r"(?:irrigate|irriguez|arrosez|water(?=\s+(?:the|my|our|this|these|those|plants?|crops?|field|beds?)\b))\b", clause, re.I):
+            return True
+        if supplied_depth_context and re.match(
+            r'(?:(?:tell me|explain)\s+)?(?:when to|when should (?:I|we))\s+apply\s+(?:it|that depth|the calculated depth)\b', clause, re.I,
+        ):
+            return True
+        if re.match(r"(?:plan|schedule|manage|adjust|calculate|set|build|assemble|update|reconcile|complete|planifier|g[eé]rer|programmer)\b", clause, re.I) and re.search(
+            rf"\b{water}\b|\b(?:soil[- ]water|water)[- ](?:balance|budget)\b", clause, re.I,
+        ):
+            return True
+        if re.search(r"\b(?:how much|how often|when|should (?:I|we)|quand|combien|(?:puis|dois|peut|doit)[- ](?:je|on|nous))\b[^.!?;]{0,60}\b(?:irrigate|water|irriguer|arroser)\b", clause, re.I):
+            if re.match(r"(?:how|when|should|quand|combien|puis|dois|peut|doit|tell|explain|advise)\b", clause, re.I):
+                return True
+        if re.match(r"(?:what|which|how should|how can)\b", clause, re.I) and re.search(
+            r"\b(?:evidence|observations?|measurements?|inputs?|records|checks|data|factors|need|schedule|plan|manage|adjust)\b", clause, re.I,
+        ) and re.search(rf"\b{water}[- ]{method}\b|\b(?:schedule|plan|manage|adjust)\b.{{0,50}}\b{water}\b", clause, re.I):
+            return True
+    return False
+
+
+def _reproductive_recovery_requested(question: str) -> bool:
+    return bool(re.search(r"\b(?:reproductive|flowering|bloom|pods?|seed[- ]fill)\b", question, re.I))
+
+
 def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequirement, ...]:
     lower = question.lower()
     focus = request_focus(lower)
@@ -3250,14 +3498,45 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
     def add(name: str, instruction: str, *patterns: str) -> None:
         requirements.append(_IntentRequirement(name=name, instruction=instruction, patterns=tuple(patterns)))
 
+    if information_request_kind(question):
+        # Topic vocabulary cannot create an unrequested diagnosis, treatment
+        # or nutrient recommendation. Independent claim checks remain active.
+        return ()
+
+    help_kind = bounded_product_help_kind(question)
+    if clubroot_workflow_applicable(question):
+        help_kind = None  # Incidental product history cannot erase containment.
+    if help_kind == "evidence_assessment":
+        add("requested_evidence_method", "Explain relevant observations, records, comparisons or tests without substituting an application plan.",
+            r"\b(?:observations?|records?|compar\w*|sampl\w*|tests?|history|scout\w*|measur\w*)\b")
+        return tuple(requirements)
+    if help_kind == "incident_information":
+        add("incident_access_boundary", "Avoid exposure and keep people or animals away from the incident.",
+            r"\b(?:avoid contact|avoid exposure|keep\b[^.]{0,70}\baway|restrict\b[^.]{0,40}\baccess)\b")
+        add("incident_qualified_response", "Contact appropriate emergency or spill-response services; do not improvise cleanup.",
+            r"\b(?:emergency|spill[- ]response|poison|authorities|qualified responders?)\b")
+        return tuple(requirements)
+
     method = observation_guidance(question)
     if method:
         for name, instruction, patterns in method.facets:
             add(name, instruction, *patterns)
-    if re.search(r"\bclubroot\b", lower) and re.search(r"\b(?:one|1|single) year\b", lower):
+        if method.has_method("unspecified_management_task") or method.has_method("soil_test_repeatability"):
+            return tuple(requirements)
+    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question) or stored_grain_probe_monitoring(question):
+        # A units explanation needs its measurement contract, not a complete
+        # pest treatment plan, natural-enemy survey or product-label decision.
+        return tuple(requirements)
+    if re.search(r"\bclubroot\b", lower) and clubroot_short_rotation_requested(question):
         add("clubroot_persistence", "Answer that one nonhost year does not eradicate persistent clubroot spores.", r"\b(?:does not|will not|cannot|not enough|not eradicate|not clean)\b[^.]{0,90}\b(?:clubroot|eradicat|clean|spores?)\b", r"\bspores?\b[^.]{0,60}\b(?:persist|years)\b")
 
-    decision = build_decision_route_state(question, question_type).decision
+    intent_state = build_decision_route_state(question, question_type)
+    decision = intent_state.decision
+    if decision == "clubroot_containment":
+        # The route already checks soil hygiene and, when actually requested,
+        # symptom confirmation. A generic plant-health checklist must not add
+        # crop-stage, weather or fresh diagnostic prerequisites to biosecurity.
+        return tuple(requirements)
     if decision == "stratified_soil_sampling":
         add("zone_samples", "Collect representative samples separately from contrasting management zones; do not average unlike zones.",
             r"\bsampl\w*\b[^.]{0,90}\b(?:each|separate)\b[^.]{0,30}\bzone", r"\b(?:each|separate)\b[^.]{0,45}\bzone\b[^.]{0,60}\bsampl\w*\b", r"\bdo not (?:mix|combine)\b[^.]{0,45}\bzones?\b")
@@ -3561,13 +3840,13 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("flood_secondary_injury", "Check roots, sediment or debris, disease, and nutrient loss after drainage.", r"\broot injury\b", r"\bsediment\b", r"\bdebris\b", r"\bdisease\b", r"\bnitrogen loss\b")
         add("flood_reassessment", "Wait for drainage, inspect new growth and growing points, and count the surviving stand before replanting.", r"\bnew growth\b", r"\binspect growing points\b", r"\bstand counts?\b", r"\bbefore deciding on replant")
     elif decision == "freeze_recovery":
-        if re.search(r"\bcanola\b", lower):
+        if intent_state.crop == "canola" and _reproductive_recovery_requested(question):
             add("freeze_canola_stage", "Record canola reproductive stage and inspect flowers, pods, seeds, stems, and growing points.", r"\breproductive stage\b", r"\b(?:flowers?|pods?|seeds?)\b[^.]{0,100}\b(?:stems?|growing points?)\b")
             add("freeze_canola_exposure", "Use the best in-field minimum temperature and exposure duration with field microclimate.", r"\bminimum temperature\b", r"\bexposure duration\b", r"\btemperature\b[^.]{0,70}\bduration\b")
             add("freeze_canola_zones", "Compare representative low, exposed, sheltered, and normal areas.", r"\b(?:low|exposed|sheltered) areas?\b", r"\brepresentative (?:areas|plants|zones)\b")
             add("freeze_canola_recovery", "Reassess tissue progression and viable reproductive sites before changing management.", r"\bviable reproductive (?:sites?|tissue)\b", r"\b(?:pods?|seeds?|flowers?)\b[^.]{0,90}\b(?:viable|recovery|progress)")
         else:
-            add("freeze_growing_point", "Base recovery on crop stage and growing-point position or condition, not burned leaves alone.", r"\bgrowing point\b", r"\bexposed leaves\b", r"\bburned leaf area\b")
+            add("freeze_growing_point", "Base recovery on crop stage and growing-point position or condition, not burned leaves alone.", r"\bgrowing[- ]points?\b", r"\bexposed leaves\b", r"\bburned leaf area\b")
             add("freeze_wait", "Allow warm recovery weather and look for new growth before deciding.", r"\bwarm (?:growing|recovery) weather\b", r"\bnew (?:leaf )?growth\b")
             add("freeze_stand", "Inspect healthy growing points and count surviving plants and uniformity.", r"\bhealthy\b[^.]{0,35}\bgrowing points?\b", r"\bcount surviving plants\b", r"\bstand uniformity\b")
             add("freeze_replant", "Compare the recovered stand and planting date with replant economics.", r"\brecovered stand\b", r"\bcost of replanting\b", r"\breplant")
@@ -3590,7 +3869,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
     if requirements:
         return tuple(requirements)
 
-    if question_type == "fertility_rate":
+    if question_type == "fertility_rate" and not topic_is_supplied_arithmetic_context(question, question_type):
         if re.search(r"\b(volatilization|fertilizer source)\b", lower):
             add("volatilization_source", "Identify the fertilizer source, such as urea, UAN, or ammonium.", r"\bfertilizer source\b", r"\burea\b", r"\bUAN\b", r"\bammonium\b")
             add("volatilization_placement", "Check placement, surface application, incorporation, or injection.", r"\bplacement\b", r"\bsurface application\b", r"\bincorporation\b", r"\binjection\b")
@@ -3617,7 +3896,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
             add("tile_loss_risk", "Account for tile drainage, leaching, and runoff.", r"\btile\b", r"\bleach", r"\brunoff\b")
             add("nutrient_records", "Preserve application and nutrient records.", r"\brecords?\b", r"\baudit trail\b")
         else:
-            add("current_nutrient_evidence", "Name the current soil or tissue evidence needed.", r"\bsoil (?:test|sample|nitrate|results?)\b", r"\bsoil or tissue results?\b", r"\btissue (?:test|result|sample)\b")
+            add("current_nutrient_evidence", "Name the current soil or tissue evidence needed.", r"\bsoil (?:test|sample|nitrate|results?)\b", r"\bsoil or tissue (?:results?|tests?|evidence|analys[ie]s)\b", r"\btissue (?:test|result|sample)\b")
             add("nutrient_records_and_credits", "Check nutrient source, application records, and applicable credits.", r"\bsource\b", r"\bapplication record", r"\b(?:manure|previous[- ]crop) credits?\b")
             if re.search(r"\b(rain|wet|irrigat|drain|leach|denitr|water loss)\b", lower):
                 add("water_loss_context", "Account for rainfall or irrigation, drainage, and nutrient-loss risk.", r"\brain", r"\birrigat", r"\bdrain", r"\bleach", r"\bdenitr")
@@ -3704,7 +3983,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("treatment_fit", "Compare untreated risk with treatment spectrum and the current label.", r"\brisk\b", r"\bcurrent (?:product )?label\b", r"\bseed treatment\b")
         add("treatment_economic_risk", "Base treatment on target-pest and economic risk rather than insurance by default.", r"\btarget pest\b", r"\beconomic risk\b", r"\bnot insurance\b")
 
-    elif question_type == "soil_water":
+    elif question_type == "soil_water" and not topic_is_supplied_arithmetic_context(question, question_type):
         if re.search(r"\b(climate normals?|historical gridded|gridded climate)\b", lower):
             add("climate_history", "Describe climate normals or gridded climate as a historical average or context.", r"\bclimate normals?\b", r"\bhistorical average\b", r"\bgridded climate\b")
             add("climate_forecast", "Use the current forecast, current weather, or short-term outlook for the operation window.", r"\bcurrent forecast\b", r"\bcurrent weather\b", r"\bshort[- ]term outlook\b")
@@ -3823,7 +4102,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         ):
             add("drainage_landscape", "Use the soil survey, topography, and water-table or permeability evidence.", r"\bsoil (?:survey|map)\b", r"\btopograph", r"\bwater table\b", r"\bpermeab")
             add("drainage_infrastructure", "Check tile maps, outlets, and drainage or wetland constraints.", r"\btile map\b", r"\boutlet\b", r"\bwetland\b", r"\bregulation\b")
-        else:
+        elif _water_balance_method_requested(question):
             add("weather_et_boundary", "Treat public weather or ET as context, not a field sensor or prescription.", r"\b(?:weather|ET|evapotranspiration)\b[^.]{0,100}\b(?:context|prior|not (?:a )?(?:field sensor|prescription))\b", r"\bnot (?:a )?(?:field sensor|irrigation prescription)\b")
             add("root_zone_measurement", "Require a local root-zone soil-moisture observation, probe, or sensor.", r"\broot[- ]zone\b", r"\b(?:probe|sensor)\b", r"\bsoil moisture\b")
             add("crop_stage_and_rooting", "Use crop stage and rooting depth in the water decision.", r"\bcrop stage\b", r"\brooting depth\b")
@@ -3907,7 +4186,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("safety_water", "Check water and sensitive-area protections.", r"\bwater\b", r"\bsensitive area\b")
         add("safety_handling", "Cover storage, transport, mixing, handling, and disposal.", r"\bstorage\b", r"\bhandling\b", r"\bdisposal\b")
 
-    elif question_type == "product_label":
+    elif question_type == "product_label" and requests_regulated_action(question):
         if _requires_application_unit_mismatch_fallback(question_type, question):
             add("unit_distinction", "State that irrigation depth cannot be converted directly into product volume.", r"\bdo not convert\b", r"\bdifferent quantities\b")
             add("current_label_context", "Verify the exact product and current jurisdiction-specific label.", r"\bexact product\b", r"\bcurrent (?:product )?label\b", r"\bjurisdiction[- ]specific label\b")
@@ -4119,7 +4398,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("fruit_nutrition", "Use current soil or tissue tests for nutrition rather than assuming a deficiency.", r"\bnutrition\b", r"\bsoil test\b", r"\btissue test\b")
         add("fruit_disease", "Use scouting and crop-specific extension guidance for disease and reproductive diagnosis.", r"\bdisease\b", r"\bscouting\b", r"\bcrop[- ]specific extension\b")
 
-    elif question_type == "crop_management" and re.search(r"\b(seed lots?|seed quality|germination|germ test|cold test|accelerated aging|seed vigor|vigor test)\b", lower):
+    elif question_type == "crop_management" and seed_quality_workflow_requested(question):
         add("seed_germination", "Use the lot-specific germination percentage or germ test.", r"\bgermination percentage\b", r"\bgerm test\b", r"\bgermination\b")
         add("seed_vigor", "Use a vigor, cold, or accelerated-aging test where relevant.", r"\bvigor test\b", r"\bcold test\b", r"\baccelerated aging\b")
         add("seed_lot", "Keep seed-lot identity and quality information separate.", r"\bseed lot\b", r"\bseed quality\b", r"\bseed size\b")
@@ -4155,7 +4434,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
 
     elif question_type == "crop_management" and re.search(r"\b(replant|stand survival|stand loss|uneven stand)\b", lower):
         add("replant_event", "Document temperature, duration, flooding or crusting, and the field pattern or low spots.", r"\btemperature\b", r"\bduration\b", r"\blow spots?\b", r"\bfield pattern\b")
-        add("replant_stage", "Check crop or growth stage and growing-point survival.", r"\bcrop stage\b", r"\bgrowth stage\b", r"\bgrowing point\b")
+        add("replant_stage", "Check crop or growth stage and growing-point survival.", r"\bcrop stage\b", r"\bgrowth stage\b", r"\bgrowing[- ]points?\b")
         add("replant_reassessment", "Wait when appropriate, reassess recovery, and make a stand count.", r"\bwait\b", r"\breassess\b", r"\bstand count\b")
         add("replant_stand", "Compare plant population, uniformity, and yield potential.", r"\bplant population\b", r"\buniformity\b", r"\byield potential\b")
         add("replant_economics", "Compare replant cost and calendar or planting-date penalty.", r"\breplant cost\b", r"\bplanting date\b", r"\bcalendar\b")
@@ -4182,7 +4461,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("mycotoxin_test", "Use a representative sample and test result, then segregate affected lots.", r"\bsample\b", r"\btest result\b", r"\bsegregate\b")
         add("mycotoxin_storage", "Manage drying, storage moisture, aeration, and monitoring.", r"\bdrying\b", r"\bstorage moisture\b", r"\baeration\b")
         add("mycotoxin_market", "Check buyer or marketing limits and do not blend around a limit.", r"\bmarketing limits?\b", r"\bbuyer limits?\b", r"\bdo not blend\b")
-    elif question_type == "crop_management" and re.search(r"\b(harvest|storage|drying|grain moisture)\b", focus):
+    elif question_type == "crop_management" and re.search(r"\b(harvest(?!\s+index\b)|storage|drying|grain moisture)\b", focus):
         add("harvest_moisture", "Measure crop or grain moisture and field loss or standability.", r"\bmoisture\b", r"\bfield loss\b", r"\bstandability\b")
         add("drying_storage", "Match harvest timing to drying, cooling, aeration, and storage capacity.", r"\bdrying\b", r"\baeration\b", r"\bstorage\b")
         add("quality_risk", "Address test weight, mold, mycotoxin, disease, or market quality as relevant.", r"\btest weight\b", r"\bmold\b", r"\bmycotoxin\b", r"\bquality\b")
@@ -4306,16 +4585,68 @@ def _decision_route_failure_answer(
         )
     if decision == "clubroot_containment":
         guidance_scope = _clubroot_guidance_scope(state.question, jurisdiction)
+        disease_scope = clubroot_question_scope(state.question)
+        if not clubroot_confirmation_requested(state.question):
+            inspection = (
+                " Assess the reported current-crop symptoms separately from clubroot soil history: compare affected and normal plants and intact roots, map the pattern, and record drainage, root injury and symptom progression. Seek crop-appropriate diagnostic help if the cause remains uncertain; the historical disease name does not diagnose the current crop."
+                if disease_scope.symptomatic_other_crop else ""
+            )
+            return (
+                "For clubroot soil risk or reported history, limit soil movement even during a nonhost rotation. "
+                "Rotation reduces risk rather than proving the soil clean; resting spores can persist for many years, so one nonhost year does not eradicate clubroot. "
+                "Mark known or suspect areas and access routes, restrict unnecessary traffic, work affected ground last, and avoid carrying soil or crop debris to clean areas. "
+                "Before equipment, tools or boots leave, remove adhering soil and follow current applicable local sanitation guidance; contain removed material and wash water. "
+                "Use any available diagnostic and field-location records to map the reported risk, and check susceptible brassica volunteers and cruciferous weeds in the rotation. "
+                f"Use {guidance_scope} for access, cleaning and longer-term rotation decisions. "
+                "If new symptoms appear in a susceptible crop, arrange representative diagnosis; soil-movement precautions need not wait for those symptoms."
+                + inspection
+            )
+        if not disease_scope.current_symptoms:
+            observation = ("You report: " + "; ".join(disease_scope.negated_root_observations) + ". Preserve those specific negative observations. "
+                           if disease_scope.negative_root_symptoms else "No swollen roots or galls have been reported. ")
+            return (
+                observation + "A tentative clubroot question does not confirm infection or establish those signs. Compare affected and normal plants and intact roots, record the actual symptoms and field pattern, and arrange a representative sample through a crop-diagnostic laboratory if concern remains. "
+                "Avoid carrying soil from areas with known or suspected clubroot risk to clean areas; remove adhering soil from equipment and follow current applicable local sanitation guidance. "
+                "Keep the reported observations separate from the diagnosis and use confirmation and " + guidance_scope + " for longer-term decisions."
+            )
         return (
             "Swollen roots are a reason to suspect clubroot, not confirmation. One nonhost year does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Check for susceptible brassica crops, volunteers and cruciferous weeds throughout the rotation. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current applicable local sanitation guidance; record where material and wash water go. "
             "Dig several plants from the patch margin and normal plants outside it, keep roots intact, photograph the pattern and galls, and submit a representative sample through an appropriate crop-diagnostic laboratory or local referral pathway. Record crop stage, recent weather, field distribution and disease risk, rotation, variety, equipment movement, and symptom progression. Confirmation and "
             f"{guidance_scope} should control longer-term rotation, resistant-variety, access, and sanitation decisions, but containment should not wait for the result."
         )
     if decision == "pesticide_rate_request":
-        if re.search(r"\b(?:fungicide|disease|blight|mildew|rust|mold|mould)\b", lower):
+        requested_classes: set[str] = set()
+        for clause in re.split(r"[.!?;]\s*", lower):
+            request = re.search(
+                r"\b(?:what|which|how much|how many|tell me|give me|choose|select|recommend)\b|"
+                r"^\s*(?:please\s+)?(?:use|apply|spray)\b", clause,
+            )
+            if request:
+                requested_classes.update(re.findall(r"\b(?:insecticide|fungicide|herbicide)\b", clause[request.start():]))
+        if not requested_classes:
+            focus = request_focus(lower)
+            for product_class, pattern in (
+                ("insecticide", r"\b(?:insects?|aphids?|flea beetles?|cutworms?|caterpillars?|leaf feeding|defoliat\w*)\b"),
+                ("fungicide", r"\b(?:disease|blight|mildew|rust|mold|mould)\b"),
+                ("herbicide", r"\b(?:weeds?|kochia|waterhemp|pigweed|ryegrass)\b"),
+            ):
+                if re.search(pattern, focus):
+                    requested_classes.add(product_class)
+        target_class = next(iter(requested_classes)) if len(requested_classes) == 1 else None
+        if target_class == "insecticide":
+            return (
+                "I cannot choose an insecticide or state a rate from a feeding percentage or crop name alone. Confirm the pest identity and active life stage, then collect representative counts or injury measurements using the same units and sampling method as current local crop-and-pest guidance. Record crop stage, injury progression, population trend, natural enemies and plant stress; compare the applicable action threshold and expected avoided loss with treatment costs. "
+                "If treatment is justified, verify the exact product and registration, current jurisdiction-specific crop-and-target label, permitted rate and timing, on-site conditions, buffers, pollinator precautions, intervals, seasonal limits and resistance-management fit. A threshold or regional alert alone does not authorize an application."
+            )
+        if target_class == "fungicide":
             return (
                 "I cannot choose a fungicide or state a rate from the crop and disease name alone. First confirm the target disease from representative scouting or diagnostic evidence, and record incidence, severity, crop stage and canopy condition. Add recent and forecast weather, leaf wetness or irrigation where relevant, and the prior fungicide application history, including efficacy and modes of action. "
-                "Identify the exact product and registration, then verify the current PMRA product label for the crop and target disease. That label controls the rate, timing and interval, maximum applications, preharvest and re-entry intervals, mixing, buffers, and other restrictions. Fit any treatment into current local disease guidance and a resistance-management program that rotates effective FRAC or mode-of-action groups. Until the diagnosis, field risk, exact product, current label, and resistance fit are known, do not name or apply a product or rate."
+                "Identify the exact product and registration, then verify the current jurisdiction-specific product label for the crop and target disease. That label controls the rate, timing and interval, maximum applications, preharvest and re-entry intervals, mixing, buffers, and other restrictions. Fit any treatment into current local disease guidance and a resistance-management program that rotates effective FRAC or mode-of-action groups. Until the diagnosis, field risk, exact product, current label, and resistance fit are known, do not name or apply a product or rate."
+            )
+        if target_class != "herbicide":
+            return (
+                "I cannot choose a pesticide or state a rate without identifying the crop or use site, target, jurisdiction, exact product and current applicable label. Collect representative target-pressure or injury observations with crop and target stage, prior application history and current on-site conditions. Compare the appropriate local decision guidance and nonchemical options. "
+                "Any application must fit the current crop-and-target label, permitted rate and timing, restrictions, intervals and resistance-management requirements."
             )
         return (
             "I cannot set a herbicide rate from incomplete crop, weed or product details. Confirm weed identity, weed stage and size, density and distribution, crop stage, jurisdiction, the exact product and registration, and the current product label. Review the application record, prior products and herbicide groups, and survivor or resistance history. For a follow-up, map and revisit escapes and separate application failure, late emergence and resistance. "
@@ -4406,7 +4737,7 @@ def _decision_route_failure_answer(
     if decision == "underspecified_spray":
         return (
             "I cannot choose a spray from that question alone. Provide the crop and production site, target weed, pest, or disease, crop stage and target stage, jurisdiction, field pattern or representative scouting count, recent treatment history, and the exact product if one is already under consideration. For a follow-up application, include the prior product, rate, timing, efficacy, and resistance or application-failure concern. "
-            "Then check on-site wind, rain and crop conditions and verify that the current product label and PMRA registration cover the crop, target, stage, timing, rate, intervals, buffers, and other restrictions. Until those facts are known, do not select a product or rate."
+            "Then check on-site wind, rain and crop conditions and verify that the current product label and applicable registration cover the crop, target, stage, timing, rate, intervals, buffers, and other restrictions. Until those facts are known, do not select a product or rate."
         )
     if decision == "boundary_only_fertility_rate":
         crop = state.crop or "crop"
@@ -4441,22 +4772,22 @@ def _decision_route_failure_answer(
     if decision == "plant_health_diagnostic":
         if re.search(r"\bstripe rust\b", lower):
             return (
-                "The yellow-orange stripes are consistent with stripe rust, but do not confirm it or spray from colour alone. Inspect representative upper and lower leaves across the field for narrow linear rows of raised yellow-orange pustules and powdery spores, whether symptoms follow leaf veins, and whether new lesions are appearing. Map incidence, severity and canopy position; record spring-wheat crop stage, recent rain, humidity or leaf wetness, regional disease risk, field history, and variety susceptibility. "
-                "Attach clear photos and submit a fresh representative leaf sample or use a diagnostic lab when the signs remain uncertain. Consider a fungicide only after diagnosis, disease pressure and movement toward yield-critical leaves, crop stage, current Alberta risk guidance, expected yield protection and economics support it, then verify the current PMRA product label and resistance group."
+                "The yellow-orange stripes are consistent with stripe rust, but do not confirm it or spray from colour alone. Inspect representative upper and lower leaves across the field for narrow linear rows of raised yellow-orange pustules and powdery spores, whether symptoms follow leaf veins, and whether new lesions are appearing. Map incidence, severity and canopy position; record the crop stage, recent rain, humidity or leaf wetness, regional disease risk, field history, and variety susceptibility. "
+                "Attach clear photos and submit a fresh representative leaf sample or use a diagnostic lab when the signs remain uncertain. Consider a fungicide only after diagnosis, disease pressure and movement toward yield-critical leaves, crop stage, current applicable local stripe-rust guidance, expected yield protection and economics support it, then verify the current jurisdiction-specific product label and resistance group."
             )
-        if state.crop == "potato" and re.search(r"\b(?:lesions?|disease program)\b", lower):
+        if state.crop == "potato" and foliar_symptoms_reported(state.question):
             local_guidance = _clubroot_guidance_scope(state.question, jurisdiction).replace(
                 "clubroot guidance", "potato disease alerts or IPM guidance"
             )
             return (
                 "Before changing the potato disease program, collect representative fresh leaves and stems from the advancing lesion margin in affected, edge and normal areas; photograph upper and lower leaf surfaces and canopy position, and submit a diagnostic sample when identity would change the program. Record incidence, severity, lesion expansion, distribution, crop stage, variety, rotation, seed and disease history, irrigation, recent rain, humidity and leaf-wetness period. "
-                f"Compare those observations with {local_guidance}. Change prevention, timing or product only when the working diagnosis and risk justify it, and verify the current PMRA product label for potato, target, crop stage, timing, intervals, resistance group and seasonal restrictions."
+                f"Compare those observations with {local_guidance}. Change prevention, timing or product only when the working diagnosis and risk justify it, and verify the current jurisdiction-specific product label for potato, target, crop stage, timing, intervals, resistance group and seasonal restrictions."
             )
     if decision == "ambiguous_product_followup":
         return (
             "Do not repeat the same insecticide, herbicide, fungicide, product, or rate from the rain event alone. "
             "Identify the exact product and registration, crop and target, prior rate and application time, rain start and amount, and the label's rainfast, reapplication, interval, seasonal-maximum, and crop-stage restrictions. Check whether the first application had time to become rainfast and whether the target is still active; rain does not automatically erase a treatment or authorize another pass. "
-            "Use an on-site field observation of rain timing, crop condition, and target activity plus the current product label and actual application record to decide whether to wait, reassess efficacy, or make a labeled follow-up. The current PMRA label controls. Do not substitute advice about an unnamed pest or product."
+            "Use an on-site field observation of rain timing, crop condition, and target activity plus the current product label and actual application record to decide whether to wait, reassess efficacy, or make a labeled follow-up. The current label applicable to the treatment jurisdiction controls. Do not substitute advice about an unnamed pest or product."
         )
     if decision == "crop_stress_differential":
         if re.search(r"\b(?:phosphorus|phosphate|soil[- ]test p|low p)\b", lower):
@@ -4546,7 +4877,7 @@ def _decision_route_failure_answer(
     if decision == "hail_disease_differential":
         return (
             "Map the storm path first and compare exposed, sheltered, edge, and interior plants. Direct hail injury should align with the event and impact direction and show fresh tearing, shredding, bruising, breakage, or scars on leaves and other exposed tissues. Mark representative lesions and revisit them: static wounds that dry and callus support physical injury, while lesions that continue expanding, develop distinct margins, sporulation, pustules, ooze, or other pathogen signs, or appear on new tissue after the storm support an active disease process. "
-            "Record crop stage, lesion age and canopy position, storm timing, subsequent leaf wetness, hybrid or variety susceptibility, prior disease history, and whether symptoms also occur outside the hail track. Photograph the same plants over time and submit representative advancing-margin tissue when progression remains ambiguous. Do not name a disease or recommend a fungicide from colour alone. Before treatment, confirm active biological progression, use a current locally validated risk model or action threshold, compare the expected yield or quality benefit with treatment cost and likely return, and verify crop stage, resistance-management fit, and the current PMRA label."
+            "Record crop stage, lesion age and canopy position, storm timing, subsequent leaf wetness, hybrid or variety susceptibility, prior disease history, and whether symptoms also occur outside the hail track. Photograph the same plants over time and submit representative advancing-margin tissue when progression remains ambiguous. Do not name a disease or recommend a fungicide from colour alone. Before treatment, confirm active biological progression, use a current locally validated risk model or action threshold, compare the expected yield or quality benefit with treatment cost and likely return, and verify crop stage, resistance-management fit, and the current label for the treatment jurisdiction."
         )
     if decision == "corn_common_rust_differential":
         return (
@@ -4872,13 +5203,14 @@ def _decision_route_failure_answer(
                 "Compare trap trend, crop and fruit stage, orchard history, fruit injury, natural enemies, and a locally valid apple-pest action threshold. Treat only when that evidence supports the target and timing, then verify the current label, preharvest interval, pollinator and beneficial-insect precautions, and resistance group for the exact product."
             )
         return (
-            "Do not spray from pest presence or a green-looking canopy alone. Confirm the pest species and active feeding stage. Sample representative edge and interior locations using the same defined method; edge sweeps alone cannot establish field-wide density. Record counts per sweep or sampled plant unit, pest density, injury level, whole-canopy defoliation where relevant, and crop stage. "
+            "Do not spray from pest presence or a green-looking canopy alone. Confirm the pest species and active feeding stage. Sample representative edge and interior locations using the appropriate crop-and-pest method; roadside or edge counts alone cannot establish field-wide density. Keep sampling units explicit, such as counts per defined ground area for grasshoppers or the appropriate sweep or plant unit for other pests. Record pest density, injury level, whole-canopy defoliation where relevant, and crop stage. "
             "Count beneficial insects and natural enemies, recheck population trends, and compare with a current locally valid crop-and-pest threshold using the same sampling units. During flowering, assess pollinator activity and the label's bee-protection restrictions; evening timing alone does not establish safety. Review previous products and IRAC groups when resistance is a concern. Rotate effective modes only when treatment is justified, verify the current product label and all current label restrictions for the crop, target, and timing, and use IPM or a selective product to preserve beneficial insects where an effective labeled option fits."
         )
     if decision == "fungicide_decision" and state.crop == "potato":
         return (
-            "Do not choose a fungicide from new potato leaf lesions alone, but treat the differential as time-sensitive. Map the field pattern and irrigation overlap; inspect upper and lower leaves, stems, lesion margins and undersides; record crop stage, incidence, severity, lesion expansion, recent rain or irrigation, humidity and leaf wetness, variety susceptibility, and field history. Separate late blight from other foliar disease and non-disease injury, and submit a fresh representative sample promptly when late blight or another consequential disease is plausible. "
-            "Use locally current disease alerts or validated risk guidance only to prioritize scouting. A protectant or curative application is defensible only when the working diagnosis, crop stage, weather risk, current potato label, current PMRA product label for that crop and target, resistance group, expected yield or quality protection, application cost, and the cost of delay support it; a public forecast or lesion photo alone is not enough."
+            "A regional alert does not mean that every potato field needs the same application today or a shorter interval. Late-blight protection is preventive: locally applicable disease alerts and validated weather-risk guidance can inform protection before visible lesions; do not require visible disease or an insect-style economic threshold first. Check the alert's date, location, target disease and applicability, crop stage and canopy growth, variety susceptibility, nearby infection reports, field history, recent rain or irrigation, humidity and leaf wetness, and representative scouting records. "
+            "If lesions or other suspicious signs are found, inspect upper and lower leaves, stems, lesion margins and undersides, map incidence and progression, distinguish disease from injury, and promptly seek confirmation with a fresh representative diagnostic sample. Absence of observed lesions does not rule out infection risk. "
+            "Before selecting a product, timing or interval, verify the exact current jurisdiction-specific product label for potato and the target, current provincial guidance, prior applications and remaining protection, rainfastness and coverage, minimum intervals and seasonal limits, resistance group and management, and expected yield or quality protection, cost and cost of delay. The alert alone cannot establish that field-specific decision."
         )
     if decision == "fungicide_decision":
         if state.crop == "corn" and re.search(r"\brectangular\b[^?]{0,100}\blesions?\b|\blesions?\b[^?]{0,100}\bleaf veins?\b", lower):
@@ -4982,19 +5314,30 @@ def _decision_route_failure_answer(
             "Restore drainage where possible without trafficking saturated soil, then allow enough aerated growing conditions to look for new growth. Inspect growing points and roots and make representative stand counts across affected and normal areas. Compare the recovered stand, uniformity, yield potential, planting-date loss, replant cost, replant seed availability, and local insurance rules before terminating the crop."
         )
     if decision == "freeze_recovery":
-        if state.crop == "canola" or re.search(r"\bcanola\b", lower):
+        if state.crop == "canola" and _reproductive_recovery_requested(state.question):
             return (
                 "Do not estimate canola loss from a distant station temperature or from surface discolouration alone. Record the reproductive stage and the best available in-field minimum temperature and exposure duration, then account for topographic position, canopy, wind, soil moisture, and whether low, exposed, or sheltered areas experienced different microclimates. "
                 "After injury has had time to express, sample representative plants from affected and normal areas. Inspect growing points, stems, flowers, pods, and developing seeds for firm viable tissue, continued pod fill, new growth, or progressive water-soaked, bleached, brown, soft, or aborted tissue. Revisit marked plants to track progression and estimate viable reproductive sites across the field. Use that stage-specific recovery evidence, not temperature alone, before changing harvest or stand management; do not invent a field-loss percentage from the forecast."
             )
-        if state.crop == "wheat" or re.search(r"\bwinter wheat\b|\bspring wheat\b", lower):
+        if state.crop == "wheat":
             return (
                 "Do not decide stand recovery from burned leaves immediately after the freeze. Record crop stage and whether the crown, growing point, or developing head was still protected near the soil or had moved into the exposed stem. After several days of warm growing conditions, sample affected, sheltered, low, and normal areas; split representative stems and crowns and look for firm yellow-green tissue and new growth versus water-soaked, white, brown, or soft growing points and heads. "
                 "Count live plants and productive tillers over representative row lengths and map stand uniformity, not just the best survivors. Use the recovered stand and tiller distribution, injury stage, root and crown health, yield potential, planting-date penalty, replant options, and current local guidance to decide whether to retain the crop. Kernel set is too late to be the first recovery check."
             )
+        if state.crop == "corn":
+            return (
+                "Confirm corn growth stage and growing-point position before judging freeze recovery. In recently emerged corn the growing point may still be protected below the soil surface; later stages can place it above the soil surface, and frozen soil can also injure a protected one. Burned leaves alone do not establish survival. Allow suitable warm growing weather for new leaf growth, then inspect growing points for healthy firm tissue and count surviving plants and stand uniformity. "
+                "Compare the recovered stand and planting date with yield potential, replant options and the cost of replanting before terminating it."
+            )
+        crust_check = (
+            " If crusting is reported, also inspect whether viable seedlings are trapped beneath the crust; separate that restriction from killed tissue."
+            if re.search(r"\bcrust\w*\b", state.question, re.I) else ""
+        )
         return (
-            "Recently emerged corn can lose exposed leaves while its growing point remains protected below the soil surface, so appearance immediately after a freeze is not a replant decision. Allow warm growing weather for new leaf growth, then inspect growing points for healthy firm tissue and count surviving plants and stand uniformity. "
-            "Compare the recovered stand and planting date with the yield potential and cost of replanting before terminating it. Lack of new growth or discolored soft growing points is more consequential than burned leaf area alone."
+            "First establish the crop and crop stage; frost survival and growing-point position are crop-specific. Record the injury pattern, exposure and field conditions, then inspect representative affected and normal plants for healthy firm growing points and other crop-appropriate viable tissue, roots or crowns. "
+            "Allow suitable recovery conditions and revisit marked plants for new growth; count surviving plants and stand uniformity rather than judging burned leaves alone."
+            + crust_check +
+            " Compare the recovered stand, remaining planting window, expected yield, replant options and cost of replanting with current crop-specific local guidance before terminating the stand."
         )
     if decision == "pollination_stress":
         return (
@@ -5037,7 +5380,7 @@ def _looks_like_french_output(answer: str) -> bool:
     return len(tokens & markers) >= 4
 
 
-def _french_conservative_failure_answer(question_type: str) -> str:
+def _french_conservative_failure_answer(question_type: str, *, question: str = "") -> str:
     if question_type == "plant_health":
         return (
             "Les observations fournies ne suffisent pas pour confirmer une maladie ni choisir un traitement. "
@@ -5066,7 +5409,7 @@ def _french_conservative_failure_answer(question_type: str) -> str:
             "Réconcilier les crédits de fumier et de culture précédente, l'objectif réaliste et les pertes possibles, "
             "puis utiliser l'étalonnage actuel de la province et de la culture. Sans ces données, ne pas donner de dose."
         )
-    if question_type == "soil_water":
+    if question_type == "soil_water" and _water_balance_method_requested(question):
         return (
             "Une carte, un indice régional ou l'apparence de la surface ne suffit pas pour fixer une irrigation, un "
             "drainage ou une date de plantation. Vérifier au champ l'humidité dans la zone racinaire, la texture, la "
@@ -5190,14 +5533,19 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
     This never preserves an unverified model prescription or supplies authority.
     English-only methods cannot replace a requested French response.
     """
+    concept = bounded_concept_prefix(question)
+    def with_concept(body: str) -> str:
+        return concept + "\n\n" + body if concept and concept not in body else body
+    if information_request_kind(question):
+        return concept
     mixed = _mixed_rate_support(question)
     if mixed:
-        return mixed
+        return with_concept(mixed)
     if _looks_like_french(question):
         return None
     method = observation_guidance(question)
     if method:
-        return method.answer
+        return with_concept(method.answer)
     if question_type == "product_label" and re.search(
         r"\b(?:disease|blight|mummy berry|aphids?|pests?|collaps\w*)\b", question, re.I
     ):
@@ -5206,17 +5554,21 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
     if state.decision in {
         "pesticide_rate_request", "underspecified_spray", "plant_health_diagnostic",
         "crop_stress_differential", "drought_nitrogen_adjustment", "spray_weather_window",
-        "clubroot_containment",
+        "clubroot_containment", "pest_treatment", "weed_escape_management",
     } or question_type == "plant_health":
-        answer = _conservative_failure_answer(question_type, question=question)
-        # The procedural method transfers; a Canadian label reference does not.
-        return answer.replace("current PMRA product label", "current jurisdiction-specific product label").replace("PMRA registration", "applicable registration")
-    return None
+        return _conservative_failure_answer(question_type, question=question)
+    return concept
 
 
-def _conservative_failure_answer(question_type: str, *, question: str = "") -> str:
+def _conservative_failure_answer(question_type: str, *, question: str = "", _include_concept: bool = True) -> str:
+    if _include_concept:
+        concept = bounded_concept_prefix(question)
+        if concept:
+            return concept + "\n\n" + _conservative_failure_answer(question_type, question=question, _include_concept=False)
     if _looks_like_french(question):
-        return _french_conservative_failure_answer(question_type)
+        return _french_conservative_failure_answer(question_type, question=question)
+    if information_request_kind(question) or is_mechanism_explanation(question):
+        return _exam_review_failure_answer(question)
     if simple_definition_subject(question) in {"soil texture", "crop rotation"}:
         return _exam_review_failure_answer(question)
     method = observation_guidance(question)
@@ -5307,7 +5659,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
             "Confirm the cause with a representative diagnostic sample or local crop specialist. Consider treatment only after diagnosis, current label fit, and the expected yield benefit, "
             "crop value, commodity price, and application cost support a reasonable return, ROI, and field-level economics."
         )
-    if question_type == "fertility_rate":
+    if question_type == "fertility_rate" and not topic_is_supplied_arithmetic_context(question, question_type):
         if re.search(r"\b(volatilization|fertilizer source)\b", lower):
             return (
                 "First identify the fertilizer source, formulation and application record: urea, UAN, ammonium or another source can have different loss pathways. Check placement and whether it is a surface application, incorporated, banded or injected; then evaluate volatilization and other loss risk from soil condition, temperature, residue, wind, soil pH, and the actual rainfall timing or irrigation timing after application. "
@@ -5577,7 +5929,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
             "Use the NRCS soil survey or Soil Data Access (SDA) map unit as a regional prior and screening context. Inspect dominant components and component percentages plus mapped texture, drainage class, hydrologic group, hydric rating, slope, and restrictive-layer clues. Treat every listed attribute as a mapped interpretation, not exact field truth: it cannot prove which component occurs at a boundary point or confirm current field conditions, and it is not a replacement for soil tests or field observations. "
             "Confirm the uploaded or drawn boundary and field history, then ground-truth representative and unusual management zones with scouting, field observations, a soil pit or probe, and appropriate soil samples before changing management."
         )
-    if question_type == "soil_water":
+    if question_type == "soil_water" and not topic_is_supplied_arithmetic_context(question, question_type):
         if re.search(r"\b(climate normals?|historical gridded|gridded climate)\b", lower):
             return (
                 "Use climate normals, a historical average, or historical gridded climate as a long-run prior and planning context; they describe what has occurred, not a prediction of the next operation window. Use the current forecast, current weather and short-term outlook for the actual period, including probability and uncertainty rather than a categorical promise. "
@@ -5682,11 +6034,12 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
                 "Diagnose persistent wetness from the soil survey and map unit, topography or elevation, field pattern, rainfall history, water-table or permeability evidence, and existing tile maps and outlets. Ground-truth the low and normal areas before changing drainage. "
                 "Any drainage plan also needs outlet capacity, downstream effects, and applicable wetland or drainage regulation checked locally."
             )
-        return (
-            "Public weather and evapotranspiration are planning context, not a field sensor or irrigation prescription. Pair them with a probe or sensor through the active root zone, crop stage and rooting depth, "
-            "recent applied-water, flowmeter, irrigation, and rainfall records, system capacity, infiltration, drainage, salinity or water-quality constraints, crop stress, and trafficability. "
-            "Change irrigation, drainage, or traffic timing only after those local observations establish the field water balance."
-        )
+        if _water_balance_method_requested(question):
+            return (
+                "Public weather and evapotranspiration are planning context, not a field sensor or irrigation prescription. Pair them with a probe or sensor through the active root zone, crop stage and rooting depth, "
+                "recent applied-water, flowmeter, irrigation, and rainfall records, system capacity, infiltration, drainage, salinity or water-quality constraints, crop stress, and trafficability. "
+                "Change irrigation, drainage, or traffic timing only after those local observations establish the field water balance."
+            )
     if question_type == "crop_management":
         if decision_state.crop == "potato" and re.search(r"\bcover crops?\b", lower):
             return (
@@ -5698,7 +6051,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
                 "Treat poor fruit set or kernel set as a crop-specific reproductive differential. Confirm bloom timing, flowering and crop stage, then check pollination biology: pollen shed and receptivity or synchrony for wind- or self-pollinated crops, and pollinator activity or bee activity only where the crop depends on it. Reconstruct temperature, heat, cold, rain and other weather during bloom. "
                 "At the same time, compare root-zone soil moisture, irrigation and water stress; use a current soil test or tissue test for nutrition rather than assuming boron, calcium or another deficiency; and scout flowers, fruit and canopy for disease. Use crop-specific extension guidance to decide which observation or sample can separate the causes."
             )
-        if re.search(r"\b(seed lots?|seed quality|germination|germ test|cold test|accelerated aging|seed vigor|vigor test)\b", lower):
+        if seed_quality_workflow_requested(question):
             if re.search(r"\bpotato(?:es)?\b", lower):
                 return (
                     "For potato, evaluate seed tubers rather than treating the lot like botanical seed. Verify certified-source and lot identity, seed-tuber health and disease status, physiological age, sprout condition, size distribution, storage history, and any cutting and healing or suberization plan. Inspect for rot, dehydration, pressure bruising, and other damage, and keep materially different lots separate. "
@@ -5780,7 +6133,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
                 "Treat mycotoxin risk as a field-to-storage lot-management problem. Before harvest, map field disease, ear mold, kernel damage and disease level; review weather, drought, humidity, insect or physical damage and delayed-harvest risk. Plan a representative sample and validated test for each lot, record the test result, and segregate affected or uncertain grain rather than blending around a limit. "
                 "Harvest and handle lots to limit further damage, then use prompt drying, verified storage moisture, cooling, aeration and temperature or moisture monitoring. Check current buyer, feed, food and marketing limits for the commodity and jurisdiction before moving or marketing the lot."
             )
-        if re.search(r"\b(harvest|storage|drying|grain moisture)\b", focus) and not (
+        if re.search(r"\b(harvest(?!\s+index\b)|storage|drying|grain moisture)\b", focus) and not (
             re.search(r"\b(variety|hybrid|cultivar|candidate list|public trials?|genetics)\b", lower)
             and re.search(r"\b(maturity|planting date|standability|disease package|field fit)\b", lower)
         ):
@@ -5923,11 +6276,12 @@ def _has_specific_failure_answer(question_type: str, question: str) -> bool:
         "fertility_rate",
         "fertility_diagnostic",
         "seed_treatment",
-        "soil_water",
         "integrated_management",
         "exam_review",
     }:
         return True
+    if question_type == "soil_water":
+        return bool(_intent_requirements(question, question_type))
     if question_type == "field_data":
         return bool(
             re.search(r"\b(soil map|soil[- ]survey|NRCS|SDA|map[- ]unit|component|public map|Cropland Data Layer|CDL|NASS|Quick Stats|regional statistics|on[- ]farm trial|strip trial|trial design|organic matter|soil organic carbon|sampling design|old soil tests?|management zones?|econom\w*|profit\w*|ROI|return|defensible|cost|spend|partial budget|prescription)\b", lower, re.IGNORECASE)
@@ -5983,13 +6337,34 @@ def _integrated_specialty_decision_answer() -> str:
     )
 
 
-def _unsupported_diagnostic_assertion(answer: str, evidence: str) -> bool:
+def _unsupported_diagnostic_assertion(answer: str, evidence: str, *, reported_context: str = '') -> bool:
     """A named organism is not evidence of an asserted field diagnosis.
 
     Only an explicit source exclusion can support the narrow negative form.
     Positive certainty still requires review; mere name overlap is insufficient.
     Questions are deliberately not a source of diagnostic confirmation.
     """
+    from agronomy_agent.query_context import extract_crop_entities
+
+    field_assertion = re.compile(
+        r"\b(?:your|this|these)\s+(?P<subject>[a-z-]+(?: [a-z-]+){0,3}?)\s+"
+        r"(?:has|have|is infected with|are infected with|suffers? from)\s+"
+        r"(?P<condition>" + _NAMED_CONDITION_RE.pattern + r")", re.I,
+    )
+    for match in field_assertion.finditer(answer):
+        if not extract_crop_entities(match['subject']) and not re.search(
+            r"\b(?:crops?|plants?|fields?|roots?|leaves|seedlings?)\b", match['subject'], re.I,
+        ):
+            continue
+        prefix = answer[:match.start()]
+        if proposition_assertion_status(prefix) != 'asserted':
+            continue
+        attributed = re.search(r"\byou (?:reported|said|described)(?: that)?\s+$", prefix, re.I)
+        lab_attributed = re.search(r"\baccording to (?:your|the supplied) (?:lab(?:oratory)? )?report,\s*$", prefix, re.I)
+        if (attributed or lab_attributed) and match['condition'].casefold() in reported_context.casefold():
+            if not lab_attributed or re.search(r"\b(?:lab|laboratory|report)\b", reported_context, re.I):
+                continue
+        return True
     for match in _DIAGNOSIS_ASSERTION_RE.finditer(answer):
         tail = answer[match.end():].split(";", 1)[0].split("\n", 1)[0]
         negative = re.match(r"\s+not\s+([^.!?]+)", tail, re.IGNORECASE)
@@ -6023,6 +6398,39 @@ def _unsupported_diagnostic_assertion(answer: str, evidence: str) -> bool:
         if not supported:
             return True
     return False
+
+
+def _unsupported_condition_values(text: str, allowed: str, *, root_inspection: bool) -> tuple[str, ...]:
+    """Distinguish a visible decay check from a disease or an asserted finding.
+
+    Only bare 'rot' in an explicit root-inspection list gets this exemption.
+    Evaluate each occurrence so a later diagnosis cannot borrow its support.
+    """
+    values: list[str] = []
+    for match in _NAMED_CONDITION_RE.finditer(text):
+        value = match.group(1)
+        if re.search(rf"(?<!\w){re.escape(_normalize_for_matching(value))}(?!\w)", allowed):
+            continue
+        if root_inspection and value.lower() == "rot":
+            start = max((text.rfind(mark, 0, match.start()) for mark in ".!?;\n"), default=-1) + 1
+            end = min((pos for mark in ".!?;\n" if (pos := text.find(mark, match.end())) >= 0), default=len(text))
+            prefix, suffix = text[start:match.start()], text[match.end():end]
+            inspection = re.search(r"\b(?:look|looking|check|checking|inspect|inspecting|examine|examining)\b[^.!?;\n]{0,350}\bfor\b", prefix, re.I)
+            list_item = re.search(r"(?:\bfor|,|\band|\bor|\bany|\bsigns of)\s*$", prefix, re.I)
+            # A comma alone is not a list boundary: ', which explains the
+            # swelling' asserts a cause. Admit only the remaining visible
+            # descriptors, with no attached finding or causal proposition.
+            list_end = re.fullmatch(
+                r"\s*(?:(?:,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+)"
+                r"(?:(?:unusual|abnormal)\s+)?"
+                r"(?:lesions?|discolou?ration|pruning|damage|cracks?|injur(?:y|ies)))*\s*",
+                suffix, re.I,
+            )
+            assertion = re.search(r"\b(?:confirmed|diagnos\w*|caus\w*|established|proven|present)\b", prefix + suffix, re.I)
+            if inspection and list_item and list_end and not assertion:
+                continue
+        values.append(value)
+    return _dedupe(values)
 
 
 def _unsupported_values(

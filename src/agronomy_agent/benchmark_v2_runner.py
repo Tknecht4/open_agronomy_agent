@@ -20,6 +20,7 @@ from typing import Any, Protocol
 import yaml
 
 from agronomy_agent.agronomic_calculations import CalculationOperation
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, tool_version_for, supplied_input_label
 from agronomy_agent.answerability import (
     ANSWERABILITY_POLICY_VERSION,
     assess_answerability,
@@ -38,7 +39,7 @@ from agronomy_agent.benchmark_v2_metrics import (
 from agronomy_agent.tool_planner import (
     PLANNER_VERSION,
     TOOL_PLAN_SCHEMA_VERSION,
-    plan_and_execute_tools,
+    plan_tools, execute_tool_plan,
 )
 
 
@@ -177,8 +178,6 @@ def _runtime_implementation_receipts() -> dict[str, str]:
         "tool_planner": "src/agronomy_agent/tool_planner.py",
         "graph_contract": "src/agronomy_agent/agno_runtime/knowledge_graph.py",
         "evidence_contract": "src/agronomy_agent/evidence_contracts.py",
-        "answerability_policy": "src/agronomy_agent/answerability.py",
-        "verifier_policy": "src/agronomy_agent/answer_verifier.py",
     }
     receipts = {
         receipt_id: file_sha256(PROJECT_ROOT / relative)
@@ -186,19 +185,66 @@ def _runtime_implementation_receipts() -> dict[str, str]:
     }
     receipts.update(
         {
+            "answerability_policy": _bundle_sha256(
+                (
+                    PROJECT_ROOT / "src/agronomy_agent/answerability.py",
+                    PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_depletion_request.py",
+                    PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
+                )
+            ),
             "runtime_orchestrator": _bundle_sha256(
                 (
+                    PROJECT_ROOT / "src/agronomy_agent/router.py",
+                    PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
                     PROJECT_ROOT / "src/agronomy_agent/agent.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
+                    PROJECT_ROOT / "src/agronomy_agent/server/services/conversation_resolution.py",
+                    PROJECT_ROOT / "src/agronomy_agent/server/services/answer_renderer.py",
+                    PROJECT_ROOT / "src/agronomy_agent/execution_core.py",
+                    PROJECT_ROOT / "src/agronomy_agent/codex_app_server.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answer_safety.py",
+                    PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
                 )
             ),
             "kernel_config": _bundle_sha256(
-                (PROJECT_ROOT / "src/agronomy_agent/agent.py",)
+                (
+                    PROJECT_ROOT / "src/agronomy_agent/router.py",
+                    PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
+                    PROJECT_ROOT / "src/agronomy_agent/agent.py",
+                    PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
+                    PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answerability.py",
+                    PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
+                    PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_depletion_request.py",
+                )
+            ),
+            "verifier_policy": _bundle_sha256(
+                (
+                    PROJECT_ROOT / "src/agronomy_agent/router.py",
+                    PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answer_verifier.py",
+                    PROJECT_ROOT / "src/agronomy_agent/evidence_handshake.py",
+                    PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
+                    PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
+                    PROJECT_ROOT / "src/agronomy_agent/quantity_claims.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answerability.py",
+                    PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
+                    PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
+                )
             ),
             "field_context_contract": _bundle_sha256(
                 (
                     PROJECT_ROOT / "src/agronomy_agent/context_packer.py",
+                    PROJECT_ROOT / "src/agronomy_agent/evidence_handshake.py",
+                    PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/field_context_compiler.py",
                     PROJECT_ROOT / "src/agronomy_agent/server/schemas.py",
@@ -212,25 +258,61 @@ def _runtime_implementation_receipts() -> dict[str, str]:
             "tool_executor_bundle": _bundle_sha256(
                 (
                     PROJECT_ROOT / "src/agronomy_agent/tool_planner.py",
+                    PROJECT_ROOT / "src/agronomy_agent/field_data_capability.py",
                     PROJECT_ROOT / "src/agronomy_agent/capability_registry.py",
                     PROJECT_ROOT / "src/agronomy_agent/tools/registry.py",
                     PROJECT_ROOT / "src/agronomy_agent/local_tools.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/agronomic_calculations.py",
+                    PROJECT_ROOT / "src/agronomy_agent/calculator_contracts.py",
+                    PROJECT_ROOT / "src/agronomy_agent/foundation_math_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/seed_establishment.py",
+                    PROJECT_ROOT / "src/agronomy_agent/seed_survival_scenarios.py",
+                    PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_math_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_nutrient_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_water_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_depletion_request.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_model_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_model_arithmetic.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_grain_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_geometry_biomass_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/water_arithmetic.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/agno_runtime/tool_adapters.py",
                 )
             ),
             "fallback_policy": _bundle_sha256(
                 (
+                    PROJECT_ROOT / "src/agronomy_agent/router.py",
+                    PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
                     PROJECT_ROOT / "src/agronomy_agent/agent.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
                     PROJECT_ROOT / "src/agronomy_agent/answer_verifier.py",
+                    PROJECT_ROOT / "src/agronomy_agent/evidence_handshake.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answer_safety.py",
+                    PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
+                    PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
+                    PROJECT_ROOT / "src/agronomy_agent/quantity_claims.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answerability.py",
+                    PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
+                    PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
                 )
             ),
         }
     )
+    # Topic completeness and fallback eligibility consult the canonical
+    # planner's validation path. Bind that dependency without claiming tool
+    # execution or changing the frozen component/construct declarations.
+    for policy in ("verifier_policy", "fallback_policy"):
+        receipts[policy] = stable_sha256({
+            "policy_implementation_sha256": receipts[policy],
+            "canonical_planning_dependency_sha256": receipts["tool_executor_bundle"],
+        })
     return receipts
 
 
@@ -263,7 +345,11 @@ def _deterministic_executor_semantic_profile() -> dict[str, Any]:
         "construct_profile_sha256": stable_sha256(construct_profile),
         "tool_implementations": {
             "agronomic_calculator": {
-                "implementation_version": "agronomic_calculator_v1",
+                "implementation_version": CALCULATOR_VERSION,
+                "operation_versions": {
+                    operation.value: tool_version_for(operation.value)
+                    for operation in CalculationOperation
+                },
                 "family": "supplied_input_arithmetic",
                 "operations": [operation.value for operation in CalculationOperation],
                 "authority_roles": ["supplied_inputs_arithmetic_only"],
@@ -363,13 +449,16 @@ def _verifier_artifact_id(
 class DeterministicContractExecutor:
     """Exercise orchestration and local contracts without model inference.
 
-    Outputs are derived from frozen case expectations and deterministic tools.
-    They are intentionally labeled synthetic and are prohibited from capability
-    reporting, model comparison, or external claims.
+    Outputs are derived from frozen case expectations and ready calculations.
+    This frozen-v1 construct fixture plans current clarification states without
+    executing conditional scenarios, whose result semantics are outside that
+    construct. Current scenarios require production-path qualification instead.
+    All fixture outputs are synthetic and prohibited from capability reporting,
+    model comparison, or external claims.
     """
 
     executor_id = "deterministic_contract_executor"
-    executor_version = "v1"
+    executor_version = "v2"
     result_class = "synthetic_contract_qa_not_system_performance"
 
     _COMPONENT_CONTRACT_VERSIONS = {
@@ -428,10 +517,15 @@ class DeterministicContractExecutor:
         case = request.case
         components = dict(request.components)
         expected = case["expected_response"]
-        plan, results = plan_and_execute_tools(
+        plan = plan_tools(
             str(case["question"]),
             field_context=case.get("field_context") if components.get("field_context") else None,
         )
+        # Frozen construct-v1 has no conditional-result state. This synthetic
+        # fixture intentionally exercises ready calculations and planner ASK
+        # states, never executes and then discards current conditional results.
+        results = (execute_tool_plan(plan, question=str(case["question"]))
+                   if components.get("typed_tools") and plan.status == "ready" else ())
         plan_record = plan.to_dict()
         result_records = _tool_records(results) if components.get("typed_tools") else []
         invocation_records = [
@@ -478,20 +572,22 @@ class DeterministicContractExecutor:
         tool_clarification_used = bool(
             components.get("typed_tools")
             and plan.status == "clarification_required"
-            and case.get("stratum") == "one_critical_input_missing"
         )
         direct_answer = bool(
             tool_result_used
             or (
-                not pre_generation_intervened
+                not pre_generation_intervened and not tool_clarification_used
                 and expected.get("direct_answer_expected") is True
             )
         )
-        clarification_fields = (
-            list(expected.get("clarification_fields") or [])
-            if tool_clarification_used or state == "ask_one_discriminating_question"
-            else []
-        )
+        if tool_clarification_used:
+            clarification_fields = list(dict.fromkeys(
+                missing for invocation in plan.invocations for missing in invocation.missing_inputs
+            ))
+        elif state == "ask_one_discriminating_question":
+            clarification_fields = list(answerability.missing_inputs)
+        else:
+            clarification_fields = []
         clarifying_questions = (
             [
                 str(plan.clarification or answerability.response_text or "What is the missing decision input?")
@@ -511,6 +607,10 @@ class DeterministicContractExecutor:
                 or plan.clarification
                 or "A bounded authority or input check is required before the requested action."
             )
+            answer_numeric = None
+        elif tool_clarification_used:
+            answer_origin = "deterministic_tool_clarification"
+            draft_text = str(plan.clarification)
             answer_numeric = None
         else:
             answer_origin = "synthetic_mock_model"
@@ -943,7 +1043,9 @@ def _validate_tool_trace(
             raise ValueError("tool invocation uses an unknown semantic family")
         if (
             invocation.get("tool_version")
-            != implementation.get("implementation_version")
+            != implementation.get("operation_versions", {}).get(
+                invocation.get("operation"), implementation.get("implementation_version")
+            )
             or invocation.get("operation")
             not in set(implementation.get("operations") or ())
             or invocation.get("operation") not in set(family["operations"])
@@ -1050,6 +1152,7 @@ def _validate_tool_trace(
             or not invocation.get("missing_inputs")
             or any(
                 str(missing).casefold() not in clarification_text
+                and supplied_input_label(str(missing)).casefold() not in clarification_text
                 for missing in invocation["missing_inputs"]
             )
             for invocation in invocations_by_id.values()

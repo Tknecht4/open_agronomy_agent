@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation, localcontext
+from decimal import Decimal, DecimalException, InvalidOperation, localcontext
 from enum import StrEnum
+import math
 from typing import Any, Mapping, Sequence
 
 from agronomy_agent.calculator_contracts import CALCULATOR_SCHEMA_VERSION, CALCULATOR_VERSION
+from agronomy_agent.water_arithmetic import WATER_INPUTS, water_arithmetic
+from agronomy_agent.supplied_model_arithmetic import MODEL_INPUTS, MODEL_OPTIONAL_INPUTS, model_arithmetic, validate_model_arithmetic_inputs
+from agronomy_agent.seed_establishment import SEED_SURVIVAL_BASES, established_fraction
 
 
 class CalculationOperation(StrEnum):
@@ -26,7 +30,7 @@ class CalculationOperation(StrEnum):
 
 
 class FoundationCalculationOperation(StrEnum):
-    """Current v2 extension; excluded from the historical harness inventory."""
+    """Current supplied-input extensions, outside the historical harness inventory."""
 
     SEED_RATE_MASS_IMPERIAL = "seed_rate_mass_imperial"
     BREAK_EVEN_PRICE = "break_even_price"
@@ -35,9 +39,43 @@ class FoundationCalculationOperation(StrEnum):
     DEBT_TO_ASSET_PERCENT = "debt_to_asset_percent"
     FERTILIZER_FIELD_TOTAL = "fertilizer_field_total"
     SOIL_WATER_STORAGE = "soil_water_storage"
+    NUTRIENT_BASIS_CONVERSION = "nutrient_basis_conversion"
+    APPARENT_NUTRIENT_BALANCE = "apparent_nutrient_balance"
+    LIQUID_PRODUCT_TOTAL = "liquid_product_total"
+    WATER_STORAGE_DIFFERENCE = "water_storage_difference"
+    CROP_EVAPOTRANSPIRATION = "crop_evapotranspiration"
+    GROSS_IRRIGATION_DEPTH = "gross_irrigation_depth"
+    WATER_DEPTH_VOLUME = "water_depth_volume"
+    ALLOWABLE_WATER_DEPLETION = "allowable_water_depletion"
+    GRAIN_MOISTURE_ADJUSTMENT = "grain_moisture_adjustment"
+    SINGLE_NOZZLE_APPLICATION_VOLUME = "single_nozzle_application_volume"
+    MEAN_TEMPERATURE_GDD = "mean_temperature_gdd"
+    GRAIN_HARVEST_INDEX = "grain_harvest_index"
+    CIRCULAR_SAMPLING_AREA = "circular_sampling_area"
+    SEED_POPULATION_DENSITY = "seed_population_density"
+    SEED_MASS_FROM_SEED_DENSITY = "seed_mass_from_seed_density"
+    AREA_COST_CHANGE = "area_cost_change"
+    INCREMENTAL_MARGIN = "incremental_margin"
+    SOIL_CARBON_STOCK = "soil_carbon_stock"
+    SOIL_TOTAL_POROSITY = "soil_total_porosity"
+    REMAINING_NITROGEN_BUDGET = "remaining_nitrogen_budget"
+    DAILY_WATER_BALANCE = "daily_water_balance"
+    NDVI_FROM_REFLECTANCE = "ndvi_from_reflectance"
+    SOIL_NITRATE_N_STOCK = "soil_nitrate_n_stock"
+    LAND_EQUIVALENT_RATIO = "land_equivalent_ratio"
+    MEAN_PAIRED_DIFFERENCE = "mean_paired_difference"
+    LIME_EQUIVALENT_MASS = "lime_equivalent_mass"
+    SIMPLIFIED_STRESS_ET = "simplified_stress_et"
 
 
 ALL_CALCULATION_OPERATIONS = tuple(CalculationOperation) + tuple(FoundationCalculationOperation)
+GRAIN_MASS_UNITS = ("kg", "t", "lb", "kg/ha", "t/ha", "lb/ha", "kg/ac", "t/ac", "lb/ac")
+# USDA NRCS National Agronomy Manual, Table 503-42: independent reporting
+# factors in each direction. Inverting a rounded display factor adds error.
+NUTRIENT_REPORTING_FACTORS = {
+    ("P", "P2O5"): Decimal("2.2915"), ("P2O5", "P"): Decimal("0.4364"),
+    ("K", "K2O"): Decimal("1.2045"), ("K2O", "K"): Decimal("0.8302"),
+}
 
 
 _ARITHMETIC_BOUNDARY = (
@@ -119,10 +157,16 @@ def calculation_tool_schema() -> dict[str, Any]:
                 "supported_units": ["kg/ha", "lb/ac", "ha", "ac", "L/ha", "US gal/ac"],
             },
             "seed_rate_mass": {
-                "required": ["target_plants_per_m2", "tkw_g", "germination_pct", "field_survival_pct"],
+                "required": ["target_plants_per_m2", "tkw_g", "field_survival_pct", "survival_basis"],
+                "optional": ["germination_pct", "mortality_pct"],
+                "survival_bases": list(SEED_SURVIVAL_BASES),
+                "germination_requirement": "required only for germinated_seeds; contextual for seeds_sown",
             },
             "seed_rate_mass_imperial": {
-                "required": ["target_plants_per_ft2", "tkw_g", "germination_pct", "field_survival_pct", "method"],
+                "required": ["target_plants_per_ft2", "tkw_g", "field_survival_pct", "survival_basis", "method"],
+                "optional": ["germination_pct", "mortality_pct"],
+                "survival_bases": list(SEED_SURVIVAL_BASES),
+                "germination_requirement": "required only for germinated_seeds; contextual for seeds_sown",
                 "methods": ["dimensional", "published_factor_10", "compare"],
             },
             "fertilizer_product_mass": {
@@ -170,6 +214,21 @@ def calculation_tool_schema() -> dict[str, Any]:
                 "optional": ["nutrient_label"],
             },
             "soil_water_storage": {"required": ["volumetric_water_content", "layer_depth_cm"]},
+            "nutrient_basis_conversion": {"required": ["quantity_kg_per_ha", "from_basis", "to_basis"],
+                                           "optional": ["factor"]},
+            "apparent_nutrient_balance": {"required": ["applied_kg_per_ha", "removed_kg_per_ha", "nutrient_basis"]},
+            "liquid_product_total": {"required": ["area_ha", "product_rate_l_per_ha"]},
+            **{operation: {"required": sorted(inputs)} for operation, inputs in WATER_INPUTS.items()},
+            **{operation: {"required": sorted(inputs), "optional": sorted(MODEL_OPTIONAL_INPUTS.get(operation, set()))}
+               for operation, inputs in MODEL_INPUTS.items()},
+            "grain_moisture_adjustment": {"required": ["wet_mass", "mass_unit", "initial_moisture_pct", "target_moisture_pct"],
+                                          "supported_mass_units": list(GRAIN_MASS_UNITS)},
+            "single_nozzle_application_volume": {"required": ["flow_l_per_min_per_nozzle", "speed_km_per_h", "nozzle_spacing_m"]},
+            "mean_temperature_gdd": {"required": ["mean_temp_c", "base_temp_c", "method"],
+                                     "methods": ["daily_mean_no_temperature_caps"]},
+            "grain_harvest_index": {"required": ["grain_dry_mass", "aboveground_dry_mass", "mass_unit"],
+                                     "supported_mass_units": list(GRAIN_MASS_UNITS)},
+            "circular_sampling_area": {"required": ["radius_m"]},
         },
         "boundary": _ARITHMETIC_BOUNDARY,
     }
@@ -211,7 +270,23 @@ def calculate_agronomic(operation: str | CalculationOperation | FoundationCalcul
         FoundationCalculationOperation.DEBT_TO_ASSET_PERCENT: _debt_to_asset_percent,
         FoundationCalculationOperation.FERTILIZER_FIELD_TOTAL: _fertilizer_field_total,
         FoundationCalculationOperation.SOIL_WATER_STORAGE: _soil_water_storage,
+        FoundationCalculationOperation.NUTRIENT_BASIS_CONVERSION: _nutrient_basis_conversion,
+        FoundationCalculationOperation.APPARENT_NUTRIENT_BALANCE: _apparent_nutrient_balance,
+        FoundationCalculationOperation.LIQUID_PRODUCT_TOTAL: _liquid_product_total,
+        FoundationCalculationOperation.GRAIN_MOISTURE_ADJUSTMENT: _grain_moisture_adjustment,
+        FoundationCalculationOperation.SINGLE_NOZZLE_APPLICATION_VOLUME: _single_nozzle_application_volume,
+        FoundationCalculationOperation.MEAN_TEMPERATURE_GDD: _mean_temperature_gdd,
+        FoundationCalculationOperation.GRAIN_HARVEST_INDEX: _grain_harvest_index,
+        FoundationCalculationOperation.CIRCULAR_SAMPLING_AREA: _circular_sampling_area,
     }
+    if selected.value in WATER_INPUTS:
+        value, unit, formula, normalized, assumptions, boundary = water_arithmetic(selected.value, inputs)
+        return _result(selected, value, unit, f"{formula} {_format_formula_result(value)} {unit}", normalized,
+                       assumptions=assumptions, boundary=_ARITHMETIC_BOUNDARY + " " + boundary)
+    if selected.value in MODEL_INPUTS:
+        value, unit, formula, normalized, assumptions, boundary = model_arithmetic(selected.value, inputs)
+        return _result(selected, value, unit, formula, normalized,
+                       assumptions=assumptions, boundary=_ARITHMETIC_BOUNDARY + " " + boundary)
     return handlers[selected](inputs)
 
 
@@ -277,44 +352,98 @@ def _unit_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
 
 
 def _seed_rate_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
-    required = {"target_plants_per_m2", "tkw_g", "germination_pct", "field_survival_pct"}
-    _require_only(inputs, required=required)
-    target = _positive(inputs, "target_plants_per_m2")
-    tkw = _positive(inputs, "tkw_g")
-    germination = _percent(inputs, "germination_pct") / Decimal("100")
-    survival = _percent(inputs, "field_survival_pct") / Decimal("100")
-    answer = target * tkw / (germination * survival * Decimal("100"))
+    inputs = validate_seed_rate_inputs("seed_rate_mass", inputs)
+    target = inputs["target_plants_per_m2"]
+    tkw = inputs["tkw_g"]
+    fraction, normalized, assumptions = _seed_establishment_values(inputs)
+    answer = target * tkw / (fraction * Decimal("100"))
     return _result(
         CalculationOperation.SEED_RATE_MASS,
         answer,
         "kg/ha",
         (
             f"({_format_operand(target)} plants/m² × {_format_operand(tkw)} g/1,000 seeds) ÷ "
-            f"({_format_operand(germination)} × {_format_operand(survival)} × 100) "
+            f"({_format_operand(fraction)} × 100) "
             f"{_format_formula_result(answer)} kg/ha"
         ),
         {
             "target_plants_per_m2": target,
             "tkw_g": tkw,
-            "germination_pct": germination * Decimal("100"),
-            "field_survival_pct": survival * Decimal("100"),
+            **normalized,
         },
+        assumptions=assumptions,
     )
+
+
+def _seed_establishment_values(inputs: Mapping[str, Any]) -> tuple[Decimal, dict[str, Any], tuple[str, ...]]:
+    survival = _percent(inputs, "field_survival_pct")
+    germination = _percent(inputs, "germination_pct") if "germination_pct" in inputs else None
+    basis = str(inputs["survival_basis"])
+    fraction, note = established_fraction(survival, basis, germination)
+    normalized: dict[str, Any] = {"field_survival_pct": survival, "survival_basis": basis}
+    if germination is not None:
+        normalized["germination_pct"] = germination
+    if "mortality_pct" in inputs:
+        mortality = _nonnegative(inputs, "mortality_pct")
+        if mortality >= 100 or abs(mortality + survival - 100) > Decimal("0.0001"):
+            raise ValueError("mortality_pct and field_survival_pct must be complementary percentages on the same basis")
+        normalized["mortality_pct"] = mortality
+    return fraction, normalized, (note, f"effective established fraction = {_format_operand(fraction)}")
+
+
+def validate_seed_rate_inputs(operation: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Pure seed-input validation shared by readiness and actual execution."""
+    if operation not in {"seed_rate_mass", "seed_rate_mass_imperial"}:
+        raise ValueError("unsupported seed-rate operation")
+    imperial = operation == "seed_rate_mass_imperial"
+    target_key = "target_plants_per_ft2" if imperial else "target_plants_per_m2"
+    required = {target_key, "tkw_g", "field_survival_pct", "survival_basis"}
+    if imperial:
+        required.add("method")
+    _require_only(inputs, required=required, optional={"germination_pct", "mortality_pct"})
+    target, tkw = _positive(inputs, target_key), _positive(inputs, "tkw_g")
+    fraction, normalized, _ = _seed_establishment_values(inputs)
+    result = {target_key: target, "tkw_g": tkw, **normalized}
+    if imperial:
+        method = str(inputs["method"]).strip().lower()
+        if method not in {"dimensional", "published_factor_10", "compare"}:
+            raise ValueError("method must be dimensional, published_factor_10, or compare")
+        result["method"] = method
+    try:
+        # The public record retains both operands and result as JSON numbers.
+        # A finite result cannot repair an overflowing operand, and a nonzero
+        # Decimal must not silently become a JSON zero.
+        def representable(value: Decimal) -> bool:
+            serialized = float(value)
+            return math.isfinite(serialized) and (value == 0 or serialized != 0)
+
+        if not all(representable(value) for value in result.values() if isinstance(value, Decimal)):
+            raise ValueError("seed operands are outside the supported numeric output range")
+        scale = target * tkw / fraction
+        values = ([scale / Decimal(10), scale * Decimal(43560) / (Decimal(1000) * Decimal("453.59237"))]
+                  if imperial else [scale / Decimal(100)])
+        for value in values:
+            if not representable(value):
+                raise ValueError("seed mass is outside the supported numeric output range")
+            _format_decimal(value)
+    except DecimalException as exc:
+        raise ValueError("seed mass is outside the supported numeric output range") from exc
+    return result
+
+
+def validate_seed_calculation_inputs(operation: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate one seed-establishment operation for shared preview/replay."""
+    if operation == "seed_population_density":
+        return validate_model_arithmetic_inputs(operation, inputs)
+    return validate_seed_rate_inputs(operation, inputs)
 
 
 def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
-    _require_only(
-        inputs,
-        required={"target_plants_per_ft2", "tkw_g", "germination_pct", "field_survival_pct", "method"},
-    )
-    target = _positive(inputs, "target_plants_per_ft2")
-    tkw = _positive(inputs, "tkw_g")
-    germination = _percent(inputs, "germination_pct") / Decimal("100")
-    survival = _percent(inputs, "field_survival_pct") / Decimal("100")
-    method = str(inputs["method"]).strip().lower()
-    if method not in {"dimensional", "published_factor_10", "compare"}:
-        raise ValueError("method must be dimensional, published_factor_10, or compare")
-    established_fraction = germination * survival
+    inputs = validate_seed_rate_inputs("seed_rate_mass_imperial", inputs)
+    target = inputs["target_plants_per_ft2"]
+    tkw = inputs["tkw_g"]
+    established_fraction, normalized, basis_assumptions = _seed_establishment_values(inputs)
+    method = inputs["method"]
     # 43,560 ft²/ac and 453.59237 g/lb are dimensional conversions. The
     # Manitoba guide's denominator of 10 is a distinct approximate rule.
     dimensional = target * tkw * Decimal("43560") / (
@@ -345,19 +474,18 @@ def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         {
             "target_plants_per_ft2": target,
             "tkw_g": tkw,
-            "germination_pct": germination * Decimal("100"),
-            "field_survival_pct": survival * Decimal("100"),
+            **normalized,
             "method": method,
         },
         assumptions=(
-            f"established fraction = germination × post-germination survival = {_format_operand(established_fraction)}",
+            *basis_assumptions,
             "published_factor_10 is an approximate provincial formula" if method == "published_factor_10" else "dimensional conversion is the primary result",
             alternative,
         ),
     )
 
 
-def _fertilizer_product_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_fertilizer_product_mass_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
     _require_only(
         inputs,
         required={"nutrient_target_kg_per_ha", "nutrient_percent"},
@@ -366,6 +494,17 @@ def _fertilizer_product_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     target = _positive(inputs, "nutrient_target_kg_per_ha")
     percent = _percent(inputs, "nutrient_percent")
     nutrient = str(inputs.get("nutrient_label") or "nutrient").strip() or "nutrient"
+    for value in (target, percent):
+        if len(value.as_tuple().digits) > 28 or not -300 <= value.adjusted() <= 23:
+            raise ValueError("fertilizer operands exceed supported decimal precision")
+    if not -300 <= target.adjusted() - percent.adjusted() + 3 <= 23:
+        raise ValueError("fertilizer product mass exceeds supported decimal precision")
+    return {"nutrient_target_kg_per_ha": target, "nutrient_percent": percent, "nutrient_label": nutrient}
+
+
+def _fertilizer_product_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_fertilizer_product_mass_inputs(inputs)
+    target, percent, nutrient = (normalized[key] for key in ("nutrient_target_kg_per_ha", "nutrient_percent", "nutrient_label"))
     answer = target / (percent / Decimal("100"))
     return _result(
         CalculationOperation.FERTILIZER_PRODUCT_MASS,
@@ -401,6 +540,163 @@ def _fertilizer_field_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         total.value, "kg", f"({rate.formula}) then {total.formula}",
         {"area_ha": area, **rate.inputs},
     )
+
+
+def validate_supplied_nutrient_inputs(operation: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Share exact input validation with readiness; never infer field authority."""
+    specifications = {
+        "nutrient_basis_conversion": ({"quantity_kg_per_ha", "from_basis", "to_basis"}, {"factor"}),
+        "apparent_nutrient_balance": ({"applied_kg_per_ha", "removed_kg_per_ha", "nutrient_basis"}, set()),
+        "liquid_product_total": ({"area_ha", "product_rate_l_per_ha"}, set()),
+    }
+    if operation not in specifications:
+        raise ValueError("unsupported supplied-input operation")
+    required, optional = specifications[operation]
+    _require_only(inputs, required=required, optional=optional)
+    for key in (required - {"quantity_kg_per_ha", "applied_kg_per_ha", "removed_kg_per_ha", "area_ha", "product_rate_l_per_ha"}):
+        if not isinstance(inputs[key], str):
+            raise ValueError(f"{key} must be a nutrient basis string")
+    normalized: dict[str, Any] = dict(inputs)
+    numeric = {key for key in inputs if key not in {"from_basis", "to_basis", "nutrient_basis"}}
+    for key in numeric:
+        value = _nonnegative(inputs, key)
+        if len(value.as_tuple().digits) > 12 or value and not -12 <= value.adjusted() <= 10:
+            raise ValueError(f"{key} exceeds supported supplied-input precision")
+        normalized[key] = value
+    if operation == "nutrient_basis_conversion":
+        pair = (inputs["from_basis"], inputs["to_basis"])
+        if pair not in NUTRIENT_REPORTING_FACTORS:
+            raise ValueError("use matching elemental/oxide bases: P2O5 and P, or K2O and K")
+        expected = NUTRIENT_REPORTING_FACTORS[pair]
+        if "factor" in normalized:
+            supplied = normalized["factor"].normalize()
+            # Reporting factors are approximations, not precision-qualified
+            # measurements. Ignore trailing zero formatting. Admit the last
+            # decimal's rounding interval plus 0.01% relative for published
+            # atomic-weight/last-digit variants; require two significant digits.
+            rounding = Decimal(1).scaleb(supplied.as_tuple().exponent) / 2
+            allowance = rounding + abs(expected) * Decimal("0.0001")
+            if len(supplied.as_tuple().digits) < 2 or abs(supplied - expected) > allowance:
+                raise ValueError("supplied factor conflicts with the stated nutrient bases or is too coarse")
+        normalized["factor"] = normalized.get("factor", expected)
+    elif operation == "apparent_nutrient_balance":
+        if inputs["nutrient_basis"] not in {"N", "P", "P2O5", "K", "K2O"}:
+            raise ValueError("use one explicit matching nutrient basis")
+        amounts = (normalized["applied_kg_per_ha"], normalized["removed_kg_per_ha"])
+        if max(value.adjusted() for value in amounts) - min(value.as_tuple().exponent for value in amounts) + 2 > 28:
+            raise ValueError("balance exceeds supported decimal precision")
+    return normalized
+
+
+def _nutrient_basis_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_supplied_nutrient_inputs("nutrient_basis_conversion", inputs)
+    quantity, factor = values["quantity_kg_per_ha"], values["factor"]
+    unit = f"kg {values['to_basis']}/ha"
+    with localcontext() as context:
+        context.prec = 64
+        result = quantity * factor
+    return _result(FoundationCalculationOperation.NUTRIENT_BASIS_CONVERSION, result, unit,
+                   f"{_format_operand(quantity)} kg {values['from_basis']}/ha × {_format_operand(factor)} {_format_formula_result(result)} {unit}",
+                   values, assumptions=("oxide and elemental nutrient use the displayed rounded reporting factor; this does not change the physical fertilizer",))
+
+
+def _apparent_nutrient_balance(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_supplied_nutrient_inputs("apparent_nutrient_balance", inputs)
+    applied, removed = values["applied_kg_per_ha"], values["removed_kg_per_ha"]
+    with localcontext() as context:
+        context.prec = 64
+        result = applied - removed
+    unit = f"kg {values['nutrient_basis']}/ha"
+    return _result(FoundationCalculationOperation.APPARENT_NUTRIENT_BALANCE, result, unit,
+                   f"{_format_operand(applied)} − {_format_operand(removed)} {_format_formula_result(result)} {unit}", values,
+                   assumptions=("applied minus removed, using the same nutrient basis and area",),
+                   boundary=_ARITHMETIC_BOUNDARY + " An apparent surplus or deficit is not a measurement of soil-test change, plant availability or environmental loss; other inputs, outputs and transformations are outside this balance.")
+
+
+def _liquid_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_supplied_nutrient_inputs("liquid_product_total", inputs)
+    area, rate = values["area_ha"], values["product_rate_l_per_ha"]
+    with localcontext() as context:
+        context.prec = 64
+        result = area * rate
+    return _result(FoundationCalculationOperation.LIQUID_PRODUCT_TOTAL, result, "L product",
+                   f"{_format_operand(area)} ha × {_format_operand(rate)} L product/ha {_format_formula_result(result)} L product", values,
+                   boundary=_ARITHMETIC_BOUNDARY + " This is product quantity, not total carrier water or finished spray volume.")
+
+
+def validate_grain_harvest_index_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    _require_only(inputs, required={"grain_dry_mass", "aboveground_dry_mass", "mass_unit"})
+    if inputs["mass_unit"] not in GRAIN_MASS_UNITS:
+        raise ValueError("use one common dry-mass unit, including any area denominator")
+    grain = _nonnegative(inputs, "grain_dry_mass")
+    total = _positive(inputs, "aboveground_dry_mass")
+    for value in (grain, total):
+        if len(value.as_tuple().digits) > 12 or value and not -12 <= value.adjusted() <= 10:
+            raise ValueError("dry mass exceeds supported precision")
+    if grain > total:
+        raise ValueError("grain dry mass cannot exceed total above-ground dry biomass")
+    return {"grain_dry_mass": grain, "aboveground_dry_mass": total, "mass_unit": inputs["mass_unit"]}
+
+
+def _grain_harvest_index(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_grain_harvest_index_inputs(inputs)
+    grain, total, unit = (values[key] for key in ("grain_dry_mass", "aboveground_dry_mass", "mass_unit"))
+    with localcontext() as context:
+        context.prec = 64
+        ratio = grain / total
+    return _result(FoundationCalculationOperation.GRAIN_HARVEST_INDEX, ratio, "harvest index",
+                   f"{_format_operand(grain)} {unit} dry grain ÷ {_format_operand(total)} {unit} total above-ground dry biomass "
+                   f"{_format_formula_result(ratio)} ({_format_decimal(ratio * 100)}%)", values,
+                   assumptions=("both masses use the same dry-matter and area basis; total above-ground biomass includes grain",),
+                   boundary=_ARITHMETIC_BOUNDARY + " This ratio does not determine harvest timing or establish a crop-specific yield target.")
+
+
+def validate_circular_sampling_area_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
+    _require_only(inputs, required={"radius_m"})
+    radius = _nonnegative(inputs, "radius_m")
+    if len(radius.as_tuple().digits) > 12 or radius and not -6 <= radius.adjusted() <= 7:
+        raise ValueError("radius exceeds supported planar-area precision")
+    return {"radius_m": radius}
+
+
+def _circular_sampling_area(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_circular_sampling_area_inputs(inputs)
+    radius = values["radius_m"]
+    pi = Decimal("3.1415926535897932384626433832795028841971693993751")
+    with localcontext() as context:
+        context.prec = 64
+        area = pi * radius * radius
+    return _result(FoundationCalculationOperation.CIRCULAR_SAMPLING_AREA, area, "m²",
+                   f"π × ({_format_operand(radius)} m)² ≈ {_format_decimal(area)} m² "
+                   f"(≈ {_format_decimal(area / 10000)} ha)", values,
+                   assumptions=("a planar circle with the supplied radius; no terrain or map-projection correction",),
+                   boundary=_ARITHMETIC_BOUNDARY + " This is the sampling footprint, not the farm field area: it uses the sampling radius rather than a mapped field boundary.")
+
+
+def validate_grain_moisture_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    _require_only(inputs, required={"wet_mass", "mass_unit", "initial_moisture_pct", "target_moisture_pct"})
+    if inputs["mass_unit"] not in GRAIN_MASS_UNITS:
+        raise ValueError("use a grain mass unit (kg, t or lb), optionally per ha or ac")
+    values = {key: _nonnegative(inputs, key) for key in ("wet_mass", "initial_moisture_pct", "target_moisture_pct")}
+    for key, value in values.items():
+        if len(value.as_tuple().digits) > 12 or value and not -12 <= value.adjusted() <= 10:
+            raise ValueError(f"{key} exceeds supported grain-mass precision")
+    if max(values["initial_moisture_pct"], values["target_moisture_pct"]) >= 100:
+        raise ValueError("wet-basis moisture percentages must be below 100")
+    return {**values, "mass_unit": inputs["mass_unit"]}
+
+
+def _grain_moisture_adjustment(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_grain_moisture_inputs(inputs)
+    mass, initial, target = (values[key] for key in ("wet_mass", "initial_moisture_pct", "target_moisture_pct"))
+    unit = values["mass_unit"]
+    dry = mass * (1 - initial / 100)
+    equivalent = dry / (1 - target / 100)
+    return _result(FoundationCalculationOperation.GRAIN_MOISTURE_ADJUSTMENT, equivalent, unit,
+                   f"dry matter = {_format_operand(mass)} {unit} × (1 − {_format_operand(initial)}/100) {_format_formula_result(dry)} {unit}; "
+                   f"equivalent mass = {_format_operand(dry)} {unit} ÷ (1 − {_format_operand(target)}/100) {_format_formula_result(equivalent)} {unit}",
+                   values, assumptions=("both moisture contents are on a wet-mass basis; dry matter is conserved and handling losses are excluded",),
+                   boundary=_ARITHMETIC_BOUNDARY + " This does not select a safe storage moisture or establish a buyer's shrink, drying fees or grading rules.")
 
 
 def validate_soil_water_storage_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
@@ -449,7 +745,7 @@ def _nutrient_delivery(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     )
 
 
-def _sprayer_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_sprayer_application_volume_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
     required = {"nozzle_count", "flow_l_per_min_per_nozzle", "speed_km_per_h", "boom_width_m"}
     _require_only(inputs, required=required)
     nozzle_count = _positive(inputs, "nozzle_count")
@@ -458,6 +754,42 @@ def _sprayer_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculati
     flow = _positive(inputs, "flow_l_per_min_per_nozzle")
     speed = _positive(inputs, "speed_km_per_h")
     boom = _positive(inputs, "boom_width_m")
+    values = {"nozzle_count": nozzle_count, "flow_l_per_min_per_nozzle": flow, "speed_km_per_h": speed, "boom_width_m": boom}
+    for value in values.values():
+        if len(value.as_tuple().digits) > 28 or not -300 <= value.adjusted() <= 23:
+            raise ValueError("sprayer operands exceed supported decimal precision")
+    order = nozzle_count.adjusted() + flow.adjusted() + 3 - speed.adjusted() - boom.adjusted()
+    if not -300 <= order <= 23:
+        raise ValueError("sprayer volume exceeds supported decimal precision")
+    return values
+
+
+def validate_single_nozzle_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
+    required = {"flow_l_per_min_per_nozzle", "speed_km_per_h", "nozzle_spacing_m"}
+    _require_only(inputs, required=required)
+    values = {key: _positive(inputs, key) for key in required}
+    for value in values.values():
+        if len(value.as_tuple().digits) > 28 or not -300 <= value.adjusted() <= 23:
+            raise ValueError("nozzle operands exceed supported decimal precision")
+    order = values["flow_l_per_min_per_nozzle"].adjusted() + 3 - values["speed_km_per_h"].adjusted() - values["nozzle_spacing_m"].adjusted()
+    if not -300 <= order <= 23:
+        raise ValueError("nozzle application volume exceeds supported decimal precision")
+    return values
+
+
+def _single_nozzle_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_single_nozzle_inputs(inputs)
+    flow, speed, spacing = (values[key] for key in ("flow_l_per_min_per_nozzle", "speed_km_per_h", "nozzle_spacing_m"))
+    answer = flow * 600 / (speed * spacing)
+    return _result(FoundationCalculationOperation.SINGLE_NOZZLE_APPLICATION_VOLUME, answer, "L/ha",
+                   f"600 × {_format_operand(flow)} L/min ÷ ({_format_operand(speed)} km/h × {_format_operand(spacing)} m) {_format_formula_result(answer)} L/ha",
+                   values, assumptions=("representative nozzle flow and uniform spacing; spacing is the effective treated width per nozzle",),
+                   boundary=_ARITHMETIC_BOUNDARY + " This is total application volume, not a pesticide product dose; no full-boom width or nozzle count was supplied or inferred.")
+
+
+def _sprayer_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_sprayer_application_volume_inputs(inputs)
+    nozzle_count, flow, speed, boom = (normalized[key] for key in ("nozzle_count", "flow_l_per_min_per_nozzle", "speed_km_per_h", "boom_width_m"))
     answer = nozzle_count * flow * Decimal("600") / (speed * boom)
     return _result(
         CalculationOperation.SPRAYER_APPLICATION_VOLUME,
@@ -523,6 +855,30 @@ def _tank_coverage(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         {"tank_volume_l": tank, "application_volume_l_per_ha": rate, "unusable_volume_l": unusable},
         assumptions=assumptions,
     )
+
+
+def validate_mean_temperature_gdd_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    _require_only(inputs, required={"mean_temp_c", "base_temp_c", "method"})
+    if inputs["method"] != "daily_mean_no_temperature_caps":
+        raise ValueError("a supplied daily mean supports only the explicit no-temperature-caps method")
+    values = {"mean_temp_c": _decimal(inputs, "mean_temp_c"),
+              "base_temp_c": _decimal(inputs, "base_temp_c"), "method": inputs["method"]}
+    for key in ("mean_temp_c", "base_temp_c"):
+        value = values[key]
+        if len(value.as_tuple().digits) > 12 or value and not -12 <= value.adjusted() <= 10:
+            raise ValueError(f"{key} exceeds supported precision")
+    return values
+
+
+def _mean_temperature_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_mean_temperature_gdd_inputs(inputs)
+    mean, base = values["mean_temp_c"], values["base_temp_c"]
+    answer = max(Decimal(0), mean - base)
+    return _result(FoundationCalculationOperation.MEAN_TEMPERATURE_GDD, answer, "GDD",
+                   f"max(0, {_format_operand(mean)} − {_format_operand(base)}) {_format_formula_result(answer)} GDD",
+                   values, assumptions=("supplied daily mean temperature in Celsius; no temperature caps",
+                                        "negative accumulation floored at zero",
+                                        "thermal accumulation is not a crop-yield prediction or field-stage observation"))
 
 
 def _daily_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
@@ -597,10 +953,17 @@ def _row_population(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     )
 
 
-def _field_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_field_product_total_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
+    """Validate supplied area and mass rate without executing the calculation."""
     _require_only(inputs, required={"area_ha", "product_rate_kg_per_ha"})
     area = _positive(inputs, "area_ha")
     rate = _nonnegative(inputs, "product_rate_kg_per_ha")
+    return {"area_ha": area, "product_rate_kg_per_ha": rate}
+
+
+def _field_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_field_product_total_inputs(inputs)
+    area, rate = normalized["area_ha"], normalized["product_rate_kg_per_ha"]
     answer = area * rate
     return _result(
         CalculationOperation.FIELD_PRODUCT_TOTAL,
@@ -896,8 +1259,8 @@ def _yield_unit(value: Any) -> str:
 
 def _cost_basis(value: Any) -> str:
     basis = str(value or "").strip().lower()
-    if basis not in {"total", "total_economic", "operating", "budget_total_supplied"}:
-        raise ValueError("cost_basis must be total, total_economic, operating, or budget_total_supplied")
+    if basis not in {"total", "total_economic", "operating", "budget_total_supplied", "incremental"}:
+        raise ValueError("cost_basis must be total, total_economic, operating, budget_total_supplied, or incremental")
     return basis
 
 
@@ -907,6 +1270,7 @@ def _cost_basis_label(basis: str) -> str:
         "total_economic": "total economic cost",
         "operating": "operating cost",
         "budget_total_supplied": "user-supplied budget total (included cost categories unverified)",
+        "incremental": "supplied intervention cost under the stated incremental budget (other costs and actual yield response unverified)",
     }[basis]
 
 

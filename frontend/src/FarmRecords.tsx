@@ -5,7 +5,7 @@ import { readableError, type FarmField } from './farmTypes'
 import { FieldSyncPanel } from './FieldSyncPanel'
 import { displayDate, readableLabel } from './fieldLabels'
 import { RecordDetails, RecordMeasurement, recordLabel, unknownRecordTime, type SavedRecord } from './RecordDetails'
-import RecordEntryDialog from './RecordEntryDialog'
+import RecordEntryDialog, { hasUnconfirmedRecordDraft } from './RecordEntryDialog'
 
 type Records = { events: SavedRecord[]; total: number; next_offset: number | null }
 const recordTypes = ['observation', 'sample', 'operation', 'note', 'decision', 'outcome', 'correction']
@@ -71,6 +71,7 @@ export default function FarmRecords({ fields = [], fieldId, farmId, season, onOp
             <p>{recordLabel(event)}</p><RecordMeasurement event={event} />
             <RecordDetails event={event} season={season} />
           </div>
+          {event.corrected_by && hasUnconfirmedRecordDraft(event.field_context_id, season, event.id) ? <button type="button" className="record-correct" onClick={() => setEntry({ fieldId: event.field_context_id, record: event })}>Resume record save</button> : null}
           {!event.corrected_by && !event.payload.imagery_analysis ? <button type="button" className="record-correct" onClick={() => setEntry({ fieldId: event.field_context_id, record: event })}>Correct record</button> : null}
         </li>
       })}</ol>}
@@ -84,6 +85,6 @@ export default function FarmRecords({ fields = [], fieldId, farmId, season, onOp
       <label>Field<select data-dialog-initial-focus required value={chosenField} onChange={event => setChosenField(event.target.value)}><option value="">Choose a field</option>{fields.map(field => <option key={field.id} value={field.id}>{field.name}</option>)}</select></label>
       <button className="primary-button" type="submit" disabled={!chosenField}>Continue</button>
     </form></WorkspaceDialog> : null}
-    {entry ? <RecordEntryDialog key={`${entry.fieldId}:${season}:${entry.record?.id || 'new'}`} fieldId={entry.fieldId} fieldName={fields.find(field => field.id === entry.fieldId)?.name} season={season} initialRecord={entry.record} onSaved={saved} onClose={() => setEntry(null)} /> : null}
+    {entry ? <RecordEntryDialog key={`${entry.fieldId}:${season}:${entry.record?.id || 'new'}`} fieldId={entry.fieldId} fieldName={fields.find(field => field.id === entry.fieldId)?.name} season={season} initialRecord={entry.record} recoveryOnly={Boolean(entry.record?.corrected_by)} onSaved={saved} onClose={() => setEntry(null)} /> : null}
   </section>
 }

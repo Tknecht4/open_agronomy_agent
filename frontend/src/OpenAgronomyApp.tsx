@@ -730,10 +730,28 @@ const sessionContextValue = (session: SessionRecord, key: string): string => {
   return ''
 }
 
-const conversationLabel = (session: SessionRecord, fallback: string): string => {
-  const title = session.title?.trim() || fallback
-  const date = (session.updated_at || session.created_at || '').slice(0, 10)
-  return date ? `${title} · ${date}` : title
+const conversationLabels = (sessions: SessionRecord[], fallback: string): Map<string, string> => {
+  const labels = sessions.map(session => {
+    const title = session.title?.trim() || fallback
+    const timestamp = session.updated_at || session.created_at
+    const date = timestamp ? new Date(timestamp) : null
+    const when = date && Number.isFinite(date.getTime())
+      ? date.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : ''
+    return when ? `${title} · ${when}` : title
+  })
+  const totals = new Map<string, number>()
+  const used = new Set(labels)
+  for (const label of labels) totals.set(label, (totals.get(label) || 0) + 1)
+  return new Map(sessions.map((session, index) => {
+    const label = labels[index]
+    if (totals.get(label)! === 1) return [session.session_id, label]
+    let ordinal = 1
+    while (used.has(`${label} · Chat ${ordinal}`)) ordinal += 1
+    const uniqueLabel = `${label} · Chat ${ordinal}`
+    used.add(uniqueLabel)
+    return [session.session_id, uniqueLabel]
+  }))
 }
 
 const sessionForField = (
@@ -1051,6 +1069,7 @@ const topDocs = (turn: Turn | null): RetrievedDoc[] => (turn?.trace?.retrieved_d
 const decisionLabel = (questionType: string | undefined): string => {
   if (!questionType) return 'Pending'
   if (questionType === 'fertility_diagnostic') return 'Crop stress'
+  if (questionType === 'exam_review') return 'Explanation or calculation'
   const label = questionType.replace(/[_-]+/g, ' ')
   return `${label.charAt(0).toUpperCase()}${label.slice(1)}`
 }
@@ -1754,6 +1773,8 @@ export function OpenAgronomyApp() {
   })
   const generalConversations = scopedSessions('general')
   const fieldConversations = conversationBaseKey === 'general' ? [] : scopedSessions(conversationBaseKey)
+  const generalConversationLabels = conversationLabels(generalConversations, 'General chat')
+  const fieldConversationLabels = conversationLabels(fieldConversations, 'Field chat')
   const evidenceTurn = turns.find((turn) => turn.turn_id === evidenceTurnId) || latestTurn
   const activeScenario: SampleProfile = sampleProfiles.find((sample) => sample.id === scenarioId) || { ...emptyFieldProfile, id: '', name: '', mlra: '', geometry: 'Location not set' }
   const evidenceDocs = topDocs(evidenceTurn)
@@ -2222,7 +2243,11 @@ export function OpenAgronomyApp() {
   currentQuestionPayloadKeyRef.current = questionPayloadKey
   const [turnReadiness, setTurnReadiness] = useState<TurnReadinessState | null>(null)
   const currentReadiness = matchingTurnReadiness(turnReadiness, readinessKey)
+  const checkingTurnReadiness = turnReadiness?.key === readinessKey && turnReadiness.status === 'checking'
   const questionModelReady = canAskWithReadiness(selectedModelReady, turnReadiness, readinessKey)
+  // Workspace blockers have their own guidance; a blocked preview cannot establish a model requirement.
+  const showModelReadinessNotice = !selectedModelReady && !isAnalyzing && answerCapability.canGenerateAnswer
+    && fieldsHydrated && !questionContextRequiresSave && !savingField && !loadingConversation
 
   useEffect(() => {
     if (!message.trim() || !answerCapability.canGenerateAnswer || !fieldsHydrated || questionContextRequiresSave || savingField || loadingConversation) {
@@ -4346,10 +4371,10 @@ export function OpenAgronomyApp() {
               >
                 <option value="" disabled>{sessionId ? 'Select a saved chat' : 'New chat · unsaved until asked'}</option>
                 <optgroup label="General">
-                  {generalConversations.map(item => <option key={item.session_id} value={item.session_id}>{conversationLabel(item, 'General chat')}</option>)}
+                  {generalConversations.map(item => <option key={item.session_id} value={item.session_id}>{generalConversationLabels.get(item.session_id)}</option>)}
                 </optgroup>
                 {conversationBaseKey !== 'general' ? <optgroup label={activeFieldContextId ? `Current field · ${fieldName}` : `Example field · ${fieldName}`}>
-                  {fieldConversations.map(item => <option key={item.session_id} value={item.session_id}>{conversationLabel(item, 'Field chat')}</option>)}
+                  {fieldConversations.map(item => <option key={item.session_id} value={item.session_id}>{fieldConversationLabels.get(item.session_id)}</option>)}
                 </optgroup> : null}
               </select>
             </div>
@@ -4368,7 +4393,7 @@ export function OpenAgronomyApp() {
                 {!selectedModelReady && currentReadiness?.requires_model !== false && selectedModelProfile?.local_detail ? <p>{selectedModelProfile.local_detail}</p> : null}
               </details>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
-              {!selectedModelReady ? <div className="model-setup-notice" role="status"><strong>{currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : turnReadiness?.key === readinessKey && turnReadiness.status === 'checking' ? 'Checking whether this question can use a local calculation.' : 'Choose an installed model in Model settings.'}</p></div> : null}
+              {showModelReadinessNotice ? <div className="model-setup-notice" role="status"><strong>{!message.trim() ? 'Model optional for calculations' : checkingTurnReadiness ? 'Checking calculation support' : currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{!message.trim() ? 'Enter a question to check local calculation support, or install a model for generated answers.' : currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : checkingTurnReadiness ? 'Checking whether this question can use a local calculation.' : 'Choose an installed model in Model settings.'}</p></div> : null}
               {runtimeAccess === 'unavailable' ? <button type="button" onClick={() => void recoverRuntime()}>Retry local runtime</button> : null}
             </div>
 
@@ -4545,7 +4570,7 @@ function EvidenceMetrics({ route, docCount, graphCount, mapCount, checkCount }: 
   checkCount: number
 }) {
   const items: Array<[string, string, string?]> = [
-    ['Decision', decisionLabel(route?.question_type), route?.question_type],
+    ['Question type', decisionLabel(route?.question_type), route?.question_type],
     ['Sensitivity', sensitivityLabel(route?.risk_level), route?.risk_level],
     ['Retrieved context', `${docCount} retrieved`],
     ['Graph', `${graphCount} linked`],

@@ -6,8 +6,12 @@ from dataclasses import dataclass
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
-from agronomy_agent.answerability import simple_definition_subject
-from agronomy_agent.observation_guidance import sample_event_roles_stated
+from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind, is_quantity_concept_explanation
+from agronomy_agent.request_scope import information_request_kind
+from agronomy_agent.observation_guidance import sample_event_roles_stated, stored_grain_probe_monitoring
+from agronomy_agent.request_scope import seed_quality_workflow_requested, soil_test_repeatability_requested
+from agronomy_agent.plant_health_scope import root_inspection_only_request, foliar_symptoms_reported, foliar_observation_request_kind
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
 
 _US_ONLY_SOURCE_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -124,11 +128,22 @@ class DecisionRouteState:
         lower = answer.lower()
         violations: list[str] = []
         if self.decision == "clubroot_containment":
+            scope = clubroot_question_scope(self.question)
+            if scope.negative_root_symptoms and not scope.current_symptoms and re.search(
+                r"\b(?:your|the|these) roots? (?:are|look|appear) (?:visibly )?swollen\b|"
+                r"\byou (?:have|report) (?:root )?galls?\b|\byour plants? (?:have|show) (?:root )?galls?\b",
+                lower,
+            ):
+                violations.append("clubroot_negative_observation_overwritten")
+            if (scope.symptomatic_other_crop and scope.soil_biosecurity_requested
+                    and re.search(r"\b(?:inspect\w*|examin\w*|investigat\w*|root checks?)\b", self.question, re.I)
+                    and not re.search(r"\b(?:inspect\w*|compar\w*|examin\w*|dig|diagnos\w*)\b[^.]{0,100}\b(?:roots?|plants?|symptoms?)\b", lower)):
+                violations.append("current_crop_inspection_not_answered")
             confirmation = bool(re.search(r"\b(?:representative sample|diagnostic lab|confirm(?:ation)?)\b", lower))
             sanitation = bool(re.search(r"\b(?:clean|remove) soil\b[^.]{0,80}\b(?:equipment|machinery|boots?)\b|\bsanitation\b", lower))
-            if not confirmation or not sanitation:
+            if (clubroot_confirmation_requested(self.question) and not confirmation) or not sanitation:
                 violations.append("clubroot_today_actions_incomplete")
-            if re.search(r"\b(?:one|1|single) year\b", self.question, re.I) and not re.search(
+            if clubroot_short_rotation_requested(self.question) and not re.search(
                 r"\bspores?\b[^.]{0,70}\b(?:persist|years)\b|\b(?:does not|cannot|will not) eradicat\w*\b", lower
             ):
                 violations.append("clubroot_rotation_persistence_not_answered")
@@ -379,7 +394,7 @@ class DecisionRouteState:
         if (
             self.decision == "plant_health_diagnostic"
             and self.crop == "potato"
-            and re.search(r"\b(?:lesions?|disease program)\b", self.question, re.IGNORECASE)
+            and foliar_symptoms_reported(self.question)
         ):
             lanes = (
                 r"\b(?:representative|fresh) (?:lesion|leaf|stem|diagnostic) sample\b|\bdiagnostic lab\b",
@@ -389,16 +404,13 @@ class DecisionRouteState:
             )
             if sum(bool(re.search(pattern, answer, re.IGNORECASE)) for pattern in lanes) < 3:
                 violations.append("potato_disease_program_evidence_missing")
-        if (
-            self.decision == "fungicide_decision"
-            and self.crop == "potato"
-            and re.search(r"\blate blight\b", self.question, re.IGNORECASE)
-            and not re.search(r"\b(?:representative|fresh) (?:diagnostic )?sample\b|\bdiagnostic (?:sample|lab)\b", lower)
-        ):
-            violations.append("late_blight_confirmation_sample_missing")
+        # Late-blight prevention can precede visible infection. A diagnostic
+        # sample is checked by the symptomatic diagnostic contract above;
+        # naming a disease in a risk forecast does not establish lesions or
+        # make a positive sample a prerequisite for preventive planning.
         if self.decision == "freeze_recovery":
             lanes = (
-                r"\b(?:crop stage|growing point|developing head|crown)\b",
+                r"\b(?:crop stage|growing[- ]points?|developing heads?|crowns?)\b",
                 r"\b(?:new growth|warm(?:er)? (?:weather|conditions)|recovery period|revisit)\b",
                 r"\b(?:firm|yellow[- ]green|water[- ]soaked|white|brown|soft)\b[^.]{0,55}\b(?:tissue|growing point|head|crown)\b",
                 r"\b(?:stand count|plant count|tiller count|surviving stand|stand uniformity|representative stand)\b",
@@ -681,7 +693,6 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
     signals = analyze_query_context(question)
     lower = question.lower()
     crop = signals.primary_crop
-    capsule = build_decision_capsule(question, crop=crop)
     source_boundary = None
     if signals.country == "canada":
         for name, pattern in _US_ONLY_SOURCE_PATTERNS:
@@ -689,6 +700,47 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
                 source_boundary = name
                 break
 
+    if (information_request_kind(question) or is_mechanism_explanation(question) or is_quantity_concept_explanation(question)
+            or stored_grain_probe_monitoring(question) or soil_test_repeatability_requested(question)):
+        return DecisionRouteState(
+            question=question, decision="exam_review", crop=crop, country=signals.country,
+            decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
+            constraints=("Explain the requested mechanism, measurement basis or rival explanations and discriminating observations; "
+                         "do not add a field operation, diagnosis or application recommendation.",),
+            capsule=None,
+        )
+
+    help_kind = bounded_product_help_kind(question)
+    if help_kind and not clubroot_workflow_applicable(question):
+        return DecisionRouteState(
+            question=question, decision=help_kind, crop=crop, country=signals.country,
+            decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
+            constraints=("Answer the requested evidence comparison or incident-information task. "
+                         "Preserve reported observations and uncertainty; do not certify a diagnosis, "
+                         "choose a product or authorize an application or improvised cleanup.",),
+            capsule=None,
+        )
+
+    if root_inspection_only_request(question) and not clubroot_workflow_applicable(question):
+        return DecisionRouteState(
+            question=question, decision="root_observation", crop=crop, country=signals.country,
+            decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
+            constraints=("Give the requested practical root-inspection and recording method. "
+                         "Do not infer a pathogen, add a treatment plan or authorize an operation.",),
+            capsule=None,
+        )
+
+    if foliar_observation_request_kind(question):
+        return DecisionRouteState(
+            question=question, decision="foliar_observation", crop=crop, country=signals.country,
+            decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
+            constraints=("Answer the requested scouting or affected-normal comparison method. "
+                         "Do not substitute a disease program, confirm a diagnosis or authorize an application. "
+                         "Preventive planning does not universally require confirmed field infection.",),
+            capsule=None,
+        )
+
+    capsule = build_decision_capsule(question, crop=crop)
     decision = _decision_name(lower, question_type)
     capsule_can_override = not (
         decision == "plant_health" and capsule.domain == "crop_stress_differential"
@@ -699,6 +751,9 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
         }.get(capsule.domain, capsule.domain)
     decisive = _decisive_evidence(decision, crop)
     premise_anchors = _premise_anchors(decision)
+    if decision == "clubroot_containment" and not clubroot_confirmation_requested(question):
+        decisive = ("reported clubroot soil risk, history and affected-area records", *decisive[1:])
+        premise_anchors = tuple(anchor for anchor in premise_anchors if anchor.name != "clubroot_confirmation")
     constraints = [f"Use only field conditions stated in the question: {question.strip()}"]
     if sample_event_roles_stated(question):
         constraints.append(
@@ -748,6 +803,15 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
         constraints.append("Compare affected and normal plants, roots, stand, wetness, field pattern, and input history before treating crop colour as a nutrient rate")
     if decision == "seeding_rate_calculation":
         constraints.append("Do not finish the calculation without target stand and expected field establishment or mortality in compatible units")
+    if decision == "clubroot_containment" and not clubroot_confirmation_requested(question):
+        constraints.append("Keep soil biosecurity separate from current symptom diagnosis; preserve reported history without inventing symptoms in the rotation crop or requiring a new symptomatic plant sample")
+    disease_scope = clubroot_question_scope(question)
+    if disease_scope.negative_root_symptoms:
+        constraints.append("Preserve each specifically negated root sign; a tentative disease question is not positive evidence of symptoms")
+    if disease_scope.symptomatic_other_crop and disease_scope.soil_biosecurity_requested:
+        constraints.append("Answer both the current-crop inspection and the separate clubroot soil-history precautions; do not replace either requested workflow with the other")
+    if disease_scope.explicit_clubroot and disease_scope.host_scope == 'other' and disease_scope.current_symptoms:
+        constraints.append("Preserve the named current crop; a tentative disease name does not establish a susceptible host. Investigate its root symptoms separately from any clubroot soil-history concern")
     if decision == "erosion_control_plan":
         constraints.append("Treat mapped slope as screening context and ground-truth flow paths, cover, rotation, tillage, and observed erosion before selecting controls")
     if decision == "drought_nitrogen_adjustment":
@@ -942,7 +1006,7 @@ def _decision_name(lower: str, question_type: str) -> str:
         return "slc_map_interpretation"
     if re.search(r"\bregional soil map\b", lower) and re.search(r"\b(?:rescue nitrogen|nitrogen pass)\b", lower):
         return "map_based_rescue_n"
-    if re.search(r"\b(?:what|which)(?:\s+\w+){0,3}\s+rate\b|\bhow much\b|\busual herbicide rate\b", lower) and re.search(
+    if re.search(r"\b(?:what|which)(?:\s+\w+){0,3}\s+rates?\b|\bhow much\b|\busual herbicide rate\b", lower) and re.search(
         r"\b(?:herbicide|insecticide|fungicide|pesticide|spray|weed)\b", lower
     ):
         return "pesticide_rate_request"
@@ -969,10 +1033,10 @@ def _decision_name(lower: str, question_type: str) -> str:
         r"\b(?:nitrogen|N rate|fertiliz)\w*\b", lower, re.IGNORECASE
     ) and re.search(r"\b(?:cut|reduce|increase|change|adjust|rate)\w*\b", lower):
         return "drought_nitrogen_adjustment"
-    if re.search(r"\bclubroot\b", lower) and re.search(
-        r"\b(?:swollen roots?|galls?|dying patch|approach|what do i do|today|contain|sanitation)\b",
+    if clubroot_workflow_applicable(lower) and (clubroot_confirmation_requested(lower) or re.search(
+        r"\b(?:swollen roots?|roots? (?:are|look|appear) swollen|galls?|dying patch|approach|what do i do|today|contain|sanitation|soil[- ]movement|precautions?)\b",
         lower,
-    ):
+    )):
         return "clubroot_containment"
     if re.search(
         r"\bfall[- ](?:banded|applied)\b[^.]{0,45}\bnitrogen\b|\bnitrogen\b[^.]{0,45}\bfall[- ](?:banded|applied)\b",
@@ -1192,7 +1256,7 @@ def _decision_name(lower: str, question_type: str) -> str:
     ) and re.search(r"\b(?:cut|cutting|harvest|spray|watch)\w*\b", lower):
         return "forage_defoliator_harvest_decision"
     if not re.search(r"\b(?:seed treatment|treated seed)\b", lower) and re.search(
-        r"\b(?:insects?|pests?|caterpillars?|moths?|trap captures?|aphids?|rootworm beetles?|defoliat\w*)\b", lower
+        r"\b(?:insects?|pests?|grasshoppers?|caterpillars?|moths?|trap captures?|aphids?|rootworm beetles?|defoliat\w*)\b", lower
     ) and re.search(
         r"\b(?:spray|treat)\w*\b|\b(?:insecticide|threshold)\b", lower
     ):
@@ -1278,9 +1342,9 @@ def _decision_name(lower: str, question_type: str) -> str:
         return "wilt_differential"
     if re.search(r"\bfungicide\b", lower):
         return "fungicide_decision"
-    if re.search(r"\b(?:harvest|storage|drying|grain moisture)\b", lower):
+    if re.search(r"\b(?:harvest(?!\s+index\b)|storage|drying|grain moisture)\b", lower):
         return "harvest_storage"
-    if re.search(r"\b(?:seed lots?|seed quality|germination|seed vigor|vigor test)\b", lower):
+    if seed_quality_workflow_requested(lower):
         return "seed_quality"
     if re.search(r"\b(?:planting window|plant into|wants? to plant|before planting|crop establishment)\b", lower):
         return "planting_window"

@@ -9,6 +9,46 @@ the canonical procedure for the versioned foundation runner, persisted
 product scenarios, native baselines, retained evidence, and matched gates.
 Engineering completion and semantic review are separate outcomes.
 
+## Current product evaluation
+
+The whole-suite development campaign contains 560 original cases and 48
+refusal and crop-scope regressions. Each case has raw-model and full-system
+arms with two trials on pinned Gemma E2B and E4B configurations and hosted
+Luna: 7,296 planned observations for one source comparison side. A retained
+baseline and a changed candidate keep their separate source identities; an
+unfinished candidate cannot inherit results from its predecessor.
+
+The public default release registry separately defines 292 scenarios: 36
+harness scenarios and 256 successor-development cases, with `production_full`
+as its default arm. The complete comparison uses its separately frozen input
+registries.
+
+Product scenarios use `execute_agent_request` with persisted field and
+conversation state. The raw arm is an ablation and does not receive fabricated
+product-stage receipts. In five conversation scenarios, the campaign's hosted
+controls bind the first turn only. Unsupported follow-up dispatches remain
+interface failures or unknown coverage; they do not establish model refusal
+or multi-turn inability. Controller-only cases, references, rubrics and scoring
+policies remain outside runtime retrieval and training; workers receive only
+the admitted task inputs. A completed collection, a valid retained report and
+an answer-quality judgment are separate observations.
+
+Read results by cohort, model, arm, criterion and domain, retaining failed
+executions and unknown labels in their denominators. Report useful completion,
+restraint, numeric and unit accuracy, source support, applicability and tool
+correctness separately before interpreting an aggregate.
+Any weighted aggregate describes this exposed set under declared project
+weights; it cannot clear a fatal error or missing safety review.
+
+Native Colab GPU and hosted-service timing and identity scopes differ; a
+configured hosted model name does not identify immutable weights. This exposed development suite
+supports regression analysis and advisory answer review, not a general model
+ranking or field validation. See the
+[operator guide](operations/release-evaluation.md) for execution and retention
+requirements.
+
+## Historical Canadian development instrument
+
 The historical Canadian development benchmark is `open_agronomy_canadian_performance_v1`:
 241 project-authored Canadian field questions. It is a development instrument,
 not a certification exam or a representative sample of agronomy work.
@@ -20,7 +60,7 @@ structured-table control, and community/jurisdiction boundary controls. It is
 exposed and non-claim-eligible: it detects source-trace, authority-boundary,
 and orchestration regressions rather than unbiased model performance.
 
-## Frozen arms
+### Frozen historical arms
 
 | Arm | Input and behavior |
 |---|---|
@@ -33,7 +73,7 @@ The primary matched contrast is raw model versus the governed system.
 Intermediate arms localize changes to added instruction, field context, or
 knowledge/evidence bundles; they do not isolate individual component effects.
 
-## What the harness measures
+## Historical harness measurements
 
 - Canadian decision-quality cases retain reference points, material-error
   boundaries, and field context for independent review.
@@ -48,7 +88,7 @@ knowledge/evidence bundles; they do not isolate individual component effects.
 Lexical-contract diagnostics are reported only where their contract is defined;
 they are not agronomic accuracy. Automated semantic judges are advisory triage
 only and cannot substitute for blinded, calibrated agronomist review. There is
-no valid single composite score.
+no validated composite of agronomic competence from this historical instrument.
 
 ## Retrieval and corpus checks
 
@@ -92,7 +132,7 @@ separately frozen confirmation set, so it was reverted. The cards remain
 non-active; partial claim coverage and raw retrieval reachability do not
 qualify them for activation.
 
-## Reproducible runs
+## Historical benchmark reproducibility
 
 The runner binds suite hash, interface contract, arm contract, executable source
 snapshot, model profile, and RAG artifact identities. A partial run resumes only

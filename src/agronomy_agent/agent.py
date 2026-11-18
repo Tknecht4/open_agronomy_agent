@@ -35,6 +35,7 @@ from agronomy_agent.corpus_governance import (
 )
 from agronomy_agent.agno_runtime.runtime import resolve_agent_runtime
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions, normalize_general_answer
+from agronomy_agent.calculator_contracts import calculation_request_is_complete
 from agronomy_agent.answerability import (
     AnswerabilityState,
     assess_answerability,
@@ -44,7 +45,9 @@ from agronomy_agent.answerability import (
     validated_deterministic_tool_execution,
 )
 from agronomy_agent.answer_verifier import bounded_decision_support, context_evidence_text, verify_answer
+from agronomy_agent.observation_guidance import bounded_concept_prefix
 from agronomy_agent.observation_guidance import observation_guidance
+from agronomy_agent.agronomic_concepts import concept_prompt_guidance
 from agronomy_agent.canada_sources import (
     apply_canadian_coverage_disclosure, apply_soileri_coverage_disclosure,
     build_canadian_coverage_boundary, build_soileri_source_coverage,
@@ -300,6 +303,8 @@ def build_answer_prompt(context_block: str, question: str) -> str:
     if re.search(r"\b(?:quelle est|diff[eé]rence entre|est-ce|puis-je|pourquoi|comment)\b", question, re.I):
         task_note += " Répondez en français."
     method = observation_guidance(question)
+    for note in concept_prompt_guidance(question):
+        task_note += " General concept boundary (project rule, not retrieved evidence): " + note
     if method:
         task_note += " Answer concisely, preserving these observation-method requirements: " + " ".join(
             instruction for _, instruction, _ in method.facets
@@ -3780,11 +3785,15 @@ def decide_evidence_intervention(
         AnswerabilityState.REQUIRE_AUTHORITY,
         AnswerabilityState.REFUSE_UNSAFE_ACTION,
     }:
-        support = (
-            bounded_decision_support(question, context.route.question_type)
-            if context is not None and decision.state == AnswerabilityState.REQUIRE_AUTHORITY
-            else None
-        )
+        support = None
+        if context is not None:
+            if decision.state == AnswerabilityState.REQUIRE_AUTHORITY:
+                support = bounded_decision_support(question, context.route.question_type)
+            elif decision.state == AnswerabilityState.ASK_ONE_DISCRIMINATING_QUESTION:
+                method = observation_guidance(question)
+                support = method.answer if method else bounded_concept_prefix(question)
+            else:
+                support = bounded_concept_prefix(question)
         hold_text = decision.response_text or baseline.hold_text
         if support:
             hold_text = support + ("\n\n" + hold_text if hold_text else "")
@@ -4229,6 +4238,19 @@ def deterministic_tool_response(
         for item in (runtime.get("tool_results") or ())
         if isinstance(item, Mapping)
     )
+    if assess_answerability(
+        question, route=getattr(context, "route", None),
+        tool_plan=plan, tool_results=results,
+        field_context=runtime.get("answerability_field_context"),
+    ).state == AnswerabilityState.REFUSE_UNSAFE_ACTION:
+        return None, None
+    raw_invocations = plan.get("invocations")
+    invocations = raw_invocations if isinstance(raw_invocations, (list, tuple)) else ()
+    calculator = next((item for item in invocations if isinstance(item, Mapping) and item.get("tool_id") == "agronomic_calculator"), None)
+    if calculator and not calculation_request_is_complete(question, str(calculator.get("operation") or "")):
+        # Keep the verified tool evidence available to the model; a computed
+        # sub-result does not complete other requested claims or operations.
+        return None, None
     if validated_deterministic_tool_execution(question, plan, results, field_context=runtime.get("answerability_field_context")):
         payload = results[0].get("payload") if isinstance(results[0], Mapping) else None
         answer = str((payload or {}).get("answer") or "").strip() if isinstance(payload, Mapping) else ""
@@ -4266,11 +4288,13 @@ def deterministic_tool_response(
                 and has_recognized_regulated_product(question)
                 and re.search(r"\bfor\s+(?:the\s+)?[a-z0-9][a-z0-9 .®™'/-]*[?.!]*\s*$", question, re.I)
             )
-            if results[0].get("tool_id") == "agronomic_calculator" and (named_product_conversion or re.search(
+            if (invocation and isinstance(invocation[0], Mapping)
+                    and invocation[0].get("operation") == "unit_conversion"
+                    and results[0].get("tool_id") == "agronomic_calculator" and (named_product_conversion or re.search(
                 r"\b(?:product|herbicide|fungicide|insecticide|pesticide)\b.{0,40}\b(?:label|rate)\b",
                 question,
                 re.IGNORECASE,
-            )):
+            ))):
                 answer += (
                     " This only converts the user-supplied number; it does not establish that a label is "
                     "current or applicable, does not establish label authority or product applicability, "
@@ -4279,6 +4303,10 @@ def deterministic_tool_response(
             return answer, "deterministic_tool_result"
     if validated_deterministic_tool_clarification(question, plan, results, field_context=runtime.get("answerability_field_context")) is not None:
         clarification = str(plan.get("clarification") or "").strip()
+        if results:
+            # Exact clarification replay above admits only the canonical
+            # unresolved-basis scenario payload, never a guessed scalar.
+            clarification = str((results[0].get("payload") or {}).get("answer") or "").strip()
         if clarification:
             return clarification, "deterministic_tool_clarification"
     return None, None
@@ -4320,6 +4348,7 @@ def _matching_outbound_line(
     normalized_text = re.sub(r"\s+", " ", text).strip()
     text_prefix = normalized_text[:48]
     truncated_text_prefix = normalized_text[:12]
+    fallback = None
     for raw_line in outbound_text.splitlines():
         line = raw_line.strip()
         if not line:
@@ -4336,9 +4365,9 @@ def _matching_outbound_line(
         )
         if identity_match and ("Excerpt:" in line or "Source:" in line or text_match):
             return line
-        if title_match and text_match:
-            return line
-    return None
+        if fallback is None and title_match and text_match:
+            fallback = line
+    return fallback
 
 
 def _shared_outbound_fragment(source_text: str, outbound_text: str, *, field: str) -> str:
@@ -4363,10 +4392,13 @@ def _benchmark_document_egress_records(
     records: list[dict[str, Any]] = []
     for doc in context.retrieved_docs:
         exact_source_projection = f"Source: {doc.title}: {doc.text}"
+        packed_marker = f"Title: {doc.title}. Source: {doc.source}. Excerpt: "
+        packed_header = next((line.strip() for line in outbound_text.splitlines()
+                              if f"[{doc.doc_id}]" in line and packed_marker in line), None)
         fragment = (
             exact_source_projection
             if exact_source_projection in outbound_text
-            else _matching_outbound_line(
+            else packed_header or _matching_outbound_line(
                 outbound_text,
                 identity=f"[{doc.doc_id}]",
                 title=doc.title,
@@ -4375,6 +4407,18 @@ def _benchmark_document_egress_records(
         )
         if fragment is None:
             continue
+        packed_source_fragment = None
+        if f"[{doc.doc_id}]" in fragment and packed_marker in fragment:
+            # Packed PDF excerpts retain newlines. Bind the actual source
+            # prefix, rather than treating its page-number header as the
+            # complete excerpt or borrowing words from the policy wrapper.
+            start = outbound_text.index(fragment)
+            excerpt_start = start + fragment.index(packed_marker) + len(packed_marker)
+            prefix = os.path.commonprefix([doc.text, outbound_text[excerpt_start:]])
+            if len(prefix.strip()) < min(8, len(doc.text.strip())) or not prefix.strip():
+                raise ValueError(f"benchmark egress could not bind document {doc.doc_id} to final outbound messages")
+            fragment = outbound_text[start:excerpt_start + len(prefix)].rstrip()
+            packed_source_fragment = prefix.strip()
         relative = _repository_relative_path(doc.corpus_path)
         corpus_path_sha256 = sha256_text(relative)
         allowed = allowed_corpora.get(corpus_path_sha256)
@@ -4402,7 +4446,7 @@ def _benchmark_document_egress_records(
             raise ValueError(
                 f"outbound benchmark document is not a member of its corpus: {doc.doc_id}"
             )
-        source_text_fragment = _shared_outbound_fragment(
+        source_text_fragment = packed_source_fragment or _shared_outbound_fragment(
             doc.text,
             fragment,
             field=f"document {doc.doc_id}",
@@ -4445,7 +4489,10 @@ def _benchmark_graph_egress_records(
     allowed_graphs = artifact_contract.get("allowed_graphs") or {}
     records: list[dict[str, Any]] = []
     for hit in context.graph_hits:
-        fragment = _matching_outbound_line(
+        header = f"- {hit.name} ({hit.kind}): "
+        fragment = next((line.strip() for line in outbound_text.splitlines()
+                         if line.strip().startswith(header)), None)
+        fragment = fragment or _matching_outbound_line(
             outbound_text,
             identity=str(getattr(hit, "node_id", "") or ""),
             title=str(getattr(hit, "name", "") or ""),
@@ -4565,16 +4612,29 @@ def _build_benchmark_egress_envelope(
                 str(row.get("claim_text") or (row.get("payload") or {}).get("answer") or "").strip() in outbound
                 for row in results if isinstance(row,Mapping) and (row.get("claim_text") or (row.get("payload") or {}).get("answer"))):
             raise ValueError("typed-tool model egress requires a separately reviewed payload class")
-        docs=_benchmark_document_egress_records(context=context,outbound_text=outbound,artifact_contract=generator.expected_artifact_contract)
-        graphs=_benchmark_graph_egress_records(context=context,outbound_text=outbound,artifact_contract=generator.expected_artifact_contract)
-        guards=_benchmark_guard_note_egress_records(context=context,outbound_text=outbound)
+        from agronomy_agent.benchmark_render_provenance import ARTIFACT_SCHEMA, ENVELOPE_SCHEMA, build_records
+        artifact = generator.expected_artifact_contract
+        render_fields = {}
+        envelope_schema = CANONICAL_ENVELOPE_SCHEMA
+        if artifact.get("schema_version") == ARTIFACT_SCHEMA:
+            rendered = build_records(artifact["render_profile"], eval_id=eval_id,
+                phase=generator.egress_phase, arm=generator.benchmark_arm,
+                messages=messages, question=question, verifier_evidence_text=verifier_evidence_text)
+            docs, graphs, guards = (rendered[name] for name in
+                ("selected_document_excerpts", "graph_evidence", "governed_guard_notes"))
+            envelope_schema = ENVELOPE_SCHEMA
+            render_fields = {"render_profile_sha256": artifact["render_profile"]["sha256"]}
+        else:
+            docs=_benchmark_document_egress_records(context=context,outbound_text=outbound,artifact_contract=artifact)
+            graphs=_benchmark_graph_egress_records(context=context,outbound_text=outbound,artifact_contract=artifact)
+            guards=_benchmark_guard_note_egress_records(context=context,outbound_text=outbound)
         classes=["project_owned_frozen_benchmark_questions"]
         if any(m["role"]=="system" for m in messages):classes.append("benchmark_system_and_answer_contract_prompts")
         if generator.benchmark_arm=="production_full" and field_context:classes.append("case_bound_synthetic_facts")
         if docs:classes.append("selected_public_release_runtime_document_source_excerpts")
         if graphs:classes.append("public_release_runtime_graph_evidence")
         if generator.egress_phase=="verification":classes += ["candidate_drafts_for_verification","verifier_evidence"]
-        return {"schema_version":CANONICAL_ENVELOPE_SCHEMA,"eval_id":eval_id,
+        return {"schema_version":envelope_schema,"eval_id":eval_id, **render_fields,
             "selected_document_excerpts":docs,"graph_evidence":graphs,"governed_guard_notes":guards,
             "payload_classes":[c for c in CANONICAL_PAYLOAD_CLASSES if c in classes],
             "phase":generator.egress_phase,"arm":generator.benchmark_arm,

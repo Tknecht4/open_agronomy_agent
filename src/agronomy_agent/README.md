@@ -80,6 +80,20 @@ an explicitly requested affected-versus-normal soil sampling contrast, even if
 a later disclaimer follows. These bounded rules and lexical checks do not form
 a general scientific correctness verifier; model answers still require review.
 
+`request_scope.information_request_kind` binds recognized whole requests for
+explanations, concept comparisons, study designs, record organization and
+pre-decision checklists. Answerability, route repair, decision obligations,
+observation methods, verifier completeness and fallback selection share that task scope. Source
+lookups keep their source route; recordkeeping requirements retain current
+regulatory-evidence checks. Incidental
+nutrient, disease or label vocabulary cannot create an unrequested operational
+checklist. Mixed actions, field-specific diagnoses, exact restriction queries
+and unconsumed instructions retain ordinary decision handling. These lexical
+contracts do not establish general language understanding or factual accuracy.
+Independent output checks still reject unsupported measurements, diagnoses,
+application instructions and entry/harvest permissions. Explicitly conditional
+label guidance is not evidence that its conditions have been satisfied.
+
 Explicit SoilERI interpretation keeps general erosion context separate from the
 named specification. `named_regional_product_coverage` records whether that
 source is indexed and retrieved; missing coverage is disclosed in the prompt
@@ -100,6 +114,13 @@ Runtime selection starts in `configs/`.
 `configs/runtime_profiles.json` is the selectable/default registry. Adding a
 config file does not activate it. See [`configs/README.md`](../../configs/README.md)
 before changing an active profile.
+
+The opt-in hosted benchmark transport owns exact-message evidence delivery in
+`codex_app_server.py` and `benchmark_render_provenance.py`. Frozen controller
+profiles can describe unchanged historical prefixes, including metadata-only
+clipped headers; they do not render prompts, select runtime evidence or grant
+source-body support. See the [evaluation operator guide](../../docs/public/operations/release-evaluation.md)
+for authority, delivery and retained-comparison limits.
 
 ## Validation
 
@@ -153,8 +174,31 @@ semantic completeness.
 
 `observation_guidance.py` owns bounded observation-method requirements shared
 by drafting, completeness review and fallback selection. Applicable methods
-cover paired scouting, satellite comparability, empty terrain coverage, point
-versus area geometry, crop-guide scope and regional stress interpretation.
+cover paired scouting, current swollen-root inspection, healthy-potato late-blight
+monitoring, satellite comparability, empty terrain coverage, point versus area
+geometry, crop-guide scope and regional stress interpretation.
+Imagery QA limits interpretation of an apparent change; it does not delay
+direct field scouting, which can proceed in parallel.
+Root methods require a reported current root symptom and an inspection request; normal
+soybean nodules are discussed only when the currently affected roots are
+explicitly associated with soybean. History, negated observations, healthy
+reference crops and additional operational requests retain their own scope.
+Complete foliar-comparison and healthy-potato monitoring requests retain an
+observation scope instead of acquiring an unasked disease program. Foliar
+comparisons check paired plants, comparable stage or variety, symptom patterns
+and the limit on disease confirmation. Additional diagnosis, application or
+entry requests retain ordinary handling. Healthy-potato output checks reject
+bounded claims that make confirmed infection a universal prerequisite for
+preventive fungicide planning; this does not authorize a product or application.
+The output application check recognizes reported root-inspection intent even
+with extra location or crop-stage context. Its stricter whole-request predicate
+still owns decision-plan selection; an explicit operation, rate or product
+authority request keeps the ordinary checks. Unasked material applications
+are screened in imperative, prescriptive passive and impersonal recommendation
+forms. Negated boundaries, historical applications and analytical data statements
+do not become application instructions merely from those words.
+Potato monitoring requires recognizable signs, representative coverage and
+diagnostic follow-up as well as crop surfaces and local alerts.
 Explicit missing method steps receive review even below the ordinary risk score
 threshold; complete answers keep the existing thresholds. Authority holds reuse
 reviewed procedural help without granting the blocked action. Product-label
@@ -162,6 +206,16 @@ cleanup can retain that reviewed help when replacing an unverified answer, but
 cannot preserve arbitrary draft permissions or rates. These lexical method
 checks do not establish complete scientific verification. Source rationale and
 transfer limits are in the [field observation guide](../../docs/public/operations/field-observations.md).
+Sample-date completeness accepts closed `report issuance (date)` event items,
+including textual four-digit years and month abbreviation periods. Date-aware
+clause boundaries retain those events for the separate checks on unsupported
+analysis attribution and explicit nominal cross-role assignments. Independently
+supplied coincident dates retain their event roles. Calendar precision and
+numeric permissions keep their separate checks.
+Root-inspection lists can describe rot or unusual discoloration without
+asserting a disease. Strict inspection-only answers share the output application
+guard used for explanations: an unasked material application receives review,
+while useful inspection guidance can be retained.
 Numeric-rate obligations distinguish pesticide scouting, stages and application
 history from fertility tests and credits. Mixed pesticide/nutrient requests
 retain the product-label and fertility authority lanes.
@@ -178,6 +232,76 @@ The active verifier retains its risk-conditioned review thresholds. A proposed
 advisory-only bypass was withdrawn after a paired development run exposed an
 unsupported field-action recommendation. An unknown map type is not renamed as
 a suitability product by a fallback.
+
+Whole-request mechanism and differential-evidence explanations do not inherit
+an operational checklist merely because they mention manure, salinity, seed
+vigor or crusting. Personal field diagnosis, authority questions and follow-up
+actions retain their normal requirements. This is bounded intent calibration,
+not a general scientific verifier.
+
+Clubroot soil biosecurity preserves reported history without inventing symptoms
+in the current rotation crop. Capsule retrieval, route anchors and verifier
+completeness checks require symptom confirmation only for a symptom or diagnosis
+question. Soil-movement advice retains containment and equipment-cleaning checks;
+generic crop-stage, weather and fresh plant-sample prerequisites do not belong
+to a history-only hygiene request. The fallback keeps those scopes distinct. Current crop and symptom mentions are
+separate from historical or negated observations; a tentative disease name
+does not establish that the current crop is a susceptible host.
+
+The supplied-input calculator also supports elemental/oxide P and K basis
+conversion, apparent nutrient balances, and liquid-product totals. Named
+quantities, units and nutrient bases must bind without conflicts; invalid or
+ambiguous premises need clarification. Apparent balances do not establish
+soil-test changes or losses, and product litres are distinct from carrier
+volume. Readiness shares the execution validators. The saved answer and final
+renderer preserve an exact, recomputed calculator result with its boundary;
+neither a generation-path flag nor a plausible trace can bypass validation.
+Default P/K reporting conversions use the four direction-specific factors in
+[USDA NRCS National Agronomy Manual, Table 503-42](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf):
+P→P2O5 2.2915, P2O5→P 0.4364, K→K2O 1.2045 and K2O→K 0.8302.
+A supplied rounded factor is preserved when it has at least two significant
+digits and lies within half its last decimal unit plus 0.01% of the reference
+factor. This is an explicit engineering rounding policy, not a field safety
+tolerance; inversion of a rounded forward factor is not used as the reference.
+Whole-field product requests retain their area and total-mass output. The
+calculation also shows product mass per hectare, so a request for both quantities
+uses one checked operation. An input described as total area does not override an
+explicit request for a per-hectare result. Unlabelled
+numeric alternatives and multiple destination nutrient bases require clarification.
+Universal requests to evade safety or authority remain blocked.
+
+Water accounting uses supplied volumetric contents and uniform depth for
+available capacity or refill deficit, standard-condition `ETc = Kc × ETo`,
+supplied net depth/application efficiency, and depth/area volume. It does not
+choose irrigation timing, stress coefficients or layered soil properties.
+Single-nozzle calibration retains supplied spacing and flow without inventing
+whole-boom width or nozzle count. Grain moisture adjustment conserves dry
+matter, preserves any yield-area denominator and excludes handling losses;
+storage and marketing targets must be supplied. A separate uncapped daily-mean
+GDD operation uses the actual supplied mean and base, with a stated zero floor;
+it cannot infer individually capped temperature extremes. These operations
+share non-executing readiness validators and whole-request guards for extra
+decisions, permission requests and unhandled questions. The historical v1
+operation family remains distinct from the current calculator contract. Seed-mass
+arithmetic requires an explicit denominator for a selected scalar result. The v6
+planner wrapper can execute two labelled conditional calculations when the sole
+gap is unqualified survival and all other inputs, including germination, are
+valid. Its `seed_survival_clarification.v1` parent remains unresolved, has no
+primary value and retains PARTIAL evidence coverage. Both children use the
+current v5 calculator and preserve metric or imperial method, supplied
+percentages and assumptions. Preview plans without executing them; the adjacent
+user-only denominator reply still resolves the original calculation. Missing,
+invalid, explicitly excluded bases and mixed operational requests retain their
+existing boundaries. Exact-replayed pure arithmetic keeps its scope boundary
+without appending unrelated provincial guidance prose; source/coverage receipts
+remain available in the evidence view.
+Grain harvest index divides supplied grain dry mass by total above-ground dry
+biomass, including grain, on the same mass and area basis; both fraction and
+percentage are shown. This follows the [FAO biomass/harvest-index definition](https://www.fao.org/4/y5146e/y5146e07.htm)
+and does not set a crop-specific target or harvest date. Circular sampling area
+uses a supplied radius and planar πr², reports square metres and hectares, and
+explains why a sampling footprint is not a mapped field boundary. Diameter,
+annulus, terrain-corrected and geodesic requests are outside that operation.
 
 MLX adapters retain at most one target/draft model pair across serialized public
 operations. Generators release temporary references after token counting,
@@ -204,6 +328,51 @@ A bounded diagnostic sampling check rejects claims that separately attributable
 area results remain recoverable after samples are pooled into one composite.
 These checks do not constitute a general scientific correctness verifier.
 
+`agronomic_concepts.py` supplies project-authored prompt boundaries and bounded
+claim corrections, separately from retrieved evidence. In a variety/harvest
+context, drydown concerns crop or grain moisture loss toward harvest, rather
+than drought survival; see [Purdue's grain-drydown explanation](https://agry.purdue.edu/ext/corn/news/timeless/GrainDrying.html).
+An explicit soil dry-down treatment has a different referent: progressive soil
+drying can be used in water-deficit experiments, including cultivar comparisons;
+see [the soybean dry-down methods in Shekoofa et al.](https://pmc.ncbi.nlm.nih.gov/articles/PMC10534556/).
+Prompt guidance and claim correction share this scope check. Explicit soil
+drying and mixed soil/harvest requests do not authorize a global harvest
+definition rewrite. A correction also requires the false trait to be the
+definition's head property; a drought-related purpose or a separate comparison
+does not establish equivalence.
+Lodging is displacement from the upright position through root anchorage failure
+or stem bending/breakage, and can occur before maturity. Standability/lodging
+resistance concerns avoiding that failure; see [Manitoba Crop Alliance](https://mbcropalliance.ca/directory/production-resources/lodging-in-spring-cereals/).
+Corrections require affirmative equivalence with positive resistance/ability;
+loss, failure, causal explanations, negation and uncertainty retain their prose.
+Fertilizer nutrient conversion uses the declared nutrient analysis and its mass
+basis, rather than a pesticide active-ingredient concentration; see
+[UMN's nutrient-analysis explanation](https://extension.umn.edu/agriculture/specialty-crops/interpreting-soil-tests-for-fruit-and-vegetable-crops)
+and [NPIC's active-ingredient definition](https://npic.orst.edu/ingred/active.html).
+Materials can have both nutrient and pesticidal roles. Mentioning nutrient
+supply alone does not trigger a correction. These general definitions provide
+neither a crop-specific drydown rate nor a fertilizer target or product permission.
+The shared rate-definition completeness check requires a relationship to the
+quantity of the commercial formulation; nearby words such as product and amount
+do not establish that relationship. An affirmative definition cannot equate the
+whole product amount with its contained active-ingredient amount. Negated
+misconceptions and valid conversions retain their meaning. A pesticide label
+may itself state an active-ingredient basis, which must be distinguished from
+formulated-product quantity; see [MU Extension's spray-mix calculation guide](https://extension.missouri.edu/publications/g1272).
+Localized corrections preserve the original draft and explicit changed spans,
+retain coordinated prose, and require reassessment of the entire result. Their
+typed provenance is validated at the production execution boundary, separately
+from model rewrites and fallbacks. The declared prompt, verifier and fallback
+implementation bundles bind their shared helpers.
+
+Requested fictional product/nutrient examples include an internally checked
+mass-fraction calculation; the word “hypothetical” alone cannot satisfy example
+completion. Yearless textual calendar dates retain a validated month/day
+identity across ordinal and reordered forms, with the year still unknown.
+Calendar identities do not authorize the same digits as quantities or an
+invented year. These checks do not validate every scientific claim or every
+event/date relationship.
+
 Compound observation requests combine each recognized method's requirements and
 contradiction checks. Instrument footprint terms in a separate request do not
 suppress an explicitly asked planted-area method. Crop-guide recovery uses the
@@ -217,3 +386,162 @@ Mixed pesticide and fertilizer requests share the quantity-subject check between
 the evidence policy and final procedural support. Final label-safety replacement
 must preserve both requested methods, including supported French guidance;
 a complete machine-policy record alone does not establish a complete visible answer.
+
+Seed-mass inputs distinguish overall establishment per seed sown from survival
+per germinated seed. Overall emergence already includes germination; supplied
+laboratory germination stays in the record and is not multiplied again.
+Conditional survival requires a separate supplied germination percentage. Both
+metric and imperial execution share the same validator with API readiness.
+Unqualified survival or mortality needs a denominator clarification; conventional
+emergence uses a visibly stated seeds-sown interpretation. No germination value
+is invented, and no crop population or survival percentage is selected. See
+[Manitoba's establishment definition](https://www.gov.mb.ca/agriculture/crops/crop-management/print,seeding-by-plant-population.html)
+and [Canola Council's emergence basis](https://www.canolacouncil.org/canola-encyclopedia/plant-establishment/seeding-rate/).
+
+
+### Complete arithmetic requests and observed crop roles
+
+`supplied_numeric_inputs.py` owns ordinary decimal/comma-thousands token
+boundaries shared by supplied, foundation and legacy extraction. A valid prefix
+of a decimal comma, exponent, fraction or malformed token is never an operand.
+The supplied parsers and seed/GDD owners bind every numeric token to an actual
+operand, a recognized incidental role or a supported method constant. A
+per-hectare product result may retain field area as context; an additional
+nutrient flow, dry-matter loss, excluded sampling area or unknown output cannot
+silently disappear. Unsupported compound units require clarification. Structured
+GDD accepts only its explicit Celsius input keys, method and temperature unit.
+
+`request_scope.py` positively qualifies complete explanatory/calculation request
+clauses. Unknown trailing or coordinated commands return to ordinary decision
+handling, including comma-separated requests and polite request wrappers.
+Parser-owned arithmetic without an anchored request head still receives a full
+tail check. A first output after a qualified arithmetic input declaration, closed assumption
+or owned formula remains eligible; these prefixes do not authorize
+a second output or an unknown command. The bypass accepts bounded
+analytical continuations and explicit parameter declarations; it does not infer
+that a word is analytical from its spelling. Leaving a bypass is not a refusal.
+Nominal concept comparisons use one shared, fully consumed grammar. Comparison
+operands and optional example lists must qualify; bounded nominal modifiers
+cannot contain an arbitrary extra imperative. Each later comparison clause
+receives the same product, treatment and rate exclusions. Personal decisions,
+permission and output application claims remain checked by answerability and
+verification. Unsupported comparison grammar retains ordinary handling.
+
+`plant_health_scope.py` preserves crop mentions while distinguishing the affected
+crop from a healthy reference subject. Negative root observations retain their
+actual wording: absence of galls does not imply absence of swelling. Decision
+checks reject invented root signs and require an explicitly requested current
+crop inspection alongside separate clubroot soil-history precautions. Fallbacks
+preserve these roles rather than assigning the historical disease to the current
+rotation crop. Generic root-inspection guidance yields to the shared susceptible-crop
+clubroot workflow so fallback does not erase persistence and soil containment.
+
+
+A valid tool plan may contribute arithmetic evidence to a compound request.
+`has_unqualified_followup` also controls answerability, model-free readiness and
+`deterministic_tool_response`: completion requires the whole request. Legacy
+daily GDD retains its verified sub-result for separately requested provenance or
+stage interpretation, and for ordinary model handling of extra commands. Its
+explicit `note` JSON key is text-only non-operative metadata; unknown numeric or
+unit-bearing keys remain invalid. Closed negative constraints preserve the pure
+calculation path rather than creating a new task. Data declarations consume their
+whole value, unit and bounded method qualifiers; a recognized input name or
+`with`, `of` or `without` prefix cannot own arbitrary instructions. Closed
+presentation requests remain eligible. Request-bearing prepositional tails
+inside the initial calculation clause receive the same scope check as later
+comma clauses. Unknown scope uses ordinary handling rather than dropping work.
+Named thousand-kernel-weight declarations retain the extractor's explicit
+spelled-out and `TKW` roles in both input prefixes and comma tails. The entire
+value and any additional request still receive the same ownership checks.
+
+Maturity identifier restoration requires an explicit subject assignment and an
+unambiguous supplied identifier. Named subjects in the question must match.
+Unbound mentions and statements containing both identifiers remain
+unchanged; negative comparisons must not become false self-comparisons.
+Runtime orchestrator identity
+also binds `server/services/conversation_resolution.py`, because effective
+request changes affect readiness and persisted execution.
+
+The shared `seed_quality_workflow_requested` predicate separates an arithmetic
+operand from a request to assess seed lots, quality or vigor. Germination supplied
+for seed-mass arithmetic does not impose a lot-selection checklist on additional
+help. Router guidance, decision selection, verifier facets and fallback use the
+same predicate. Independently requested quality assessments retain their checks;
+no calculation or action authority follows from this topical selection.
+For water and fertilizer topics, a distinct selected method and a complete
+planner-recognized arithmetic fragment qualify supplied quantities as context.
+The original compound request retains ordinary execution. Independent water or
+nutrient management, unknown additional quantities and using the calculated
+result retain the management checks. Numeric support and field authority pass
+through their normal verification. Verifier and fallback implementation
+identities also bind their canonical planning dependency.
+
+### Product topics and requested authority
+
+`answerability.py` separates whole quantity-concept and mechanism explanations
+from requests for application permission. `bounded_product_help_kind` admits
+recognized evidence-assessment and incident-information questions with qualified
+observational context. These retain bounded generation and output-claim checks;
+they do not certify a diagnosis, choose a product or authorize an operation.
+Their decision scope avoids imposing an unasked full management plan.
+Closed comparisons of sampling count bases share the quantity-concept scope.
+The router, decision planner and verifier preserve the requested measurement
+explanation rather than requiring a pest-management plan. This does not exempt
+supplied field counts, treatment requests or appended operations; fallback
+guidance retains method-specific calibration without inventing a conversion.
+
+`requests_regulated_action` is contextual: its callers must already have a
+product-aware route. Unknown product requests keep the authority hold. Routing
+alone cannot turn a recognized evidence question into application intent, and
+postprocessing uses the same scope before replacing an answer. Numeric
+application instructions remain checked even when a question only asks for
+evidence or an explanation. Historical rate context is not a new prescription;
+only the complete recognized declaration and explanation fit that exclusion.
+
+Pesticide-rate fallbacks distinguish insect, disease and weed targets, with a
+neutral path when the class is unknown. A leaf-feeding percentage is not by
+itself a sampling protocol, threshold or application authorization.
+
+Seedling loss is not automatically the complement of overall emergence.
+The two-scenario clarification requires directly supplied survival; mortality
+inputs do not gain that path. A stage-specific seedling loss needs actual
+overall emergence or an explicit loss definition among germinated seeds. The
+parser and short follow-up resolver do not turn its complement into a supplied
+overall survival fact. Explicit post-germination mortality remains supported.
+
+Unknown App Server notifications still fail closed. Failed-attempt evidence
+retains a bounded method identifier, known parameter names and value types,
+unknown-field count and observed thread/turn binding booleans. It excludes
+payload values and unknown field names. Missing binding remains unknown;
+acknowledged provider turns do not become undispatched attempts.
+
+Observation support distinguishes stored grain from live plants across the
+whole request before overriding a route. Unknown clauses or another affected
+subject retain ordinary mixed-task handling. Soil-test evidence, reference/crop/
+actual ET distinctions, photo limitations and historical station records keep
+their measurement and time support. A reviewed observation method can accompany
+an evidence-clarification hold; it does not grant field-action authority.
+Mapped crop-classification context remains separate from complete farm history.
+The contradiction check qualifies the completeness predicate, including when a
+true disclaimer appears elsewhere. Soybean maturity identifiers are strings
+with significant leading zeroes; localized restoration requires one unambiguous
+supplied identifier in the same explicit role, and preserves adaptation
+uncertainty. See the public field-observation guide for primary-source rationale.
+
+Private-table planning qualifies the full query shape before requesting an
+upload or column. The supported normalized grammar retains unsupported filters
+and compound table requests as clarifications only after table ownership is
+established. Uploaded spatial context and incidental statistics stay available
+to the ordinary interpretation path. Supplied dry-mass arithmetic similarly
+keeps a named biomass ratio separate from harvest-timing management.
+
+`arithmetic_input_roles.py` owns existing named operands shared by arithmetic
+parsers and whole-request qualification. These patterns contain no capturing
+groups, so reuse cannot shift numeric bindings. A recognized name alone does
+not establish a valid value or a complete request. Financial parsers bind the
+amount itself, preserving extra quantities and compound-unit errors as gaps.
+The nominal partial-budget input “lower costs CAD 25/ac” has a closed data-clause
+exception; instructions to lower costs by or to an amount remain actions.
+All five benchmark implementation groups consuming these roles include their
+source bytes in their identity. Legacy ready operations without an independently
+callable canonical input validator retain unknown preview readiness.

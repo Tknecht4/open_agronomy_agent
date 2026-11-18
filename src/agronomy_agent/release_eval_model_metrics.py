@@ -311,8 +311,13 @@ def _cell_value(cell: Mapping[str, Any], policy: Mapping[str, Any]) -> float | N
     if policy["truncated_outcome"] == "zero" and cell["termination_status"] == "unknown":
         return None
     dimensions = cell["dimensions"]
-    if all(dimensions.get(dim) is not None for dim in policy["dimension_weights"]):
-        return sum(dimensions[dim] * weight for dim, weight in policy["dimension_weights"].items())
+    weights = policy["dimension_weights"]
+    applicable = {dim: weight for dim, weight in weights.items()
+                  if cell["dimension_status"].get(dim) != "not_applicable"}
+    if applicable and all(dimensions.get(dim) is not None for dim in applicable):
+        value = sum(dimensions[dim] * weight for dim, weight in applicable.items())
+        # Exclude only declared N/A outcomes; missing applicable labels stay unknown.
+        return value if len(applicable) == len(weights) else value / sum(applicable.values())
     return None
 
 

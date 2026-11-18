@@ -634,6 +634,43 @@ def test_multiline_verifier_source_projection_binds_exact_document_member() -> N
     assert records[0]["source_text_fragment"] == source_text
 
 
+def test_packed_pdf_excerpt_binds_the_multiline_body_and_finds_later_headers():
+    from agronomy_agent.codex_app_server import _validate_egress_records, _validate_evidence_section_completeness
+    source_text = "5 \n- Scout crop roots carefully.\nIdentify the cause before choosing a treatment."
+    title = "Synthetic source page 5"
+    artifact = _artifact_contract(document_text=source_text, document_title=title)
+    doc = RetrievedDoc(doc_id="soil_fertility_n_rate", title=title, text=source_text,
+        source="seed agronomy synthesis", score=1.0, tags=(), namespaces=("regional_environment",),
+        source_type="official_specification", allowed_roles=("farmer",), source_id="seed agronomy synthesis",
+        raw_sha256=_digest("full seed source document"), corpus_path="data/seed/agronomy_rag_corpus.jsonl")
+    header = (f"- [CONSTRAINT] [{doc.doc_id}]. Evidence policy: context only. "
+              f"Title: {title}. Source: {doc.source}. Excerpt: ")
+    fragment = header + source_text
+    outbound = (f"Supporting evidence IDs: [{doc.doc_id}], Synthetic source page 5.\n\n"
+                "Boundary Evidence:\n" + fragment)
+    records = _benchmark_document_egress_records(context=SimpleNamespace(retrieved_docs=[doc]),
+        outbound_text=outbound, artifact_contract=artifact)
+    assert records[0]["content_fragment"] == fragment
+    assert records[0]["source_text_fragment"] == source_text
+    envelope = {"selected_document_excerpts": records, "graph_evidence": [], "governed_guard_notes": []}
+    _validate_egress_records(envelope, artifact, "Explain the observation.")
+    _validate_evidence_section_completeness(outbound, documents=records, graph_rows=[], guard_rows=[])
+    # A later header must not disappear merely because the first PDF excerpt
+    # contained ordinary continuation lines.
+    extra = "\n- [CONSTRAINT] [unbound_source]. Title: Other. Source: Other. Excerpt: Unbound text"
+    with pytest.raises(CodexAppServerError, match="unbound document"):
+        _validate_evidence_section_completeness(outbound+extra, documents=records, graph_rows=[], guard_rows=[])
+    forged = copy.deepcopy(records)
+    forged[0]["content_fragment"] += "\nInvented source assertion."
+    forged[0]["content_sha256"] = _digest(forged[0]["content_fragment"])
+    forged[0]["excerpt_chars"] = len(forged[0]["content_fragment"])
+    with pytest.raises(CodexAppServerError, match="differs from source prefix"):
+        _validate_egress_records({**envelope, "selected_document_excerpts": forged}, artifact, "Explain the observation.")
+    with pytest.raises(ValueError, match="could not bind document"):
+        _benchmark_document_egress_records(context=SimpleNamespace(retrieved_docs=[doc]),
+            outbound_text="Boundary Evidence:\n"+header+"5\nUnrelated invented text.", artifact_contract=artifact)
+
+
 def test_thread_start_observed_state_is_checked_before_turn_start(tmp_path: Path) -> None:
     client = object.__new__(CodexAppServerClient)
     client.expected_model = "gpt-5.6-luna"
@@ -1290,7 +1327,7 @@ def test_canonical_missing_thread_selection_is_not_requested_model():
 
 def _canonical_generator(tmp_path, *, question="What should I check?", messages=None, facts=None,
                          phase="candidate_generation", arm="production_full", config_sha=None,
-                         evidence=None, max_tokens=640, model_id="gpt-6-luna", config_path=None):
+                         evidence=None, max_tokens=640, model_id="gpt-6-luna", config_path=None, artifact=None):
     import agronomy_agent.codex_app_server as module
     tmp_path.mkdir(parents=True,exist_ok=True)
     if config_path is None:
@@ -1305,7 +1342,7 @@ def _canonical_generator(tmp_path, *, question="What should I check?", messages=
            "candidate_application_messages_sha256_by_arm":{"raw_model":_digest(_canonical([{"role":"user","content":question}])),
                                                             "production_full":_digest(_canonical(messages))},
            "verification_evidence_sha256":_digest(question if evidence is None else evidence)}}}
-    suite["sha256"]=_digest(_canonical(suite));artifact=_artifact_contract();static=build_benchmark_static_prompt_contract()
+    suite["sha256"]=_digest(_canonical(suite));artifact=_artifact_contract() if artifact is None else artifact;static=build_benchmark_static_prompt_contract()
     grant,bid,_=_write_authorization(tmp_path,suite_case_contract_sha256=suite["sha256"],
         egress_artifact_contract_sha256=artifact["sha256"],static_prompt_contract_sha256=static["sha256"])
     authority=json.loads(grant.read_text());authority.update(schema_version=module.CANONICAL_EGRESS_AUTHORIZATION_SCHEMA,benchmark_suite_sha256=suite["benchmark_suite_sha256"],
@@ -1415,6 +1452,118 @@ def test_canonical_protocol_completion_keeps_cap_effort_revision_and_eos_unknown
     with pytest.raises(CodexAppServerError,match="single-turn"):client.generate(user_text="again",base_instructions="")
 
 
+@pytest.mark.parametrize("change", [None, "missing_start", "foreign_thread", "foreign_turn", "duplicate_start", "foreign_terminal"])
+def test_current_turn_response_requires_observed_thread_binding(change):
+    # The current generated TurnStartResponse has only a turn; attribution is
+    # independently observed in turn/started and turn/completed notifications.
+    start = {"method": "turn/started", "params": {"threadId": "thread-1", "turn": {"id": "turn-1"}}}
+    events = [start, *_terminal_events()]
+    if change == "missing_start": events.pop(0)
+    if change == "foreign_thread": start["params"]["threadId"] = "foreign"
+    if change == "foreign_turn": start["params"]["turn"]["id"] = "foreign"
+    if change == "duplicate_start": events.insert(1, copy.deepcopy(start))
+    if change == "foreign_terminal": events[-1]["params"]["threadId"] = "foreign"
+    client = _protocol_client(events)
+    request = client._request
+    def current_request(method, params):
+        value = request(method, params)
+        if method == "turn/start": value.pop("threadId")
+        return value
+    client._request = current_request
+    if change:
+        with pytest.raises(CodexAppServerError): client.generate(user_text="question", base_instructions="")
+    else:
+        result = client.generate(user_text="question", base_instructions="")
+        assert result.receipt["thread_binding_evidence"] == {
+            "turn_start_response": False, "turn_started_notification": True, "completed_notification": True}
+
+
+@pytest.mark.parametrize("change", [None, "thread", "cwd", "model", "effort", "network", "approval", "profile", "missing", "missing_profile"])
+def test_settings_notifications_must_preserve_controlled_transport(change):
+    settings = {"cwd": "/owned/empty", "model": "gpt-6-luna", "effort": "medium",
+                "approvalPolicy": "never", "sandboxPolicy": {"type": "readOnly", "networkAccess": False},
+                "activePermissionProfile": None}
+    event = {"method": "thread/settings/updated", "params": {"threadId": "thread-1", "threadSettings": settings}}
+    if change == "thread": event["params"]["threadId"] = "foreign"
+    if change in {"cwd", "model", "effort"}: settings[change] = "foreign"
+    if change == "network": settings["sandboxPolicy"]["networkAccess"] = True
+    if change == "approval": settings["approvalPolicy"] = "on-request"
+    if change == "profile": settings["activePermissionProfile"] = {"name": "other"}
+    if change == "missing": settings.pop("model")
+    if change == "missing_profile": settings.pop("activePermissionProfile")
+    client = _protocol_client([event, *_terminal_events()])
+    if change:
+        with pytest.raises(CodexAppServerError, match="controlled transport"): client.generate(user_text="question", base_instructions="")
+    else:
+        assert client.generate(user_text="question", base_instructions="").text == "synthetic answer"
+
+
+@pytest.mark.parametrize("change", [None, "foreign_thread", "unknown_warning", "remote_enabled"])
+def test_only_expected_isolation_warning_and_disabled_remote_state_are_admitted(change):
+    warning = {"method": "warning", "params": {"threadId": "thread-1", "message":
+        "Failed to read global AGENTS.md instructions from `/synthetic/config/AGENTS.md`: Operation not permitted (os error 1)"}}
+    remote = {"method": "remoteControl/status/changed", "params": {"status": "disabled", "environmentId": None}}
+    if change == "foreign_thread": warning["params"]["threadId"] = "foreign"
+    if change == "unknown_warning": warning["params"]["message"] = "Unreviewed transport condition"
+    if change == "remote_enabled": remote["params"]["status"] = "enabled"
+    client = _protocol_client([warning, remote, *_terminal_events()])
+    if change:
+        with pytest.raises(CodexAppServerError): client.generate(user_text="question", base_instructions="")
+    else:
+        result = client.generate(user_text="question", base_instructions="")
+        assert result.receipt["transport_warning_classifications"] == ["global_instruction_read_denied"]
+
+
+def test_explicit_disabled_code_mode_warning_is_retained_without_enabling_tools():
+    event = {"method": "warning", "params": {"threadId": "thread-1", "message":
+        "Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; "
+        "enable `features.code_mode_host` and install `codex-code-mode-host`."}}
+    result = _protocol_client([event, *_terminal_events()]).generate(user_text="question", base_instructions="")
+    assert result.receipt["transport_warning_classifications"] == ["code_mode_host_disabled"]
+    assert result.receipt["transport_policy"] == "text_only_no_tools_v1"
+
+
+@pytest.mark.parametrize("mode", ["chatgpt", "apikey", None])
+def test_account_notifications_cannot_change_the_declared_auth_transport(mode):
+    event = {"method": "account/updated", "params": {"authMode": mode, "planType": None}}
+    client = _protocol_client([event, *_terminal_events()])
+    if mode != "chatgpt":
+        with pytest.raises(CodexAppServerError, match="authentication state"): client.generate(user_text="question", base_instructions="")
+    else:
+        assert client.generate(user_text="question", base_instructions="").text == "synthetic answer"
+
+
+@pytest.mark.parametrize("foreign", [False, True])
+def test_moderation_metadata_remains_attributed_observation_not_answer_authority(foreign):
+    event = {"method": "turn/moderationMetadata", "params": {"threadId": "thread-1",
+        "turnId": "foreign" if foreign else "turn-1", "metadata": {"synthetic_observation": True}}}
+    client = _protocol_client([event, *_terminal_events()])
+    if foreign:
+        with pytest.raises(CodexAppServerError, match="binding mismatch"): client.generate(user_text="question", base_instructions="")
+    else:
+        result = client.generate(user_text="question", base_instructions="")
+        assert result.receipt["moderation_metadata"] == [event["params"]]
+        assert result.receipt["moderation_metadata_scope"].startswith("provider_observation_only")
+
+
+def test_sparse_account_quota_observation_does_not_become_turn_attribution():
+    event = {"method": "account/rateLimits/updated", "params": {"rateLimits": {"primary": None}}}
+    result = _protocol_client([event, *_terminal_events()]).generate(user_text="question", base_instructions="")
+    assert result.receipt["account_rate_limit_observations"] == [event["params"]]
+    assert result.receipt["effective_turn_reasoning_effort_observed"] is False
+
+
+@pytest.mark.parametrize("stream_answer", [False, True])
+def test_terminal_fallback_cannot_hide_a_forbidden_tool_item(stream_answer):
+    events = _terminal_events()
+    events[-1]["params"]["turn"]["items"] = [
+        {"id": "item-1", "type": "agentMessage", "text": "synthetic answer"},
+        {"id": "tool-1", "type": "commandExecution"}]
+    if not stream_answer: events.pop(0)
+    with pytest.raises(CodexAppServerError, match="forbidden.*terminal items"):
+        _protocol_client(events).generate(user_text="question", base_instructions="")
+
+
 @pytest.mark.parametrize("stage",["thread/start","turn/start"])
 def test_canonical_fresh_authority_check_occurs_at_both_egress_boundaries(stage):
     calls=[]
@@ -1480,7 +1629,9 @@ def test_canonical_failed_attempt_keeps_known_acknowledgements_not_stale_stats(t
             error=CodexAppServerError("synthetic failure")
             error.provider_attempt={"state":"turn_acknowledged" if after_ack else "pre_dispatch",
                 "thread_id":"thread" if after_ack else None,"turn_id":"turn" if after_ack else None,
-                "turn_acknowledged":after_ack,"submitted":after_ack}
+                "turn_acknowledged":after_ack,"submitted":after_ack,
+                "event_diagnostic": {"method": "error", "params_shape": {"message": "str"},
+                    "thread_binding": None, "turn_binding": None, "other_field_count": 0}}
             raise error
     monkeypatch.setattr(module,"CodexAppServerClient",FailedClient)
     generator=_canonical_generator(tmp_path)
@@ -1493,6 +1644,122 @@ def test_canonical_failed_attempt_keeps_known_acknowledgements_not_stale_stats(t
     assert attempt["phase"]=="candidate_generation" and attempt["eval_id"]==_EVAL_ID and attempt["attempt_id"]==1
     assert attempt["turn_acknowledged"] is after_ack and attempt["turn_id"]==("turn" if after_ack else None)
     assert generator.last_generation_stats is None
+    assert attempt["event_diagnostic"]["method"] == "error"
+    assert attempt["event_diagnostic"]["params_shape"] == {"message": "str"}
+
+
+@pytest.mark.parametrize("rejection", ["question", "envelope_bound", "config"])
+def test_rejected_attempt_after_success_does_not_inherit_provider_submission(tmp_path, monkeypatch, rejection):
+    import agronomy_agent.codex_app_server as module
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+
+    class CompletedClient(_FakeClient):
+        def generate(self, **kwargs):
+            result = super().generate(**kwargs)
+            result.receipt["selected_model"] = "gpt-6-luna"
+            self.last_attempt_evidence = {
+                "state": "protocol_completed", "submitted": True,
+                "thread_acknowledged": True, "turn_acknowledged": True,
+                "thread_id": "previous-thread", "turn_id": "previous-turn",
+            }
+            return result
+
+    monkeypatch.setattr(module, "CodexAppServerClient", CompletedClient)
+    generator = _canonical_generator(tmp_path)
+    messages = [{"role": "system", "content": "Synthetic system"},
+                {"role": "user", "content": "What should I check?"}]
+    envelope = _build_benchmark_egress_envelope(
+        generator=generator, messages=messages, eval_id=_EVAL_ID,
+        question="What should I check?", field_context={}, context=None, resources=None)
+    assert generator.generate_with_egress(messages, envelope) == "bounded answer"
+    previous = generator._client.last_attempt_evidence
+    rejected = copy.deepcopy(envelope)
+    if rejection == "question":
+        rejected["question_fragment"] = "An unapproved follow-up"
+    elif rejection == "envelope_bound":
+        rejected["unclassified"] = "x" * (1048576 + 1)
+    else:
+        generator._model_config_path.write_text("changed")
+
+    with pytest.raises(CodexAppServerError) as raised:
+        generator.generate_with_egress(messages, rejected)
+    attempt = raised.value.provider_attempt
+    assert len(generator._client.calls) == 1
+    assert attempt["attempt_id"] == 2 and attempt["state"] == "pre_dispatch"
+    assert attempt["submitted"] is False
+    assert attempt["thread_acknowledged"] is False and attempt["turn_acknowledged"] is False
+    assert "thread_id" not in attempt and "turn_id" not in attempt
+    assert generator.last_generation_stats is None
+    assert previous["submitted"] is True and previous["turn_id"] == "previous-turn"
+
+
+def test_current_client_failure_evidence_survives_without_exception_annotation(tmp_path, monkeypatch):
+    import agronomy_agent.codex_app_server as module
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+
+    class FailedClient(_FakeClient):
+        def generate(self, **kwargs):
+            self.last_attempt_evidence = {
+                "state": "turn_acknowledged", "submitted": True,
+                "thread_acknowledged": True, "turn_acknowledged": True,
+                "thread_id": "current-thread", "turn_id": "current-turn",
+            }
+            raise CodexAppServerError("current transport failure")
+
+    monkeypatch.setattr(module, "CodexAppServerClient", FailedClient)
+    generator = _canonical_generator(tmp_path)
+    messages = [{"role": "system", "content": "Synthetic system"},
+                {"role": "user", "content": "What should I check?"}]
+    envelope = _build_benchmark_egress_envelope(
+        generator=generator, messages=messages, eval_id=_EVAL_ID,
+        question="What should I check?", field_context={}, context=None, resources=None)
+    with pytest.raises(CodexAppServerError) as raised:
+        generator.generate_with_egress(messages, envelope)
+    attempt = raised.value.provider_attempt
+    assert attempt["submitted"] is True and attempt["state"] == "turn_acknowledged"
+    assert attempt["thread_id"] == "current-thread" and attempt["turn_id"] == "current-turn"
+
+
+def test_current_client_initialization_failure_retains_its_own_evidence(tmp_path, monkeypatch):
+    import agronomy_agent.codex_app_server as module
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+
+    def failed_client(**kwargs):
+        error = CodexAppServerError("current initialization failure")
+        error.provider_attempt = {"state": "initializing", "submitted": False, "request_id": "current-init"}
+        raise error
+
+    monkeypatch.setattr(module, "CodexAppServerClient", failed_client)
+    generator = _canonical_generator(tmp_path)
+    messages = [{"role": "system", "content": "Synthetic system"},
+                {"role": "user", "content": "What should I check?"}]
+    envelope = _build_benchmark_egress_envelope(
+        generator=generator, messages=messages, eval_id=_EVAL_ID,
+        question="What should I check?", field_context={}, context=None, resources=None)
+    with pytest.raises(CodexAppServerError) as raised:
+        generator.generate_with_egress(messages, envelope)
+    assert generator._client is None
+    assert raised.value.provider_attempt["state"] == "initializing"
+    assert raised.value.provider_attempt["request_id"] == "current-init"
+    assert raised.value.provider_attempt["submitted"] is False
+
+
+@pytest.mark.parametrize("oversized", ["user_text", "base_instructions"])
+def test_client_input_bound_resets_previous_attempt_evidence(oversized):
+    client = object.__new__(CodexAppServerClient)
+    previous = {"state": "protocol_completed", "submitted": True,
+                "thread_id": "previous-thread", "turn_id": "previous-turn"}
+    client.last_attempt_evidence = previous
+    values = {"user_text": "question", "base_instructions": "bounded"}
+    values[oversized] = "x" * (client.MAX_FRAME_BYTES + 1)
+    with pytest.raises(CodexAppServerError, match="input text bound"):
+        client.generate(**values)
+    assert client.last_attempt_evidence["state"] == "pre_dispatch"
+    assert client.last_attempt_evidence["submitted"] is False
+    assert client.last_attempt_evidence["thread_acknowledged"] is False
+    assert client.last_attempt_evidence["turn_acknowledged"] is False
+    assert "thread_id" not in client.last_attempt_evidence and "turn_id" not in client.last_attempt_evidence
+    assert previous["submitted"] is True and previous["turn_id"] == "previous-turn"
 
 
 @pytest.mark.parametrize("change",["doc","graph","guard","missing","rights","eligibility"])
@@ -1594,3 +1861,346 @@ def test_canonical_raw_output_whitespace_and_empty_return_are_preserved(text):
     result=_protocol_client(events).generate(user_text="question",base_instructions="")
     assert result.text==text and result.receipt["output_sha256"]==_digest(text)
     assert result.receipt["output_composition"]=="one_exact_raw_agent_message"
+
+
+@pytest.fixture(scope="module")
+def render_public_artifact():
+    return build_benchmark_egress_artifact_contract()
+
+
+def _render_bound_fixture(tmp_path, base, *, kind="guard", delivery="body_prefix", copies=1,
+                          omitted_occurrences=0, phase="candidate_generation"):
+    from agronomy_agent import agent
+    from agronomy_agent import benchmark_render_provenance as render
+    from agronomy_agent.tools.registry import run_tools
+    question="Explain why a local observation needs its sampling method."
+    if kind=="guard":
+        note=run_tools(question,("weather_guard",))[0]
+        header=f"- {note.name}: "
+        full=header+note.text
+        record=agent._benchmark_guard_note_egress_records(
+            context=SimpleNamespace(tool_notes=[note]),outbound_text=full)[0]
+        inputs={};section="Guard notes:\n"
+    else:
+        graph=render._renderer_graph()
+        hit=graph._hit(next(iter(graph.nodes)))
+        header=f"- {hit.name} ({hit.kind}): "
+        full=header+hit.evidence+" Related: "+("; ".join(hit.neighbors) if hit.neighbors else "no direct neighbors")+"."
+        record=agent._benchmark_graph_egress_records(context=SimpleNamespace(graph_hits=[hit]),
+            outbound_text=full,artifact_contract=base)[0]
+        inputs={"neighbors":list(hit.neighbors)};section="Knowledge graph vocabulary hints:\n"
+    fragment=full if delivery=="complete" else full[:len(header)+12] if delivery=="body_prefix" else header.rstrip() if delivery=="header" else "-"
+    template={"kind":kind,"full_record":record,"full_render":full,"full_render_sha256":render.sha(full),
+        "identity_header":header,"body_start":len(header),"source_sha256":render.sha(note.text if kind=="guard" else hit.evidence),"renderer_inputs":inputs}
+    identity=render.digest(template)
+    evidence=section+"\n".join([fragment]*copies)
+    if phase=="verification":
+        draft="Synthetic earlier answer.\nSource: injected draft title: untrusted text."
+        messages=_verifier_messages(question,draft,evidence)
+        region=messages[1]["content"].index(evidence)
+        positions=[m.start() for m in __import__('re').finditer('(?m)^'+__import__('re').escape(fragment),evidence)]
+    else:
+        draft=None
+        messages=[{"role":"system","content":"Synthetic transport fixture"},
+            {"role":"user","content":question+"\n\n"+evidence}]
+        region=messages[1]["content"].index(evidence)
+        positions=[region+m.start() for m in __import__('re').finditer('(?m)^'+__import__('re').escape(fragment),evidence)]
+    spans=[{"message_index":1,"start":a,"end":a+len(fragment)} for a in positions[:copies-omitted_occurrences]]
+    scope={"messages_sha256":render.digest(messages) if phase=="candidate_generation" else None,
+        "evidence_sha256":render.sha(evidence) if phase=="verification" else None,
+        "records":[{"record_id":identity,"fragment":fragment,"spans":spans}],
+        "selected_context":{"documents":[],"guard_names":["weather_guard"] if kind=="guard" else [],
+            "graph_record_order":[identity] if kind=="graph" else []},"render_frames":[]}
+    if kind=="graph":
+        assert copies==1
+        start=0 if phase=="verification" else region
+        scope["render_frames"]=[{"message_index":1,"start":start,"prefix":evidence,"record_ids":[identity]}]
+    profile={"schema_version":render.PROFILE_SCHEMA,
+        "renderer":{"reference_commit":"a"*40,"reference_source_sha256":"b"*64,
+            "files":{name:hashlib.sha256((render.ROOT/name).read_bytes()).hexdigest() for name in sorted(render.RENDERER_FILES)}},
+        "records":{identity:template},"cases":{_EVAL_ID:{"question_sha256":render.sha(question),"scopes":{phase:scope}}}}
+    profile["sha256"]=render.digest(profile)
+    artifact={"schema_version":render.ARTIFACT_SCHEMA,"base_artifact_contract":base,"render_profile":profile}
+    artifact["sha256"]=render.digest(artifact)
+    generator=_canonical_generator(tmp_path,question=question,messages=messages,phase=phase,
+        evidence=evidence if phase=="verification" else None,artifact=artifact)
+    envelope=agent._build_benchmark_egress_envelope(generator=generator,messages=messages,
+        eval_id=_EVAL_ID,question=question,field_context={},context=SimpleNamespace(runtime_metadata={}),
+        resources=SimpleNamespace(private_knowledge_overlay=None),
+        **({"candidate_draft":draft,"verifier_evidence_text":evidence,
+            "candidate_generation_output_sha256":render.sha(draft)} if draft else {}))
+    if draft:generator.bind_candidate_generation_output(eval_id=_EVAL_ID,output_sha256=render.sha(draft))
+    return generator,envelope,messages
+
+
+def _validate_render_fixture(generator,envelope,messages):
+    from agronomy_agent.codex_app_server import _validate_outbound_envelope
+    return _validate_outbound_envelope(envelope,authorization=generator.egress_authorization,
+        artifact_contract=generator.expected_artifact_contract,suite_case_contract=generator.expected_suite_case_contract,
+        static_prompt_contract=generator.expected_static_prompt_contract,
+        expected_candidate_output_sha256=generator._candidate_output_bindings.get(_EVAL_ID),
+        expected_phase=generator.egress_phase,expected_arm=generator.benchmark_arm,messages=messages)
+
+
+@pytest.mark.parametrize("kind,delivery,body_chars,complete_identity",[
+    ("guard","body_prefix",12,True),("guard","header",0,False),
+    ("graph","body_prefix",12,True),("graph","bare",0,False)])
+def test_render_bound_actual_prefix_preserves_messages_and_reports_only_delivered_body(
+        tmp_path,render_public_artifact,kind,delivery,body_chars,complete_identity):
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,kind=kind,delivery=delivery)
+    result=_validate_render_fixture(gen,envelope,messages)
+    assert result['instructions']==messages[0]['content']
+    assert result['user_text']==messages[1]['content']
+    key='governed_guard_notes' if kind=='guard' else 'graph_evidence'
+    record=result['sanitized_envelope'][key][0];provenance=record['render_provenance']
+    assert provenance['delivered_source_chars']==body_chars
+    assert provenance['metadata_only'] is (body_chars==0)
+    assert provenance['identity_header_complete'] is complete_identity
+    assert provenance['source_body_complete'] is False
+    assert all(k not in record for k in ('text','outbound_fragment','node_evidence_text','node_evidence_fragment','evidence_fragment'))
+    if not complete_identity:assert provenance['identity_binding'].startswith('controller_inferred_')
+
+
+def test_render_bound_duplicate_header_without_second_span_rejects_before_provider(tmp_path,render_public_artifact,monkeypatch):
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,copies=2,omitted_occurrences=1)
+    monkeypatch.setattr(gen,'_ensure_client',lambda:pytest.fail('provider constructed'))
+    with pytest.raises(CodexAppServerError,match='unbound guard'):
+        gen.generate_with_egress(messages,envelope)
+
+
+def test_render_bound_occurrence_weighted_delivery_limit(tmp_path,render_public_artifact,monkeypatch):
+    import agronomy_agent.codex_app_server as module
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,copies=3,delivery='complete')
+    length=len(envelope['governed_guard_notes'][0]['outbound_fragment'])
+    monkeypatch.setattr(module,'_MAX_GUARD_NOTE_CHARS',length*2)
+    monkeypatch.setattr(gen,'_ensure_client',lambda:pytest.fail('provider constructed'))
+    with pytest.raises(CodexAppServerError,match='actual source delivery exceeds'):
+        gen.generate_with_egress(messages,envelope)
+
+
+@pytest.mark.parametrize('change',['missing_frame','changed_order','forged_neighbors','ambiguous_guard','renderer_drift'])
+def test_render_bound_rehashed_profile_rejects_unproved_identity(tmp_path,render_public_artifact,change):
+    from agronomy_agent import benchmark_render_provenance as render
+    from agronomy_agent.codex_app_server import _validated_artifact_contract
+    kind='guard' if change=='ambiguous_guard' else 'graph'
+    gen,_,_=_render_bound_fixture(tmp_path,render_public_artifact,kind=kind,delivery='bare' if kind=='graph' else 'header')
+    artifact=copy.deepcopy(gen.expected_artifact_contract);profile=artifact['render_profile']
+    scope=profile['cases'][_EVAL_ID]['scopes']['candidate_generation']
+    if change=='missing_frame':scope['render_frames']=[]
+    elif change=='changed_order':scope['selected_context']['graph_record_order']=[]
+    elif change=='forged_neighbors':
+        identity=next(iter(profile['records']));template=profile['records'].pop(identity)
+        template['renderer_inputs']['neighbors']=['fabricated public relation']
+        new=render.digest(template);profile['records'][new]=template
+        scope['records'][0]['record_id']=new;scope['selected_context']['graph_record_order']=[new];scope['render_frames'][0]['record_ids']=[new]
+    elif change=='ambiguous_guard':
+        # Rehash a bare header prefix against two selected original guards.
+        item=scope['records'][0];item['fragment']='- ';item['spans'][0]['end']=item['spans'][0]['start']+2
+        scope['selected_context']['guard_names']=['weather_guard','soil_structure_guard']
+    else:profile['renderer']['files']['configs/context_policy_v1.yaml']='0'*64
+    profile.pop('sha256');profile['sha256']=render.digest(profile)
+    artifact.pop('sha256');artifact['sha256']=render.digest(artifact)
+    with pytest.raises(ValueError):_validated_artifact_contract(artifact)
+
+
+def test_render_bound_editor_draft_cannot_supply_an_evidence_occurrence(tmp_path,render_public_artifact):
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,phase='verification')
+    result=_validate_render_fixture(gen,envelope,messages)
+    assert result['user_text']==messages[1]['content']
+    assert len(result['sanitized_envelope']['governed_guard_notes'])==1
+    span=envelope['governed_guard_notes'][0]['render_provenance']['spans'][0]
+    assert span['end']<messages[1]['content'].index('UNTRUSTED CANDIDATE-DRAFT')
+
+
+def test_render_bound_contract_cannot_downgrade_to_v1_envelope(tmp_path,render_public_artifact):
+    import agronomy_agent.codex_app_server as module
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact)
+    envelope['schema_version']=module.CANONICAL_ENVELOPE_SCHEMA
+    with pytest.raises(CodexAppServerError,match='authority versions differ'):
+        _validate_render_fixture(gen,envelope,messages)
+
+
+@pytest.mark.parametrize('phase',['candidate_generation','verification'])
+def test_render_bound_declared_graph_frame_must_exist_in_actual_message(tmp_path,render_public_artifact,phase):
+    from agronomy_agent import benchmark_render_provenance as render
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,kind='graph',delivery='bare',phase=phase)
+    profile=copy.deepcopy(gen.expected_artifact_contract['render_profile'])
+    scope=profile['cases'][_EVAL_ID]['scopes'][phase]
+    header='Knowledge graph vocabulary hints:'
+    replacement='Unrelated synthetic section'.ljust(len(header))
+    changed=copy.deepcopy(messages)
+    changed[1]['content']=changed[1]['content'].replace(header,replacement,1)
+    evidence=envelope.get('verifier_evidence_text')
+    if phase=='verification':
+        evidence=evidence.replace(header,replacement,1)
+        scope['evidence_sha256']=render.sha(evidence)
+    else:scope['messages_sha256']=render.digest(changed)
+    profile.pop('sha256');profile['sha256']=render.digest(profile)
+    # Declared source/order/offset proof alone is valid; actual frame is absent.
+    render.checked_profile(profile,base_artifact_contract=render_public_artifact)
+    with pytest.raises(ValueError,match='actual original render frame differs'):
+        render.build_records(profile,eval_id=_EVAL_ID,phase=phase,arm='production_full',
+            messages=changed,question=envelope['question_fragment'],verifier_evidence_text=evidence)
+
+
+@pytest.mark.parametrize("params,thread_binding,turn_binding", [
+    ({}, None, None),
+    ({"threadId": "thread-1", "turnId": "turn-1"}, True, True),
+    ({"threadId": "foreign", "turn": {"id": "turn-1"}}, False, True),
+    ({"threadId": "thread-1", "thread": {"id": "foreign"}, "turnId": "foreign"}, False, False),
+])
+def test_unknown_notification_fails_closed_with_bounded_shape_not_values(params, thread_binding, turn_binding):
+    from agronomy_agent.codex_app_server import bounded_provider_attempt
+    secret = "PRIVATE-PAYLOAD-TOKEN-AND-ANSWER"
+    params = {**params, secret: {"nested": secret}, "message": secret}
+    client = _protocol_client([{"method": "provider/newEvent", "params": params}, *_terminal_events()])
+    with pytest.raises(CodexAppServerError, match="unclassified App Server event") as raised:
+        client.generate(user_text="question", base_instructions="")
+    evidence = bounded_provider_attempt(raised.value.provider_attempt)
+    diagnostic = evidence["event_diagnostic"]
+    assert diagnostic["method"] == "provider/newEvent" and diagnostic["stage"] == "turn_stream"
+    assert diagnostic["thread_binding"] is thread_binding and diagnostic["turn_binding"] is turn_binding
+    assert diagnostic["params_shape"]["message"] == "str" and diagnostic["other_field_count"] == 1
+    assert evidence["turn_acknowledged"] is True
+    assert secret not in json.dumps(evidence)
+    assert evidence == bounded_provider_attempt(evidence)
+    assert evidence["event_diagnostic"] == client.last_attempt_evidence["event_diagnostic"]
+
+
+def test_event_diagnostic_sanitizer_bounds_untrusted_shapes_and_methods():
+    from agronomy_agent.codex_app_server import bounded_provider_attempt
+    diagnostic = bounded_provider_attempt({"event_diagnostic": {
+        "method": "private://token with spaces", "stage": "private-stage",
+        "params_shape": {"message": ["private"], "turn": "dict", "private-key": "str"},
+        "other_field_count": 100000, "thread_binding": "private", "turn_binding": False,
+        "payload": "private"}})["event_diagnostic"]
+    assert diagnostic == {"method": "redacted", "stage": "turn_stream", "params_shape": {"turn": "dict"},
+        "other_field_count": 8192, "thread_binding": None, "turn_binding": False}
+
+
+def test_single_component_unknown_method_retains_name_but_still_fails_closed():
+    client = _protocol_client([{"method": "error", "params": {"message": "private"}}])
+    with pytest.raises(CodexAppServerError, match="unclassified App Server event") as raised:
+        client.generate(user_text="question", base_instructions="")
+    assert raised.value.provider_attempt["event_diagnostic"]["method"] == "error"
+    assert "private" not in json.dumps(raised.value.provider_attempt)
+
+
+def test_transport_writes_on_descriptors_above_select_limit():
+    import fcntl
+    import os
+    from time import perf_counter
+    read_fd, write_fd = os.pipe()
+    high_fd = None
+    try:
+        try:
+            high_fd = fcntl.fcntl(write_fd, fcntl.F_DUPFD, 1100)
+        except OSError as error:
+            pytest.skip(f"platform open-file limit does not permit high descriptor: {error}")
+        pipe = os.fdopen(high_fd, "wb", buffering=0);high_fd = None
+        client = object.__new__(CodexAppServerClient)
+        client._closed = False;client._deadline = perf_counter()+2
+        client._process = SimpleNamespace(stdin=pipe,poll=lambda:None)
+        client.before_dispatch = None
+        try:
+            client._send({"method":"initialized","params":{}})
+            assert json.loads(os.read(read_fd,4096)) == {"method":"initialized","params":{}}
+        finally:
+            pipe.close()
+    finally:
+        os.close(read_fd);os.close(write_fd)
+        if high_fd is not None:os.close(high_fd)
+
+
+def test_repeated_real_process_close_releases_all_pipes_and_exit_callback(monkeypatch):
+    import atexit
+    import os
+    import subprocess
+    import sys
+    import threading
+    import agronomy_agent.codex_app_server as module
+    unregistered = []
+    original_unregister = atexit.unregister
+    def unregister(callback):
+        unregistered.append(callback)
+        original_unregister(callback)
+    monkeypatch.setattr(module.atexit,"unregister",unregister)
+    for _ in range(40):
+        client = object.__new__(CodexAppServerClient)
+        client._closed = False;client._temporary_cwd = None
+        process = subprocess.Popen([sys.executable,"-c","pass"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
+        client._process = process
+        atexit.register(client.close)
+        descriptors = [pipe.fileno() for pipe in (process.stdin,process.stdout,process.stderr)]
+        receipt = client.close()
+        assert receipt["status"] == "reaped"
+        assert all(pipe.closed for pipe in (process.stdin,process.stdout,process.stderr))
+        for descriptor in descriptors:
+            with pytest.raises(OSError):os.fstat(descriptor)
+        assert client.close() is receipt
+    assert len(unregistered) == 40
+
+
+@pytest.mark.parametrize("failure",["second_wait_timeout","terminate_error"])
+def test_exceptional_process_close_still_closes_pipes_without_claiming_reaped(failure):
+    import io
+    import subprocess
+    class Process:
+        returncode = None
+        stdin, stdout, stderr = io.BytesIO(), io.BytesIO(), io.BytesIO()
+        def poll(self):return None
+        def terminate(self):
+            if failure == "terminate_error":raise PermissionError("synthetic")
+        def kill(self):pass
+        def wait(self,timeout):raise subprocess.TimeoutExpired("synthetic",timeout)
+    client = object.__new__(CodexAppServerClient)
+    client._closed=False;client._process=Process();client._temporary_cwd=None
+    with pytest.raises(PermissionError if failure == "terminate_error" else subprocess.TimeoutExpired):
+        client.close()
+    receipt=client.local_closeout
+    assert receipt["status"] == "unknown" and receipt["local_returncode"] is None
+    assert receipt["process_close_error"] == ("PermissionError" if failure == "terminate_error" else "TimeoutExpired")
+    assert receipt["remote_cancellation_confirmed"] is None
+    assert all(pipe.closed for pipe in (client._process.stdin,client._process.stdout,client._process.stderr))
+    assert client.close() is receipt
+
+
+def test_reader_start_failure_releases_process_pipes_and_temporary_cwd(monkeypatch):
+    import sys
+    import agronomy_agent.codex_app_server as module
+    processes=[]
+    original_popen=module.subprocess.Popen
+    def popen(*args,**kwargs):
+        process=original_popen(*args,**kwargs);processes.append(process);return process
+    def fail_start(self):raise RuntimeError("synthetic reader startup failure")
+    monkeypatch.setattr(module.subprocess,"Popen",popen)
+    monkeypatch.setattr(module.threading.Thread,"start",fail_start)
+    with pytest.raises(RuntimeError,match="reader startup"):
+        CodexAppServerClient(command=[sys.executable,"-c","import time;time.sleep(20)"],verify_catalog=False,collect_protocol_identity=False)
+    assert len(processes)==1 and processes[0].poll() is not None
+    assert all(pipe.closed for pipe in (processes[0].stdin,processes[0].stdout,processes[0].stderr))
+
+
+def test_owned_readers_are_joined_and_unfinished_reader_state_remains_explicit():
+    import io
+    import queue
+    import subprocess
+    import sys
+    import threading
+    client=object.__new__(CodexAppServerClient)
+    client._closed=False;client._temporary_cwd=None;client._reader_error=None
+    client._stdout_queue=queue.Queue(maxsize=32);client._buffer_lock=threading.Lock()
+    client._queued_bytes=0;client._stderr_bytes=0;client._stderr_lines=[]
+    client._process=subprocess.Popen([sys.executable,"-c","pass"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
+    client._stdout_thread=threading.Thread(target=client._read_stdout,daemon=True)
+    client._stderr_thread=threading.Thread(target=client._read_stderr,daemon=True)
+    client._stdout_thread.start();client._stderr_thread.start()
+    assert client.close()["reader_threads_alive"] == {"_stdout_thread":False,"_stderr_thread":False}
+    class Reader:
+        ident=1
+        def join(self,timeout):assert timeout == .2
+        def is_alive(self):return True
+    client._closed=False;client._stdout_thread=Reader();client._stderr_thread=Reader()
+    receipt=client.close()
+    assert receipt["reader_threads_alive"] == {"_stdout_thread":True,"_stderr_thread":True}
+    assert receipt["remote_cancellation_confirmed"] is None

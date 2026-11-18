@@ -42,6 +42,7 @@ from agronomy_agent.corpus_release import (  # noqa: E402
 
 
 DEFAULT_OUTPUT = ROOT / "data" / "derived" / "rag" / "offline_agronomy" / "active"
+PROJECT_CONTEXT_SOURCE = Path("data/seed/agronomy_rag_corpus_v2.jsonl")
 MAX_SHARD_BYTES = 16 * 1024 * 1024
 _PAGE = re.compile(r"\[page\s+(\d+)\]", re.IGNORECASE)
 _SPACE = re.compile(r"\s+")
@@ -449,7 +450,7 @@ def build(*, archive: Path, output: Path) -> dict[str, Any]:
     metadata = _source_metadata(rows)
     canadian, pdf_sources = _canadian_pdf_records(archive, metadata)
     tables, table_sources = _xlsx_records(archive, metadata)
-    project = _project_records(ROOT / "data/seed/agronomy_rag_corpus.jsonl", evidence_tier="internal_synthesis", eligibility="context_only", source_kind="project_seed")
+    project = _project_records(ROOT / PROJECT_CONTEXT_SOURCE, evidence_tier="internal_synthesis", eligibility="context_only", source_kind="project_seed")
     boundary = _project_records(ROOT / "data/seed/boundary_rag_corpus.jsonl", evidence_tier="project_safety_policy", eligibility="decisive", source_kind="project_boundary")
     soilwise = _project_records(ROOT / "data/derived/rag/soilwise_rag_corpus.jsonl", evidence_tier="open_ontology", eligibility="context_only", source_kind="soilwise")
     components = {
@@ -505,12 +506,86 @@ def build(*, archive: Path, output: Path) -> dict[str, Any]:
     return manifest
 
 
+def refresh_project_context(*, previous: Path, output: Path) -> dict[str, Any]:
+    """Rebuild project context without re-extracting unchanged external sources.
+
+    The input is a complete hash-verified release, never loose legacy chunks.
+    No external record, policy or source receipt is regenerated or promoted.
+    This narrow path cannot add/remove IDs or change duplicate membership.
+    """
+    previous, output = previous.resolve(), output.resolve()
+    if output.exists() or output.is_relative_to(previous) or previous.is_relative_to(output):
+        raise ValueError("refresh requires a new, separate output directory")
+    manifest = json.loads((previous / "store_manifest.json").read_text())
+    claimed = manifest.pop("store_sha256")
+    if manifest["schema_version"] != CORPUS_RELEASE_SCHEMA or sha256_text(canonical_json(manifest)) != claimed:
+        raise ValueError("previous store identity mismatch")
+    members = [(item["path"], item["sha256"]) for item in manifest["shards"]]
+    members += [(manifest[key + "_path"], manifest[key + "_sha256"])
+                for key in ("quality_ledger", "exact_duplicate_clusters", "source_receipt")]
+    names = [name for name, _ in members]
+    if len(set(names)) != len(names):
+        raise ValueError("duplicate release member paths")
+    for name, digest in members:
+        relative = Path(name)
+        if relative.is_absolute() or ".." in relative.parts or relative.as_posix() != name or name == ".":
+            raise ValueError(f"noncanonical release member path: {name}")
+        path = previous / name
+        if path.is_symlink() or not path.resolve().is_relative_to(previous) or _sha256(path) != digest:
+            raise ValueError(f"previous release member mismatch: {name}")
+    project_shards = [item for item in manifest["shards"] if Path(item["path"]).name.startswith("project_context-")]
+    if len(project_shards) != 1:
+        raise ValueError("refresh supports one project-context shard")
+    shard = project_shards[0]
+    old_project = [json.loads(line) for line in (previous / shard["path"]).read_text().splitlines() if line.strip()]
+    project = _project_records(ROOT / PROJECT_CONTEXT_SOURCE, evidence_tier="internal_synthesis", eligibility="context_only", source_kind="project_seed")
+    old_ids = {row["doc_id"] for row in old_project}
+    if len(old_ids) != len(old_project) or old_ids != {row["doc_id"] for row in project} or len(project) != len(old_project):
+        raise ValueError("project document membership changed; full rebuild required")
+    clusters = json.loads((previous / manifest["exact_duplicate_clusters_path"]).read_text())["clusters"]
+    if any(old_ids.intersection(row["member_doc_ids"]) for row in clusters):
+        raise ValueError("project duplicate membership requires full rebuild")
+    external_hashes = set()
+    for item in manifest["shards"]:
+        if item is not shard:
+            external_hashes.update(normalized_text_sha256(json.loads(line)["text"])
+                                   for line in (previous / item["path"]).read_text().splitlines() if line.strip())
+    hashes = [normalized_text_sha256(row["text"]) for row in project]
+    if len(set(hashes)) != len(hashes) or external_hashes.intersection(hashes):
+        raise ValueError("new project duplicates require full rebuild")
+    project, _ = _deduplicate(project)
+    # All validation precedes output creation; the previous release stays intact.
+    output.mkdir(parents=True)
+    for name, _ in members:
+        destination = output / name
+        if not destination.resolve().is_relative_to(output):
+            raise ValueError(f"release destination escapes output: {name}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(previous / name, destination)
+    rows, digest, size = write_jsonl(output / shard["path"], project)
+    shard.update(rows=rows, sha256=digest, bytes=size)
+    ledger = []
+    for item in manifest["shards"]:
+        for line in (output / item["path"]).read_text().splitlines():
+            record = json.loads(line)
+            ledger.append(quality_ledger_row(record, corpus_path=item["path"], duplicate_cluster=normalized_text_sha256(record["text"]), duplicate_disposition=record["quality"]["duplicate_disposition"]))
+    ledger_path = output / manifest["quality_ledger_path"]
+    ledger_path.write_text(json.dumps({"schema_version": "open_agronomy_agent.corpus_quality_ledger.v1", "rows": ledger}, indent=2) + "\n")
+    manifest["quality_ledger_sha256"] = _sha256(ledger_path)
+    manifest["store_sha256"] = sha256_text(canonical_json(manifest))
+    (output / "store_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    return manifest
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archive", type=Path, required=True, help="mounted historical source archive")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--archive", type=Path, help="mounted historical source archive")
+    mode.add_argument("--refresh-project-context-from", type=Path, help="hash-verified previous complete store; output must be new")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
-    manifest = build(archive=args.archive, output=args.output)
+    manifest = (refresh_project_context(previous=args.refresh_project_context_from, output=args.output)
+                if args.refresh_project_context_from else build(archive=args.archive, output=args.output))
     print(json.dumps({"output": str(args.output), "rows": manifest["row_count"], "sha256": manifest["store_sha256"]}, indent=2))
     return 0
 

@@ -1,0 +1,622 @@
+"""Whole input/request regressions from independent composed-source review."""
+import pytest
+
+from agronomy_agent.answerability import is_mechanism_explanation
+from agronomy_agent.decision_route import build_decision_route_state
+from agronomy_agent.plant_health_scope import clubroot_question_scope
+from agronomy_agent.router import classify_query, refine_query_route
+from agronomy_agent.tool_planner import plan_and_execute_tools, plan_tools
+
+
+_COMPLETE_ARITHMETIC = (
+    'Calculate the seed rate: target stand is 80 plants/m2, TKW is 4.5 g, germination is 96%, and expected field survival is 75% of germinated seeds',
+    'A teaching plan needs 24 mm net irrigation and assumes 80% application efficiency. Calculate gross depth',
+    'A field covers 16 hectares. A dry fertilizer product is 25% nitrogen by mass. Calculate the total product kilograms needed to supply 75 kg N/ha',
+)
+
+
+_ROLE_REGRESSIONS = (
+    ('Laboratory germination is 92%. Calculate wheat seed rate for 270 plants/m2, TKW 36 g and survival 90% of germinated seeds.', 'seed_rate_mass', 117.3913043478261),
+    ('Target population is 270 plants/m2. Calculate wheat seed rate with TKW 36 g, germination 92%, and survival 90% of germinated seeds.', 'seed_rate_mass', 117.3913043478261),
+    ('Average daily temperature is 16 C. Calculate daily GDD with base temperature 6 C, no temperature caps and negative accumulation floored at zero.', 'mean_temperature_gdd', 10),
+    ('Calculate daily GDD from base temperature 6 C, average daily temperature is 16 C, no temperature caps and negative accumulation floored at zero.', 'mean_temperature_gdd', 10),
+    ('Calculate daily GDD from high 25 C, low 9 C and base 7 C.', 'daily_gdd', 10),
+    ('Calculate daily GDD from maximum temperature 25 C, minimum temperature 9 C and base 7 C.', 'daily_gdd', 10),
+    ('For a uniform profile, field capacity is 0.30, permanent wilting point is 0.15 and rooting depth is 0.4 m. Calculate total available water.', 'water_storage_difference', 60),
+    ('Root-zone depth is 0.4 m. For a uniform profile, field capacity is 0.30 and wilting point is 0.15. Calculate total available water.', 'water_storage_difference', 60),
+    ('Calculate a partial-budget net change: added returns CAD 100/ac, saved costs CAD 25/ac, added costs CAD 80/ac and lost revenue CAD 15/ac.', 'partial_budget', 30),
+    ('Calculate a partial-budget net change: added revenue CAD 100/ac, reduced costs CAD 25/ac, added costs CAD 80/ac and lost revenue CAD 15/ac.', 'partial_budget', 30),
+    ('Calculate a partial-budget net change: added revenue CAD 100/ac, saved costs CAD 25/ac, additional costs CAD 80/ac and lost revenue CAD 15/ac.', 'partial_budget', 30),
+    ('Calculate a partial-budget net change: added revenue CAD 100/ac, saved costs CAD 25/ac, added costs CAD 80/ac and foregone income CAD 15/ac.', 'partial_budget', 30),
+    ('Calculate break-even price from total cost CAD 500/ac and harvested yield 50 bu/ac.', 'break_even_price', 10),
+    ('Calculate break-even price from total cost CAD 500/ac and target yield 50 bu/ac.', 'break_even_price', 10),
+)
+
+
+_MODEL_CONTEXT_REGRESSIONS = (
+    ('For a teaching standard-conditions model ETc = Kc × ETo, Kc is 1.15 and ETo is 4 mm/day. Compute ETc.', 'crop_evapotranspiration', 4.6),
+    ('For a teaching GDD method, mean daily temperature is 16 C, base 4 C, no upper cap, and negative values are floored at zero. Calculate today\'s GDD.', 'mean_temperature_gdd', 12),
+    ('For a 0.5 m root zone, field capacity is 0.28 and wilting point 0.12 m3/m3. Compute total available water under a uniform-profile assumption.', 'water_storage_difference', 80),
+    ('A teaching mixture requires 1.5 L product/ha over 8 ha. Compute product quantity and distinguish it from total carrier volume.', 'liquid_product_total', 12),
+)
+
+
+@pytest.mark.parametrize('question,operation,value', _MODEL_CONTEXT_REGRESSIONS)
+def test_closed_model_contexts_preserve_existing_calculation_contracts(question, operation, value):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and len(results) == 1
+    assert plan.invocations[0].operation == operation
+    assert calculation_request_is_complete(question, operation)
+    assert results[0].payload['value'] == pytest.approx(value)
+
+
+@pytest.mark.parametrize('question,operation,value', _MODEL_CONTEXT_REGRESSIONS)
+@pytest.mark.parametrize('extra', [' Then apply it tomorrow.', ', with instructions to spray my field.', ' Also choose a product.'])
+def test_model_context_is_not_authority_for_an_added_field_action(question, operation, value, extra):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    mixed = question.rstrip('.') + extra
+    assert not calculation_request_is_complete(mixed, operation)
+    _, results = plan_and_execute_tools(mixed)
+    assert not results
+
+
+@pytest.mark.parametrize('question,operation,value', _ROLE_REGRESSIONS)
+def test_existing_named_input_roles_keep_whole_calculator_requests(question, operation, value):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and len(results) == 1
+    assert plan.invocations[0].operation == operation
+    assert calculation_request_is_complete(question, operation)
+    assert results[0].payload['value'] == pytest.approx(value)
+    if operation == 'seed_rate_mass':
+        assert plan.invocations[0].inputs['germination_pct'] == 92
+        assert plan.invocations[0].inputs['survival_basis'] == 'germinated_seeds'
+
+
+@pytest.mark.parametrize('question,operation,value', _ROLE_REGRESSIONS)
+@pytest.mark.parametrize('extra', [', with instructions to transplant seedlings.', ', recommend a field population.'])
+def test_shared_roles_do_not_hide_independent_requests(question, operation, value, extra):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    mixed = question.rstrip('.') + extra
+    assert not calculation_request_is_complete(mixed, operation)
+    _, results = plan_and_execute_tools(mixed)
+    assert not results or operation == 'daily_gdd'  # Legacy GDD keeps a labelled sub-result, never whole completion.
+
+
+def test_shared_role_patterns_preserve_operand_capture_indices():
+    import re
+    from agronomy_agent.arithmetic_input_roles import ARITHMETIC_INPUT_ROLES, ARITHMETIC_INPUT_ROLE_PATTERN
+    assert all(re.compile(pattern).groups == 0 for pattern in (*ARITHMETIC_INPUT_ROLES, ARITHMETIC_INPUT_ROLE_PATTERN))
+
+
+@pytest.mark.parametrize('role', ['saved costs', 'reduced costs', 'lower costs', 'cost savings'])
+def test_nominal_budget_cost_roles_retain_supplied_basis(role):
+    question = (f'Calculate a partial-budget net change: added returns CAD 100/ac, {role} CAD 25/ac, '
+                'additional costs CAD 80/ac and foregone returns CAD 15/ac.')
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and len(results) == 1
+    assert plan.invocations[0].inputs['area_unit'] == 'ac'
+    assert plan.invocations[0].inputs['reduced_costs'] == 25
+    assert results[0].payload['value'] == 30
+
+
+@pytest.mark.parametrize('cost_clause', ['lower costs by CAD 25/ac', 'lower costs to CAD 25/ac',
+    'lower costs CAD 25/ac by 10%', 'saved costs CAD 25/ac by 10%', 'saved costs CAD 25/ac/day'])
+def test_budget_modifiers_and_compound_bases_cannot_be_silently_dropped(cost_clause):
+    question = (f'Calculate a partial-budget net change: added returns CAD 100/ac, {cost_clause}, '
+                'additional costs CAD 80/ac and foregone returns CAD 15/ac.')
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready'
+    assert not any(result.status == 'calculated' for result in results)
+
+
+@pytest.mark.parametrize('question', [
+    'Calculate a partial-budget net change: added revenue CAD 100/ac by 10%, saved costs CAD 25/ac, added costs CAD 80/ac and lost revenue CAD 15/ac.',
+    'Calculate a partial-budget net change: the change adds CAD 100 with 10% more revenue, saved costs CAD 25/ac, added costs CAD 80/ac and lost revenue CAD 15/ac.',
+    'Calculate break-even price from total cost CAD 500/ac by 10% and expected yield 50 bu/ac.',
+    'Calculate break-even yield from total cost CAD 500/ac and an assumed price CAD 10/bu with 10% added.',
+    'Calculate current ratio from current assets CAD 300,000 by 10% and current liabilities CAD 120,000.',
+    'Calculate debt-to-asset ratio from total debt CAD 100,000 by 10% and total assets CAD 400,000.',
+    'Calculate current ratio from current assets CAD 300% and current liabilities CAD 100.',
+    'Calculate debt-to-asset ratio from total debt CAD 100/ac and total assets CAD 400.',
+    'Calculate break-even yield from total cost CAD 500/ac and an assumed price CAD 10/bu/year.',
+])
+def test_financial_quantity_bindings_never_cover_extra_numbers_or_incompatible_units(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready'
+    assert not any(result.status == 'calculated' for result in results)
+
+
+@pytest.mark.parametrize('question', [
+    'Lower costs CAD 25/ac.',
+    'Calculate a partial-budget net change and lower costs by CAD 25/ac.',
+    'Calculate a partial-budget net change and lower costs CAD 25/ac by 10%.',
+    'Calculate a partial-budget net change and lower costs CAD 25/ac with instructions to spray.',
+])
+def test_nominal_budget_exception_cannot_authorize_lowering_costs(question):
+    from agronomy_agent.request_scope import has_action_directive
+    assert has_action_directive(question)
+
+
+@pytest.mark.parametrize('weight_role', ['TKW', 'thousand kernel weight', 'thousand-kernel weight'])
+@pytest.mark.parametrize('position', ['prefix', 'comma'])
+def test_parser_owned_seed_weight_declarations_reach_the_same_calculation(weight_role, position):
+    if position == 'prefix':
+        question = f'{weight_role} is 36 g. Calculate wheat seed rate for 270 plants/m2, germination 92%, and survival 90% of germinated seeds.'
+    else:
+        question = f'Calculate wheat seed rate for 270 plants/m2, {weight_role} 36 g, germination 92%, and survival 90% of germinated seeds.'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and len(results) == 1
+    assert plan.invocations[0].inputs['tkw_g'] == 36
+    assert plan.invocations[0].inputs['survival_basis'] == 'germinated_seeds'
+    assert results[0].payload['value'] == pytest.approx(117.3913043478261)
+
+
+@pytest.mark.parametrize('weight_role', ['TKW', 'thousand kernel weight', 'thousand-kernel weight'])
+@pytest.mark.parametrize('extra', [
+    'with instructions to transplant seedlings',
+    'and advise when to apply it',
+    ', show units with advice on mulching beds',
+    ', and recommend a field population',
+])
+def test_seed_weight_role_cannot_own_additional_grower_requests(weight_role, extra):
+    question = (f'Calculate wheat seed rate for 270 plants/m2, germination 92%, '
+                f'survival 90% of germinated seeds, {weight_role} 36 g {extra}.')
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'not_applicable' and not results
+
+
+@pytest.mark.parametrize('base', [
+    'A soil moisture probe reports 0.22 cubic metres of water per cubic metre of soil over a hypothetical uniform 40 cm layer. Convert that to millimetres of water stored',
+    'A 2400 L sprayer tank is applying 120 L/ha in a Saskatchewan wheat field. How many hectares can one full tank cover',
+    'Calculate break-even price from total cost CAD 480/ac without an expected yield',
+])
+@pytest.mark.parametrize('tail', [
+    ', with instructions to transplant seedlings.',
+    ', without explaining the arithmetic and with advice on mulching beds.',
+    ', of course provide instructions to transplant seedlings.',
+])
+def test_descriptive_and_missing_operands_do_not_hide_additional_help(base, tail):
+    from agronomy_agent.request_scope import has_unqualified_followup
+    question = base + tail
+    assert has_unqualified_followup(question, calculation=True)
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'not_applicable' and not results
+
+
+@pytest.mark.parametrize('base', _COMPLETE_ARITHMETIC)
+@pytest.mark.parametrize('tail', [
+    ', with instructions to transplant seedlings.',
+    ', with advice on mulching beds.',
+    ', without explaining the arithmetic and with instructions to transplant seedlings.',
+    ', of course provide instructions to transplant seedlings.',
+    ', show the units with instructions to transplant seedlings.',
+    ', target stand is 80 plants/m2 with instructions to transplant seedlings.',
+    ' with instructions to transplant seedlings.',
+    '. State the units with instructions to transplant seedlings.',
+])
+def test_input_or_presentation_prefix_cannot_own_a_request_bearing_tail(base, tail):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    from agronomy_agent.request_scope import has_unqualified_followup
+    question = base + tail
+    assert has_unqualified_followup(question, calculation=True)
+    assert not calculation_request_is_complete(question, 'seed_rate_mass')
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready' and not results
+
+
+@pytest.mark.parametrize('base', _COMPLETE_ARITHMETIC)
+@pytest.mark.parametrize('tail', [', with all assumptions stated.', ', without explaining the arithmetic.',
+                                  ', with units and assumptions stated.'])
+def test_closed_presentation_tails_preserve_supplied_arithmetic(base, tail):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question = base + tail
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results
+    assert calculation_request_is_complete(question, plan.invocations[0].operation)
+
+
+@pytest.mark.parametrize('base', _COMPLETE_ARITHMETIC + (
+    'A field covers 24 hectares. The fertilizer is 46% nitrogen. Calculate the total product for 40 kg N/ha',))
+def test_bound_arithmetic_does_not_acquire_an_unasked_management_checklist(base):
+    from types import SimpleNamespace
+    from agronomy_agent.answer_verifier import verify_answer, context_evidence_text
+    from agronomy_agent.evidence_contracts import capability_evidence_from_records
+    from agronomy_agent.request_scope import seed_quality_workflow_requested
+    _, results = plan_and_execute_tools(base + '.')
+    assert len(results) == 1
+    evidence = context_evidence_text(SimpleNamespace(runtime_metadata={
+        'evidence_fabric': {'evidence_packet': {'capability_evidence': [
+            item.to_dict() for item in capability_evidence_from_records(results)]}}}))
+    question = base + ', with instructions to transplant seedlings.'
+    draft = results[0].payload['answer'] + (
+        ' Where transplants have root balls, keep them intact and moist during handling; '
+        'use crop-specific depth, spacing and establishment guidance rather than '
+        'converting seed mass to a transplant plan. What crop and seedling stage are involved?')
+    class NoEditor:
+        def generate(self, messages):
+            raise AssertionError('complete, bound answer must not require an editor')
+    route = refine_query_route(question, classify_query(question))
+    assert not seed_quality_workflow_requested(question)
+    assert build_decision_route_state(question, route.question_type).decision != 'seed_quality'
+    result = verify_answer(draft, question=question, evidence_text=evidence,
+        question_type=route.question_type, risk_level=route.risk_level,
+        editor=NoEditor(), review_mode='risk_conditioned_selective_v3')
+    assert result.answer == draft
+    assert not result.draft_assessment.unsupported_numbers
+    assert not result.draft_assessment.missing_intent_facets
+    assert not result.fallback_applied
+
+
+@pytest.mark.parametrize('base,topic,extra', [
+    (_COMPLETE_ARITHMETIC[1], 'soil_water', 'choose an irrigation schedule'),
+    (_COMPLETE_ARITHMETIC[2], 'fertility_rate', 'choose the nutrient rate for my field'),
+    (_COMPLETE_ARITHMETIC[1], 'soil_water', 'tell me when to apply it'),
+    (_COMPLETE_ARITHMETIC[2], 'fertility_rate', 'recommend an irrigation schedule'),
+])
+def test_independent_management_or_result_use_keeps_ordinary_checks(base, topic, extra):
+    from agronomy_agent.request_scope import topic_is_supplied_arithmetic_context
+    from agronomy_agent.answer_verifier import _intent_requirements
+    question = base + ', with instructions to transplant seedlings and ' + extra + '.'
+    assert not topic_is_supplied_arithmetic_context(question, topic)
+    assert _intent_requirements(question, topic)
+
+
+@pytest.mark.parametrize('question', [
+    'Compare seed lots using germination results and vigor tests.',
+    'How should I interpret seed quality before planting?',
+    _COMPLETE_ARITHMETIC[0] + ', and compare seed lots using germination and vigor tests.',
+    _COMPLETE_ARITHMETIC[0] + ', with advice on evaluating seed quality.',
+])
+def test_independently_requested_seed_quality_keeps_its_own_workflow(question):
+    from agronomy_agent.request_scope import seed_quality_workflow_requested
+    from agronomy_agent.answer_verifier import _intent_requirements
+    assert seed_quality_workflow_requested(question)
+    assert 'seed_vigor' in {item.name for item in _intent_requirements(question, 'crop_management')}
+
+
+@pytest.mark.parametrize('question', [
+    'For a uniform profile, field capacity is 0,31, wilting point 0,15 and rooting depth 0.4 m. Compute total available water.',
+    'For a standard-conditions model ETc = Kc × ETo, Kc is 1/day and ETo is 4 mm/day. Compute ETc.',
+    'For a standard-conditions model ETc = Kc × ETo, Kc is 0,9 and ETo is 4 mm/day. Compute ETc.',
+    'For a standard-conditions model ETc = Kc × ETo, Kc is 0.11e1 and ETo is 4 mm/day. Compute ETc.',
+    'Calculate harvest index from 1e3 kg grain dry mass and 2000 kg total above-ground dry biomass.',
+    'Calculate harvest index from 4,2 t/ha grain dry mass and 12 t/ha total above-ground dry biomass.',
+    'Calculate daily GDD from Tmax 25,0 C, Tmin 9,0 C and base 7,0 C with no temperature caps.',
+    'Grain mass is 12 t at 25% wet-basis moisture. Calculate equivalent mass at 10% moisture, including 5% dry-matter loss.',
+    'Grain mass is 12 t at 25% wet-basis moisture. Calculate equivalent mass at 10% moisture, including respiration losses.',
+    'How much 25%-N fertilizer supplies 75 kg N/ha/day?',
+    'How much 25%-N fertilizer supplies 75 kg N/ha per day?',
+    'Calculate apparent nutrient balance: 85 kg N/ha applied and 60 kg N/ha removed, plus 10 kg N/ha supplied in irrigation water.',
+    'Calculate area of a circular sampling plot with radius 12 metres, excluding 5 m2 occupied by a tree.',
+    'Total above-ground dry biomass is 12 t/ha and grain dry mass is 4.2 t/ha. Compute harvest index and biomass per plant for a stand of 40 plants/m2.',
+    'Total above-ground dry biomass is 12 t/ha and grain dry mass is 4.2 t/ha. Compute harvest index and biomass per plant.',
+])
+def test_unrepresented_or_malformed_inputs_never_produce_calculator_only_answer(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready'
+    assert not results
+
+
+@pytest.mark.parametrize('question,value', [
+    ('Calculate harvest index from 1,000 kg grain dry mass and 2,000 kg total above-ground dry biomass.', .5),
+    ('Grain mass is 12,000 kg at 25% wet-basis moisture. Calculate equivalent mass at 10% moisture, ignoring losses.', 10000),
+    ('For a standard-conditions model ETc = Kc × ETo, Kc is .9 and ETo is 4 mm/day. Compute ETc.', 3.6),
+    ('Compute fertilizer product rate: how much 25%-N fertilizer supplies 75 kg N/ha across 16 ha?', 300),
+    ('Calculate daily GDD from Tmax 25.0 C, Tmin 9.0 C and base 7.0 C with no temperature caps.', 10),
+])
+def test_valid_decimals_thousands_and_incidental_area_keep_their_contract(question, value):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready', plan
+    assert results[0].payload['value'] == pytest.approx(value)
+
+
+@pytest.mark.parametrize('directive', ['Thin the stand.', 'Reseed the field.', 'Mulch the bed.', 'Transplant the seedlings.', 'Mulch beds.', 'Transplant seedlings.'])
+def test_an_unknown_followup_cannot_inherit_an_explanation_or_calculation_bypass(directive):
+    question = 'Why does cold slow emergence? ' + directive
+    assert not is_mechanism_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != 'exam_review' and route.risk_level != 'low'
+    arithmetic = 'Daily mean temperature is 17 C, base temperature 6 C, no temperature caps and negative accumulation floored at zero. Calculate GDD. '
+    for complete in [arithmetic + directive, arithmetic.rstrip('. ') + ' and ' + directive,
+                     arithmetic.rstrip('. ') + ', ' + directive]:
+        assert plan_tools(complete).status == 'not_applicable'
+        routed = refine_query_route(complete, classify_query(complete))
+        assert routed.question_type != 'exam_review' and routed.risk_level != 'low'
+
+
+def test_coordinated_explanation_does_not_authorize_mixing():
+    assert not is_mechanism_explanation('Explain why soil acidifies and mix fertilizer with irrigation water.')
+
+
+@pytest.mark.parametrize('reference', ['Adjacent corn looks healthy.', 'Nearby wheat is normal.', 'And adjacent corn looks healthy.'])
+def test_healthy_reference_crop_does_not_erase_affected_canola(reference):
+    question = 'My canola roots are swollen. Could this be clubroot? ' + reference
+    scope = clubroot_question_scope(question)
+    assert scope.host_scope == 'susceptible' and scope.current_symptoms
+    assert scope.confirmation_requested
+    assert build_decision_route_state(question, 'plant_health').decision == 'clubroot_containment'
+
+
+@pytest.mark.parametrize('question', [
+    'My canola is stunted, but roots are not swollen and there are no galls. Could this be clubroot?',
+    'My canola has no root galls. Is this clubroot?',
+])
+def test_negative_root_observations_are_preserved_in_route_and_fallback(question):
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    scope = clubroot_question_scope(question)
+    assert scope.negative_root_symptoms and not scope.current_symptoms
+    route = build_decision_route_state(question, 'plant_health')
+    # A fallback must not turn a diagnostic question into positive evidence.
+    answer = _decision_route_failure_answer(route, jurisdiction=None)
+    assert 'You report:' in answer
+    for observation in scope.negated_root_observations:
+        assert observation in answer
+    if 'not swollen' not in question:
+        assert 'no swollen roots' not in answer
+    assert 'Treat this as suspected clubroot' not in answer
+    assert 'photograph the pattern and galls' not in answer
+    assert 'representative sample' in answer
+
+
+def test_soil_history_precautions_do_not_replace_current_other_crop_inspection():
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    question = 'My corn roots are swollen this season. Previous canola had clubroot. What soil-movement precautions and corn inspection are needed?'
+    scope = clubroot_question_scope(question)
+    assert scope.host_scope == 'other' and scope.symptomatic_other_crop
+    route = build_decision_route_state(question, 'plant_health')
+    answer = _decision_route_failure_answer(route, jurisdiction=None)
+    assert 'current-crop symptoms separately' in answer
+    assert 'soil movement' in answer and 'sanitation' in answer
+    assert 'historical disease name does not diagnose' in answer
+
+
+def test_route_rejects_affirmative_signs_that_overwrite_reported_absence():
+    question = 'My canola has no root galls. Is this clubroot?'
+    route = build_decision_route_state(question, 'plant_health')
+    assert 'clubroot_negative_observation_overwritten' in route.answer_violations(
+        'Your roots are swollen. Arrange confirmation and follow sanitation guidance.')
+    assert 'clubroot_negative_observation_overwritten' not in route.answer_violations(
+        'Your roots are not swollen. Arrange confirmation if concern remains and follow sanitation guidance.')
+
+
+def test_route_requires_both_explicit_current_inspection_and_history_precautions():
+    question = 'My corn roots are swollen this season. Previous canola had clubroot. What soil-movement precautions and corn inspection are needed?'
+    route = build_decision_route_state(question, 'plant_health')
+    assert 'current_crop_inspection_not_answered' in route.answer_violations('Follow sanitation guidance and limit soil movement.')
+    assert 'current_crop_inspection_not_answered' not in route.answer_violations(
+        'Follow sanitation guidance and limit soil movement. Compare affected and normal corn roots and plants.')
+
+
+@pytest.mark.parametrize('question,draft,required', [
+    ('The soil sample was collected March 3 and the report was issued March 10. Can I infer the analysis date?',
+     'No. Issuance does not establish when the laboratory analyzed the sample. Use an analysis date only if the report or laboratory confirms it.',
+     'No. Issuance does not establish when the laboratory analyzed the sample. Use an analysis date only if the report or laboratory confirms it.'),
+    ('The soil sample was collected March 3 and the report was issued March 10. Can I infer the analysis date?',
+     'The analysis date is March 10, not the collection date.',
+     'Do not infer the analysis date from report issuance alone.'),
+    ('My canola has no root galls. Is this clubroot?',
+     'Your roots are swollen and clubroot is confirmed. Follow sanitation guidance and arrange confirmation.',
+     'You report: no root galls'),
+    ('My corn roots are swollen this season. Previous canola had clubroot. What soil-movement precautions and corn inspection are needed?',
+     'Follow sanitation guidance and limit soil movement.', 'current-crop symptoms separately'),
+])
+def test_production_persistence_keeps_observation_roles_and_both_requested_workflows(tmp_path, monkeypatch, question, draft, required):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+
+    class Backend:
+        backend_id = 'synthetic_composed_integrity'
+        intervention_profile = 'balanced'
+        def generate(self, messages):
+            return draft
+        def close(self):
+            pass
+    backend = Backend()
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *args, **kwargs: backend)
+    database = tmp_path/'integrity.sqlite3'
+    store = TraceStore(database)
+    try:
+        session = store.create_session('Synthetic role-integrity review', {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(
+            store=store, settings=build_settings(db_path=database, artifact_root=tmp_path/'artifacts', network_mode='offline'),
+            session_id=session['session_id'], message=question, mode='agronomic_rag', model_id='imposed',
+            rag_config='configs/rag.yaml', max_tokens=180, generation_backend=backend))
+        assert required in result.answer
+        assert store.get_turn(result.turn['turn_id'])['answer'] == result.answer
+        assert len(result.stage_receipts) == 17
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize('question', [
+    'Calculate seed rate for 80 plants/m2 target, TKW 4.5 g, germination is 9,6%, and overall emergence is 75%.',
+    'Calculate seed rate for 80 plants/m2 target, TKW 4.5 g, germination is 96%, and overall emergence is 0,75%.',
+    'Calculate seed rate for 80 plants/m2 target, TKW 4.5 g, germination is 96%, overall emergence is 75%, seed purity 90%.',
+    'Calculate daily GDD from Tmax 25 C/hour, Tmin 9 C/hour and base 7 C.',
+    'Calculate daily GDD. {"max_temp_C":25,"min_temp_C":9,"base_temp_C":7,"upper_cap_F":77}',
+])
+def test_seed_and_gdd_cannot_drop_unsupported_notation_units_or_keys(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready'
+    assert not results
+
+
+@pytest.mark.parametrize('question', [
+    'Explain why soil acidifies and topdress wheat.',
+    'Explain why cold slows emergence and weed the field.',
+    'Explain why cold slows emergence and improve soil drainage.',
+    'Why does cold slow emergence, mulch the field?',
+])
+def test_verb_spelling_and_comma_syntax_do_not_authorize_an_operational_followup(question):
+    assert not is_mechanism_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != 'exam_review' and route.risk_level != 'low'
+
+
+def test_a_comma_does_not_hide_a_command_from_the_calculator():
+    question = 'Daily mean temperature is 17 C, base temperature 6 C, no temperature caps and negative accumulation floored at zero. Calculate GDD, thin the stand.'
+    assert plan_tools(question).status == 'not_applicable'
+
+
+@pytest.mark.parametrize('comparison', [
+    'compared with normal plants elsewhere in the same field',
+    'next to healthy corn',
+])
+def test_a_reference_inside_the_affected_clause_does_not_erase_current_symptoms(comparison):
+    scope = clubroot_question_scope(f'My canola roots are swollen {comparison}. Could this be clubroot?')
+    assert scope.host_scope == 'susceptible' and scope.current_symptoms and scope.confirmation_requested
+
+
+@pytest.mark.parametrize('question', [
+    'Explain soil texture, structure and porosity.',
+    'What are photosynthesis and respiration?',
+    'Explain soil texture and soil structure.',
+])
+def test_coordinated_concept_definitions_remain_direct_low_risk_explanations(question):
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type == 'exam_review' and route.risk_level == 'low'
+
+
+@pytest.mark.parametrize('question', [
+    'Calculate break-even price from total cost CAD 40,50/ac and expected yield 50 bu/ac.',
+    'Calculate how much area will a 1000 L sprayer tank cover applying 10,0 L/ha, ignoring unusable tank volume?',
+])
+def test_reachable_legacy_cost_and_tank_extractors_use_the_same_number_contract(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready'
+    assert not results
+
+
+def test_deep_unrecognized_gdd_data_is_clarified_without_an_uncaught_decoder_error():
+    nested = '[' * 1100 + '0' + ']' * 1100
+    question = 'Calculate daily GDD. {"max_temp_C":25,"min_temp_C":9,"base_temp_C":7,"extra":' + nested + '}'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'clarification_required' and not results
+
+
+@pytest.mark.parametrize('tail', ['Mulch beds.', 'Transplant seedlings.'])
+def test_verified_daily_gdd_evidence_is_retained_while_extra_operations_need_a_complete_response(tail):
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    from agronomy_agent.answerability import assess_answerability
+    question = 'Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C, ' + tail
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results[0].payload['value'] == 10
+    records = [row.to_dict() for row in results]
+    context = SimpleNamespace(runtime_metadata={'tool_plan': plan.to_dict(), 'tool_results': records})
+    assert deterministic_tool_response(context, question=question) == (None, None)
+    assert context.runtime_metadata['tool_results'] == records
+    decision = assess_answerability(question, tool_plan=plan.to_dict(), tool_results=records)
+    assert decision.reason != 'validated_deterministic_tool_result_available'
+
+
+def test_renderer_owned_boundary_only_completes_the_matching_operation():
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question = 'Calculate area of a circular sampling plot with radius 12 metres. Explain why this is not the field area.'
+    assert calculation_request_is_complete(question, 'circular_sampling_area')
+    assert not calculation_request_is_complete(question, 'grain_harvest_index')
+
+
+def test_named_gdd_note_is_context_and_does_not_supply_a_new_request_or_operand():
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    question = 'Calculate GDD. {"max_temp_C":24,"min_temp_C":8,"base_temp_C":6,"note":"State the weather provenance"}'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results[0].payload['value'] == 10
+    context = SimpleNamespace(runtime_metadata={'tool_plan':plan.to_dict(), 'tool_results':[r.to_dict() for r in results]})
+    assert deterministic_tool_response(context, question=question)[1] == 'deterministic_tool_result'
+
+
+@pytest.mark.parametrize('prefix', ['Can you', 'Could you please', 'Please would you', "I'd like you to", '  Will you'])
+@pytest.mark.parametrize('tail', [', mulch beds.', ' and transplant seedlings.', '. Mulch beds.'])
+def test_polite_calculation_wrappers_cannot_drop_a_second_request(prefix, tail):
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question = prefix + ' calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C' + tail
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results[0].payload['value'] == 10
+    assert not calculation_request_is_complete(question, 'daily_gdd')
+    context = SimpleNamespace(runtime_metadata={'tool_plan':plan.to_dict(), 'tool_results':[r.to_dict() for r in results]})
+    assert deterministic_tool_response(context, question=question) == (None, None)
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != 'exam_review' and route.risk_level != 'low'
+
+
+@pytest.mark.parametrize('question', [
+    'Can you calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C?',
+    'Could you please calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C?',
+    'Ignoring unusable tank volume, how much area will a 1000 L sprayer tank cover applying 100 L/ha?',
+    'For one day in a corn field, maximum temperature was 24°C and minimum temperature was 8°C. Using a 6°C base and no temperature caps, calculate growing degree days.',
+    'What yield breaks even from total cost CAD 400/ac and assumed price CAD 5/bu?',
+])
+def test_accepted_request_phrasings_keep_complete_deterministic_results(question):
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results
+    context = SimpleNamespace(runtime_metadata={'tool_plan':plan.to_dict(), 'tool_results':[r.to_dict() for r in results]})
+    assert deterministic_tool_response(context, question=question)[1] == 'deterministic_tool_result'
+
+
+def test_unrecognized_calculation_head_still_inspects_unknown_tails():
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    assert not calculation_request_is_complete('Daily GDD from Tmax 24 C, Tmin 8 C and base 6 C, mulch beds.', 'daily_gdd')
+    assert not calculation_request_is_complete('Ignoring unusable tank volume, how much area will a 1000 L sprayer tank cover applying 100 L/ha, calculate fertilizer needs.', 'tank_coverage')
+    assert not calculation_request_is_complete('Using mulch beds, calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C.', 'daily_gdd')
+
+
+@pytest.mark.parametrize('prefix', ['Mulch beds. ', 'Transplant seedlings, ',
+    'Maximum temperature was 24 C then mulch beds. ',
+    'Maximum temperature was 24 C also mulch beds. ',
+    'Maximum temperature was 24 C and mulch beds. '])
+def test_a_later_calculation_cannot_erase_an_earlier_request(prefix):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question = prefix + 'Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C.'
+    assert not calculation_request_is_complete(question, 'daily_gdd')
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != 'exam_review' and route.risk_level != 'low'
+
+
+@pytest.mark.parametrize('question', [
+    'Can you explain soil texture, structure and porosity?',
+    'Could you please explain soil texture and soil structure?',
+])
+def test_polite_concept_lists_do_not_become_operational_requests(question):
+    route = refine_query_route(question, classify_query(question))
+    assert route.risk_level == 'low'
+    assert route.question_type in {'conceptual', 'exam_review'}
+
+
+def test_closed_product_volume_exclusion_does_not_hide_an_additional_operation():
+    question = ('A hypothetical field is 16 ha and a teaching example uses 3 L product/ha. '
+                'Calculate the total product volume, not a recommended rate or carrier-water volume, mulch beds.')
+    assert plan_tools(question).status != 'ready'
+
+
+@pytest.mark.parametrize("suffix",["", " Then apply a treatment.", " Also select a pesticide."])
+def test_incremental_budget_break_even_keeps_cost_basis_and_extra_work(suffix):
+    from agronomy_agent.tool_planner import plan_and_execute_tools
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question="An intervention costs CAD 60/ha and crop price is CAD 240/t. Under a simple incremental budget, what yield increase breaks even?"+suffix
+    plan,results=plan_and_execute_tools(question)
+    assert calculation_request_is_complete(question,"break_even_yield") is (not suffix)
+    if not suffix:
+        assert plan.status=="ready" and results[0].payload["value"]==pytest.approx(.25)
+        assert results[0].payload["inputs"]["cost_basis"]=="incremental"
+        assert results[0].payload["unit"]=="tonne/ha"
+    else:assert not results
+
+
+def test_unknown_budget_component_does_not_invalidate_explicit_bases_of_known_components():
+    from agronomy_agent.tool_planner import plan_and_execute_tools
+    question="What is the partial-budget net change: added revenue USD 110/ac, saved costs USD 30/ac, added costs USD 85/ac? Lost revenue is unknown."
+    plan,results=plan_and_execute_tools(question)
+    assert plan.status=="clarification_required" and not results
+    assert plan.invocations[0].missing_inputs==("reduced_returns",)
+    assert plan.invocations[0].inputs["area_unit"]=="ac"
+    assert "reduced_returns" not in plan.invocations[0].inputs

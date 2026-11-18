@@ -7,13 +7,15 @@ authority requirements, missing evidence, and retrieval obligations explicit.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import hashlib
 import re
 from typing import Any, Iterable, Mapping, Sequence
 
 from agronomy_agent.query_context import QueryContextSignals, analyze_query_context
 from agronomy_agent.router import evidence_interpretation_kind
+from agronomy_agent.answerability import is_mechanism_explanation
+from agronomy_agent.request_scope import information_request_kind
 from agronomy_agent.method_context import (
     METHODS, METHOD_SCHEMA, LEGACY_METHOD_IDS, PHYSICAL_METHOD_SCHEMA,
     PHYSICAL_METHOD_SOURCE_IDS, requested_methods, reviewed_method_ids,
@@ -434,7 +436,8 @@ def build_decision_contract(
     original_tools = tuple(
         sorted({str(value) for value in _route_value(route, "required_tools", ())})
     )
-    action = _action(question)
+    information_task = information_request_kind(question)
+    action = "inform" if information_task else _action(question)
     # Construct the ordinary contract first; explanation is an eligibility
     # condition for a bounded topical exemption, never a blanket rule bypass.
     active_rules = [rule for rule in _RULES
@@ -443,13 +446,20 @@ def build_decision_contract(
         rule.key == "field_observation" for rule in active_rules
     ):
         active_rules.insert(0, _RULES[0])
-    interpreting = primary == "exam_review" and evidence_interpretation_kind(question) is not None
+    interpreting = primary == "exam_review" and (
+        information_task is not None or evidence_interpretation_kind(question) is not None or is_mechanism_explanation(question)
+    )
     topical_exemptions = {
         "field_observation", "plant_health_differential", "fertility_diagnosis",
         "current_weather", "soil_water_condition", "salinity_sodicity", "soil_structure",
     }
     if interpreting:
         active_rules = [rule for rule in active_rules if rule.key not in topical_exemptions]
+    if information_task:
+        # Keep source lineage for named maps; diagnosis, treatment and crop
+        # management prerequisites do not follow from the topic of a lesson.
+        boundary_rules = {"regional_or_mapped_context", "regulated_product_authority", "resistance_stewardship"}
+        active_rules = [replace(rule, required_inputs=()) for rule in active_rules if rule.key in boundary_rules]
 
     obligations: list[EvidenceObligation] = []
     intents = {primary}

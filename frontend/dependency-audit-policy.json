@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-11-17T00:00:00Z",
+  "expires_at": "2026-11-24T00:00:00Z",
+  "advisory": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+  "advisory_source": 1247710,
+  "affected_package": "picomatch",
+  "affected_version": "4.0.7",
+  "development_nodes": {
+    "node_modules/@vitejs/plugin-react": "6.1.2",
+    "node_modules/fdir": "6.5.0",
+    "node_modules/picomatch": "4.0.7",
+    "node_modules/tinyglobby": "0.2.17",
+    "node_modules/vite": "8.3.6",
+    "node_modules/vitest": "5.0.5"
+  },
+  "boundary": "Temporary accepted build-tool risk, not a vulnerability fix. Patterns are controlled by repository source/configuration or operator CLI inputs; production serves the built static assets. Malicious repository/configuration input can still stall tooling. No grower-input pattern path was found. Do not expose development/test servers.",
+  "removal": "Remove when a patched upstream release is available, or reassess before expiry. Changed versions, production reachability, another advisory cause, malformed reports or audit transport failures cannot use this exception."
+}

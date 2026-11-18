@@ -1,4 +1,51 @@
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+import pytest
+
+
+@pytest.mark.parametrize("question", [
+    "What does EPA mean on a document sent to my Canadian farm?",
+    "What does PMRA mean on a label sent to my US farm?",
+])
+def test_factual_regulator_question_does_not_retain_an_unasked_application(question):
+    answer = enforce_answer_safety_postconditions(
+        "Apply Zedrin at 2 L/ha to canola.", question=question,
+        route={"question_type": "product_label"},
+    )
+    assert answer.strip() and "Apply Zedrin" not in answer and "2 L/ha" not in answer
+
+
+@pytest.mark.parametrize("question,fact,boundary,reminder", [
+    ("What does PMRA mean on a label sent to my US farm?",
+     "PMRA is Canada's Pest Management Regulatory Agency.",
+     "Do not follow a Canadian label as authority for use on a U.S. farm.", "current EPA-registered labeling"),
+    ("What does EPA mean on a document sent to my Canadian farm?",
+     "EPA is the United States Environmental Protection Agency.",
+     "Do not follow an EPA label as authority for use on a Canadian farm.", "Health Canada registered product label"),
+])
+def test_correct_negated_foreign_authority_guidance_keeps_its_definition(question, fact, boundary, reminder):
+    answer = enforce_answer_safety_postconditions(fact + " " + boundary, question=question,
+                                                route={"question_type": "product_label"})
+    assert fact in answer and boundary in answer and reminder in answer
+
+
+@pytest.mark.parametrize("question,draft,forbidden,reminder", [
+    ("What does PMRA mean on a label sent to my US farm?", "Follow a Canadian label for this U.S. application.",
+     "Follow a Canadian label", "EPA registration number"),
+    ("What does PMRA mean on a label sent to my US farm?", "Do not fail to follow a Canadian label for this U.S. application.",
+     "follow a Canadian label", "EPA registration number"),
+    ("What does PMRA mean on a label sent to my US farm?",
+     "Do not follow a Canadian label as authority here, but follow a Canadian label for this U.S. application.",
+     "follow a Canadian label for this", "EPA registration number"),
+    ("What does EPA mean on a document sent to my Canadian farm?", "Follow an EPA label for this Canadian application.",
+     "Follow an EPA label", "Health Canada registered product label"),
+    ("What does EPA mean on a document sent to my Canadian farm?",
+     "Do not follow an EPA label as authority here, but follow an EPA label for this Canadian application.",
+     "follow an EPA label for this", "Health Canada registered product label"),
+])
+def test_affirmative_foreign_authority_instruction_remains_blocked(question, draft, forbidden, reminder):
+    answer = enforce_answer_safety_postconditions(draft, question=question,
+                                                route={"question_type": "product_label"})
+    assert forbidden not in answer and reminder in answer
 
 
 def test_us_rate_request_uses_us_product_authority() -> None:
@@ -139,3 +186,47 @@ def test_ambiguous_or_missing_treatment_jurisdiction_stays_neutral() -> None:
         assert "without the treatment jurisdiction" in answer
         assert "PMRA" not in answer
         assert "EPA" not in answer
+
+
+@pytest.mark.parametrize("jurisdiction", [None, "France", "US", "Canada", "CA-AB"])
+@pytest.mark.parametrize("question,diagnostic_detail", [
+    ("My potato leaves have expanding brown lesions after wet weather. What should I collect before changing the disease program?",
+     "advancing lesion margin"),
+    ("My wheat leaves have yellow-orange stripes. Could this be stripe rust, and should I change the disease program?",
+     "pustules"),
+])
+def test_failed_diagnostic_answer_keeps_scouting_without_assuming_label_authority(
+    jurisdiction, question, diagnostic_detail,
+) -> None:
+    from agronomy_agent.answer_verifier import verify_answer
+
+    class BrokenEditor:
+        def generate(self, messages):
+            return "True False " * 40
+
+    result = verify_answer(
+        "```json\n" + "import repeated_alias\n" * 30,
+        question=question, evidence_text="", question_type="plant_health",
+        risk_level="high", editor=BrokenEditor(), review_mode="risk_gated",
+        jurisdiction=jurisdiction,
+    )
+
+    assert result.fallback_applied
+    assert diagnostic_detail in result.answer and "label" in result.answer.lower()
+    assert "PMRA" not in result.answer and "EPA" not in result.answer
+    if jurisdiction != "CA-AB":
+        assert "Alberta" not in result.answer
+    assert "spring-wheat crop stage" not in result.answer
+
+
+def test_known_province_still_scopes_potato_alerts_without_granting_treatment() -> None:
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    from agronomy_agent.decision_route import build_decision_route_state
+
+    question = "My potato leaves have expanding brown lesions. What should I collect before changing the disease program?"
+    answer = _decision_route_failure_answer(
+        build_decision_route_state(question, "plant_health"), jurisdiction="CA-AB",
+    )
+    assert "current Alberta potato disease alerts or IPM guidance" in answer
+    assert "working diagnosis and risk justify it" in answer
+    assert "jurisdiction-specific product label" in answer

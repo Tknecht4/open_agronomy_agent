@@ -14,6 +14,20 @@ instructions and revisit marked locations. Symptoms can have biological,
 weather, soil or application causes. See [Alberta field scouting](https://www.alberta.ca/index.php/field-scouting)
 and [Manitoba sample submission instructions](https://www.gov.mb.ca/agriculture/crops/crop-diagnostic-services/pubs/sample-submission-instructions.pdf).
 
+For a reported current root swelling, dig or lift intact plants and compare
+affected and nearby normal plants, including the normal underground structures
+of that crop. Inspect the attachment and shape of swellings, discoloration,
+soft or decaying tissue and injury. Photograph the structures and record crop,
+stage, location and field pattern; keep contrasting material separate and
+contain attached soil while asking the diagnostic lab for collection and
+packaging instructions. Swelling alone does not identify a pathogen. Normal
+soybean nodules can attach to roots, whereas root-knot galls form part of the
+root; the [University of Florida diagnostic guide](https://edis.ifas.ufl.edu/publication/NG018/pdf)
+explains that distinction. The affected crop must be positively identified
+before adding crop-specific normal structures: a historical or healthy
+comparison crop does not establish the host of a current swelling. These steps
+do not certify a diagnosis or authorize treatment.
+
 For a nutrient sampling plan, keep contrasting landscape and management zones
 separate; an eroded knoll, wet depression and old manure strip need not be
 represented by one whole-field average. Record the sampling depth and date and
@@ -60,14 +74,30 @@ after wet weather alone does not identify the cause. Inspect fresh foliage,
 stems, roots and tubers. [Alberta's late-blight guidance](https://www.alberta.ca/late-blight-of-potatoes-and-tomatoes)
 and [Cornell's lookalike guide](https://cce.cornell.edu/cornell-vegetable-program/late-blight-and-its-lookalikes-correctly-identify-late-blight-potatoes)
 support identification, with product decisions subject to local authority.
-For a healthy potato crop, monitor leaves and stems regularly and use local
-alerts and crop-specific IPM guidance for prevention planning; visible collapse
-is not a prerequisite. See [Minnesota late-blight monitoring](https://extension.umn.edu/agriculture/specialty-crops/vegetable-farming/disease-management/late-blight)
+Generic words such as “lesions” or “necrosis” alone do not complete a
+disease-specific scouting method. Recognizable descriptions can use equivalent
+wording; none establishes a diagnosis.
+
+For a healthy potato crop, scout representative areas, including low, shaded
+or persistently damp places, and inspect leaves, undersides and stems for
+water-soaked spots and dark, spreading lesions. White growth can occur beneath
+lesions under humid conditions, especially early in the morning; its absence
+does not exclude late blight. Photograph and locate suspicious findings and
+promptly seek local diagnostic instructions. [Manitoba late-blight guidance](https://www.gov.mb.ca/agriculture/crops/plant-diseases/late-blight-potatoes.html)
+supports these recognition and scouting methods; symptoms remain conditional,
+not a diagnosis of a healthy crop. Use local alerts and crop-specific IPM
+guidance for prevention planning; visible collapse is not a prerequisite. See [Minnesota late-blight monitoring](https://extension.umn.edu/agriculture/specialty-crops/vegetable-farming/disease-management/late-blight)
 for general scouting methods, with treatment authority still local.
+Clubroot can affect cabbage and other susceptible brassicas as well as canola;
+[Manitoba's brassica disease guidance](https://manitoba.ca/agriculture/crops/plant-diseases/clubroot-brassica.html)
+supports the host, long-lived resting-spore and soil-movement biology. Its older
+regional distribution and management intervals are not current local authority.
 For suspected clubroot, limit movement of contaminated soil while arranging
 confirmation. One nonhost year does not establish eradication: resting spores
-can persist for many years. Follow the [current applicable provincial plan](https://www.alberta.ca/alberta-clubroot-management-plan)
-and any municipal requirements for the field. Check all susceptible brassica
+can persist for many years. For an Alberta field, consult the
+[Alberta clubroot management plan](https://www.alberta.ca/alberta-clubroot-management-plan)
+and applicable municipal requirements. Other regions need their own current
+guidance. Check all susceptible brassica
 crops, volunteers and cruciferous weeds when assessing a nonhost interval.
 
 Treat regional crop-health and agroclimate layers as screening context. Confirm
@@ -108,3 +138,32 @@ planting rule for other berries; insect pollination remains important.
 
 These references support general observation methods. Their presence here
 does not admit them into runtime retrieval or qualify a field recommendation.
+
+Stored grain is a different observation object from a growing crop. Measure
+representative moisture and temperature across the grain bulk, check
+crop-specific storage guidance and intended duration, and plan adequate drying,
+cooling/aeration and airflow. An average can hide wet or warm pockets. Monitor
+for moisture migration, hot spots, insects and spoilage through storage; use
+safe external procedures rather than entering grain or moving equipment.
+The [Canadian Grain Commission's monitoring guidance](https://www.canada.ca/en/grain-commission/services/grain-quality/manage-stored-grain/monitor-grain-temperature.html)
+and [Ontario's aeration guide](https://www.ontario.ca/page/grain-aeration)
+support these distinctions. Their numerical schedules and targets are not
+transferred here as universal thresholds.
+
+A soil-test nutrient value requires its extraction method, units, sampling
+support and local crop-response calibration. One method's value is not another
+method's calibrated interpretation. [Manitoba's interpretation guidance](https://www.gov.mb.ca/agriculture/crops/soil-fertility/soil-fertility-guide/fertilizer-recommendation-guidelines.html)
+explains the method-specific basis; this does not establish a fertilizer rate
+for another soil or jurisdiction.
+
+Reference evapotranspiration describes a standardized reference surface.
+Standard crop ET uses a crop coefficient and growth-stage context; actual
+water use under stress requires appropriate adjustments or measurements.
+[FAO-56 concepts](https://www.fao.org/4/x0490e/x0490e04.htm) and its
+[soil-water-stress treatment](https://www.fao.org/4/x0490e/x0490e0e.htm)
+explain why these quantities are distinct. None alone specifies irrigation.
+
+Soybean maturity groups retain their leading zeroes: `000`, `00` and `0`
+identify distinct classifications. The [Manitoba cultivar research](https://manitobapulse.ca/wp-content/uploads/2016/03/12_Agronomic-Mgmt-of-Soybeans-in-MB_Cultivar-Growth-Rate-Maturity.pdf)
+reports these groups and ratings as such. Preserving a supplied identifier does
+not establish local adaptation or select a variety for another region.

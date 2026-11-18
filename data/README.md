@@ -31,6 +31,13 @@ rows in policy-segregated shards. Its store manifest, source receipt,
 duplicate-cluster receipt, quality ledger, and shard hashes form one immutable
 release unit.
 
+The current project context is generated from
+`data/seed/agronomy_rag_corpus_v2.jsonl`. The original
+`agronomy_rag_corpus.jsonl` remains byte-frozen for historical benchmark and
+policy checks. The v2 project-authored wording distinguishes symptom diagnosis
+from risk-based preventive disease planning; it adds no external evidence or
+decisive authority. Both full builds and project-only refreshes use the v2 seed.
+
 Canadian PDF records are reconstructed from raw page text with exact spans;
 Ontario workbook records retain structured table coordinates. Seed, boundary,
 and SoilWise records preserve exact source-record locators. Source receipts bind

@@ -24,8 +24,8 @@
     {
       "path": "shards/project_context-0001.jsonl",
       "rows": 36,
-      "bytes": 64253,
-      "sha256": "6a3eb04006b4dafdc9234cda826dd3de54397bb655b67394cac4300c6a4159e2",
+      "bytes": 64839,
+      "sha256": "ad0909927171c516c77ab6779e4c0c0a0641150f1361cf74ae329fb86e313b0c",
       "retrieval_policies": [
         "context_only"
       ]
@@ -58,12 +58,12 @@
     "soilwise_context": 1783
   },
   "quality_ledger_path": "quality_ledger.json",
-  "quality_ledger_sha256": "b162c8e7cd5a818f602d5706a1c1e67d64f2d7164543b3c95aa03ad6cd9913ac",
+  "quality_ledger_sha256": "16674af89bf6b2c58944b11dadae6610879bf324f438b456bd06400d01e38651",
   "exact_duplicate_clusters_path": "exact_duplicate_clusters.json",
   "exact_duplicate_clusters_sha256": "4f2998b958f6cf09beea968fd672b7846a8f1a2f8bb55682073ea8e4281386cc",
   "source_receipt_path": "source_receipt.json",
   "source_receipt_sha256": "a5554b3952e83cc7e6831614a4fc050df6266a70b55a796ab9b77157b8330c8a",
   "unrecoverable_legacy_rows_excluded": 17,
   "jurisdiction_policy": "Canadian official sources rank before U.S. analogue context; community sources are not loaded.",
-  "store_sha256": "48ec600b95132c412b5901c9af56e0cef3fae52fa71f47eb48a209cc5580dc0d"
+  "store_sha256": "8dfed922ce1acbf8c658383d1aff54f94feecb14ca7ac41ae14267bb7d4afe46"
 }

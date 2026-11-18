@@ -13,7 +13,7 @@ import hashlib
 import json
 import math
 import os
-import select
+import selectors
 import signal
 import queue
 import re
@@ -458,13 +458,67 @@ class AppServerResult:
     receipt: dict[str, Any]
 
 
+_EVENT_SHAPE_KEYS = frozenset({"threadId", "turnId", "thread", "turn", "item", "status",
+                               "reason", "data", "message", "id", "items"})
+_EVENT_SHAPE_TYPES = frozenset({"null", "bool", "int", "float", "str", "list", "dict", "other"})
+
+
+def _event_shape_type(value):
+    return "null" if value is None else type(value).__name__ if type(value).__name__ in _EVENT_SHAPE_TYPES else "other"
+
+
+def _bounded_event_diagnostic(value):
+    """Retain protocol shape only; never unknown field names or payload values."""
+    if not isinstance(value, Mapping):
+        return {}
+    method = value.get("method")
+    method = method if (isinstance(method, str) and len(method) <= 96 and re.fullmatch(
+        r"[A-Za-z][A-Za-z0-9]*(?:/[A-Za-z][A-Za-z0-9]*){0,5}", method)) else "redacted"
+    shape = value.get("params_shape")
+    shape = {k: v for k, v in shape.items() if k in _EVENT_SHAPE_KEYS and type(v) is str and v in _EVENT_SHAPE_TYPES} if isinstance(shape, Mapping) else {}
+    count = value.get("other_field_count")
+    return {"method": method, "stage": "turn_stream", "params_shape": shape,
+            "other_field_count": min(count, 8192) if type(count) is int and count >= 0 else None,
+            **{k: value.get(k) if type(value.get(k)) is bool else None
+               for k in ("thread_binding", "turn_binding")}}
+
+
+def _unknown_event_diagnostic(method, params, thread_id, turn_id):
+    def binding(direct, nested, expected):
+        observed = []
+        if direct in params:
+            observed.append(params[direct])
+        if isinstance(params.get(nested), dict) and "id" in params[nested]:
+            observed.append(params[nested]["id"])
+        return all(value == expected for value in observed) if observed else None
+    return _bounded_event_diagnostic({
+        "method": method, "stage": "turn_stream",
+        "params_shape": {k: _event_shape_type(v) for k, v in params.items() if k in _EVENT_SHAPE_KEYS},
+        "other_field_count": sum(k not in _EVENT_SHAPE_KEYS for k in params),
+        "thread_binding": binding("threadId", "thread", thread_id),
+        "turn_binding": binding("turnId", "turn", turn_id),
+    })
+
+
 def bounded_provider_attempt(value):
     """No prompts, credentials, raw provider errors or unbounded objects."""
     fields={"attempt_id","phase","arm","eval_id","envelope_sha256","state","request_id",
             "thread_id","turn_id","selected_model","thread_acknowledged","turn_acknowledged","submitted","error_type"}
     if not isinstance(value,Mapping):return {}
-    return {k:(v[:160] if isinstance(v,str) else v) for k,v in value.items()
-            if k in fields and (v is None or type(v) in {str,int,bool})}
+    result = {k:(v[:160] if isinstance(v,str) else v) for k,v in value.items()
+              if k in fields and (v is None or type(v) in {str,int,bool})}
+    if isinstance(value.get("event_diagnostic"), Mapping):
+        result["event_diagnostic"] = _bounded_event_diagnostic(value["event_diagnostic"])
+    return result
+
+
+def _new_provider_attempt():
+    return {
+        "state": "pre_dispatch",
+        "submitted": False,
+        "thread_acknowledged": False,
+        "turn_acknowledged": False,
+    }
 
 
 def _bounded_protocol_json(value, limit):
@@ -542,25 +596,25 @@ class CodexAppServerClient:
         self._stderr_lines: list[str] = []
         self._pending_notifications: list[dict[str, Any]] = []
         self._closed = False
-        self._process = subprocess.Popen(
-            list(self.command),
-            cwd=self.cwd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=False,
-            bufsize=0,
-            start_new_session=False,
-        )
-        if self._process.stdin is None or self._process.stdout is None or self._process.stderr is None:
-            self.close()
-            raise CodexAppServerError("failed to open App Server stdio pipes")
-        self._stdout_thread = threading.Thread(target=self._read_stdout, daemon=True)
-        self._stderr_thread = threading.Thread(target=self._read_stderr, daemon=True)
-        self._stdout_thread.start()
-        self._stderr_thread.start()
-        atexit.register(self.close)
         try:
+            self._process = subprocess.Popen(
+                list(self.command),
+                cwd=self.cwd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=False,
+                bufsize=0,
+                start_new_session=False,
+            )
+            if self._process.stdin is None or self._process.stdout is None or self._process.stderr is None:
+                self.close()
+                raise CodexAppServerError("failed to open App Server stdio pipes")
+            self._stdout_thread = threading.Thread(target=self._read_stdout, daemon=True)
+            self._stderr_thread = threading.Thread(target=self._read_stderr, daemon=True)
+            self._stdout_thread.start()
+            self._stderr_thread.start()
+            atexit.register(self.close)
             self.initialize_result = self._request(
                 "initialize",
                 {
@@ -638,12 +692,16 @@ class CodexAppServerClient:
         assert self._process.stdin is not None
         fd=self._process.stdin.fileno();os.set_blocking(fd,False)
         offset=0
-        while offset<len(encoded):
-            if not select.select([], [fd], [], min(self._remaining(),0.1))[1]:continue
-            if payload.get("method") in {"thread/start","turn/start"} and self.before_dispatch is not None:
-                self.before_dispatch(payload["method"])
-            try:offset+=os.write(fd,encoded[offset:offset+4096])
-            except BlockingIOError:continue
+        # select.select is limited to FD_SETSIZE even when the process has a
+        # higher open-file limit. Use the platform selector for bounded writes.
+        with selectors.DefaultSelector() as writable:
+            writable.register(fd, selectors.EVENT_WRITE)
+            while offset<len(encoded):
+                if not writable.select(min(self._remaining(),0.1)):continue
+                if payload.get("method") in {"thread/start","turn/start"} and self.before_dispatch is not None:
+                    self.before_dispatch(payload["method"])
+                try:offset+=os.write(fd,encoded[offset:offset+4096])
+                except BlockingIOError:continue
 
     def _notify(self, method: str, params: dict[str, Any]) -> None:
         self._send({"method":method,"params":params})
@@ -744,9 +802,9 @@ class CodexAppServerClient:
         output_schema: dict[str, Any] | None = None,
         metadata: dict[str, str] | None = None,
     ) -> AppServerResult:
+        self.last_attempt_evidence = _new_provider_attempt()
         if len(user_text)>self.MAX_FRAME_BYTES or len(base_instructions)>self.MAX_FRAME_BYTES:
             raise CodexAppServerError("App Server input text bound")
-        self.last_attempt_evidence={"state":"pre_dispatch","submitted":False,"thread_acknowledged":False,"turn_acknowledged":False}
         if getattr(self,"_completed_once",False):raise CodexAppServerError("App Server client is single-turn; no implicit retry")
         started = perf_counter()
         self._pending_notifications.clear()
@@ -832,12 +890,15 @@ class CodexAppServerClient:
         if not isinstance(turn_id,str) or not turn_id:
             raise CodexAppServerError("turn/start did not return a turn id")
         self.last_attempt_evidence.update(turn_id=turn_id,turn_acknowledged=True,state="turn_acknowledged")
-        if turn_result.get("threadId") is None:
-            # Missing explicit binding is unknown, not the requested thread.
-            raise CodexAppServerError("turn/start thread binding is missing")
+        # Current TurnStartResponse contains only `turn`. Its request is
+        # correlated by RPC id, but require an observed matching turn/started
+        # notification before qualifying a return without an explicit binding.
+        response_thread_bound = turn_result.get("threadId") == thread_id
+        started_thread_bound = False
         events = list(self._pending_notifications)
         self._pending_notifications.clear()
         completed_turn: dict[str, Any] | None = None
+        warning_classifications: list[str] = []
         pending=list(events);events=[]
         while completed_turn is None:
             payload = pending.pop(0) if pending else self._read_message()
@@ -850,7 +911,7 @@ class CodexAppServerClient:
             params=payload.get("params") or {}
             method=payload.get("method")
             if not isinstance(params,dict):raise CodexAppServerError("App Server event params malformed")
-            if method in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification"}:
+            if method in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification","turn/moderationMetadata"}:
                 event_turn=(params.get("turn") or {}).get("id") if method=="turn/completed" else params.get("turnId")
                 if params.get("threadId")!=thread_id or event_turn!=turn_id:
                     raise CodexAppServerError("App Server event thread/turn binding mismatch")
@@ -859,11 +920,61 @@ class CodexAppServerClient:
                 event_turn=(params.get("turn") or {}).get("id") if method=="turn/started" else params.get("turnId")
                 if params.get("threadId")!=thread_id or event_turn!=turn_id:
                     raise CodexAppServerError("progress event binding mismatch")
+                if method == "turn/started":
+                    if started_thread_bound:
+                        raise CodexAppServerError("duplicate turn/started binding")
+                    started_thread_bound = True
             elif method in {"thread/started","thread/status/changed"}:
                 event_thread=(params.get("thread") or {}).get("id") if method=="thread/started" else params.get("threadId")
                 if event_thread!=thread_id:raise CodexAppServerError("thread metadata binding mismatch")
-            elif method not in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification"}:
-                raise CodexAppServerError("unclassified App Server event")
+            elif method == "thread/settings/updated":
+                settings = params.get("threadSettings")
+                if (params.get("threadId") != thread_id or not isinstance(settings, dict)
+                        or settings.get("cwd") != self.cwd
+                        or settings.get("model") != self.expected_model
+                        or settings.get("effort") != self.expected_reasoning_effort
+                        or settings.get("approvalPolicy") != "never"
+                        or settings.get("sandboxPolicy") != expected_sandbox
+                        or "activePermissionProfile" not in settings
+                        or settings.get("activePermissionProfile") is not None):
+                    raise CodexAppServerError("thread settings changed controlled transport conditions")
+            elif method == "warning":
+                # The local isolation wrapper intentionally denies the global
+                # instruction file. Its expected warning is safe only after
+                # thread/start independently confirmed no instruction sources.
+                message = params.get("message")
+                if params.get("threadId") != thread_id or not isinstance(message, str):
+                    raise CodexAppServerError("unreviewed App Server warning")
+                if re.fullmatch(
+                        r"Failed to read global AGENTS\.md instructions from `[^`\n]{1,2048}`: "
+                        r"Operation not permitted \(os error 1\)", message):
+                    warning_classifications.append("global_instruction_read_denied")
+                elif message == (
+                        "Code Mode is unavailable because code-mode host is disabled. "
+                        "Code mode will fail closed; enable `features.code_mode_host` "
+                        "and install `codex-code-mode-host`."):
+                    warning_classifications.append("code_mode_host_disabled")
+                else:
+                    raise CodexAppServerError("unreviewed App Server warning")
+            elif method == "remoteControl/status/changed":
+                if params.get("status") != "disabled" or params.get("environmentId") is not None:
+                    raise CodexAppServerError("unexpected remote control state")
+            elif method == "account/updated":
+                if (set(params) != {"authMode", "planType"} or params.get("authMode") != "chatgpt"
+                        or params.get("planType") is not None and not isinstance(params["planType"], str)):
+                    raise CodexAppServerError("unexpected benchmark account authentication state")
+            elif method == "account/rateLimits/updated":
+                # Sparse account-level resource observations are not turn
+                # attribution or permission. Preserve them without assuming a
+                # particular quota belongs to the selected model.
+                if set(params) != {"rateLimits"} or not isinstance(params["rateLimits"], dict):
+                    raise CodexAppServerError("malformed account rate-limit observation")
+            elif method not in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification","turn/moderationMetadata"}:
+                self.last_attempt_evidence["event_diagnostic"] = _unknown_event_diagnostic(
+                    method, params, thread_id, turn_id)
+                exc = CodexAppServerError("unclassified App Server event")
+                exc.provider_attempt = bounded_provider_attempt(self.last_attempt_evidence)
+                raise exc
             self._retain_event(events,payload)
             if payload.get("method") == "turn/completed":
                 params = payload.get("params") or {}
@@ -871,6 +982,8 @@ class CodexAppServerClient:
                     completed_turn = params.get("turn")
         if pending:
             raise CodexAppServerError("events/duplicate terminals after completed turn")
+        if not response_thread_bound and not started_thread_bound:
+            raise CodexAppServerError("turn/start thread binding is unobserved")
         # Do not assign delayed notifications from this request to a later turn.
         if completed_turn.get("status") != "completed":
             raise CodexAppServerError(
@@ -886,6 +999,11 @@ class CodexAppServerClient:
             if event.get("method") == "item/completed"
         )
         allowed_item_types = {"userMessage", "agentMessage", "reasoning"}
+        terminal_items = completed_turn.get("items")
+        if terminal_items is not None and (not isinstance(terminal_items, list) or any(
+                not isinstance(item, dict) or item.get("type") not in allowed_item_types
+                for item in terminal_items)):
+            raise CodexAppServerError("completed turn contains forbidden or malformed terminal items")
         forbidden_item_types = {
             item_type: count
             for item_type, count in completed_item_types.items()
@@ -957,6 +1075,9 @@ class CodexAppServerClient:
             "model_provider": thread_result.get("modelProvider") or thread.get("modelProvider"),
             "thread_id": thread_id,
             "turn_id": turn_id,
+            "thread_binding_evidence": {"turn_start_response": response_thread_bound,
+                                        "turn_started_notification": started_thread_bound,
+                                        "completed_notification": True},
             "thread_ephemeral": True,
             "cwd_sha256": _sha256(self.cwd),
             "sandbox": thread_result["sandbox"],
@@ -964,10 +1085,18 @@ class CodexAppServerClient:
             "approval_policy": thread_result["approvalPolicy"],
             "runtime_workspace_roots": thread_result["runtimeWorkspaceRoots"],
             "instruction_sources": thread_result["instructionSources"],
+            "transport_warning_classifications": warning_classifications,
             "transport_policy": "text_only_no_tools_v1",
             "reroutes": reroutes,
             "model_verifications": [
                 event.get("params") or {} for event in events if event.get("method") == "model/verification"
+            ],
+            "moderation_metadata": [
+                event.get("params") or {} for event in events if event.get("method") == "turn/moderationMetadata"
+            ],
+            "moderation_metadata_scope": "provider_observation_only; no inferred safety_permission_or_category_meaning",
+            "account_rate_limit_observations": [
+                event.get("params") or {} for event in events if event.get("method") == "account/rateLimits/updated"
             ],
             "token_usage": token_usage,
             "elapsed_ms": round((perf_counter() - started) * 1000.0, 3),
@@ -989,25 +1118,56 @@ class CodexAppServerClient:
     def close(self) -> dict[str, Any]:
         if self._closed:return self.local_closeout or {"status":"unknown"}
         self._closed=True
+        # Explicit close must release the callback's strong reference as well
+        # as all pipe descriptors; a long benchmark creates many clients.
+        atexit.unregister(self.close)
         process=getattr(self,"_process",None)
-        if process is None:return {"status":"not_started","remote_cancellation_confirmed":None}
+        if process is None:
+            temporary_cwd=getattr(self,"_temporary_cwd",None)
+            if temporary_cwd is not None:temporary_cwd.cleanup();self._temporary_cwd=None
+            self.local_closeout={"status":"not_started","remote_cancellation_confirmed":None}
+            return self.local_closeout
         pipe_error=None
         if process.stdin is not None:
             try:process.stdin.close()
             except OSError as exc:pipe_error=type(exc).__name__
-        if process.poll() is None:
-            try:process.terminate()
-            except ProcessLookupError:pass
-        try:process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            try:process.kill()
-            except ProcessLookupError:pass
-            process.wait(timeout=2)
-        self.local_closeout={"status":"reaped","local_returncode":process.returncode,
-            "scope":"direct_owned_process_only; descendants_unverified",
-            "owned_group_absent":None,"remote_cancellation_confirmed":None,"pipe_close_error":pipe_error}
-        temporary_cwd=getattr(self,"_temporary_cwd",None)
-        if temporary_cwd is not None:temporary_cwd.cleanup();self._temporary_cwd=None
+        process_error=None
+        reaped=False
+        try:
+            if process.poll() is None:
+                try:process.terminate()
+                except ProcessLookupError:pass
+            try:process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                try:process.kill()
+                except ProcessLookupError:pass
+                process.wait(timeout=2)
+            reaped=True
+        except Exception as exc:
+            process_error=type(exc).__name__
+            raise
+        finally:
+            # Even a failed kill/wait must release owned descriptors. The
+            # process outcome remains unknown; cleanup cannot claim cancellation.
+            for name in ("stdout", "stderr"):
+                pipe=getattr(process,name,None)
+                if pipe is not None:
+                    try:pipe.close()
+                    except OSError as exc:pipe_error=type(exc).__name__
+            readers_alive={}
+            for name in ("_stdout_thread", "_stderr_thread"):
+                reader=getattr(self,name,None)
+                if reader is not None:
+                    if reader.ident is not None and reader is not threading.current_thread():
+                        reader.join(timeout=0.2)
+                    readers_alive[name]=reader.is_alive()
+            self.local_closeout={"status":"reaped" if reaped else "unknown",
+                "local_returncode":process.returncode, "process_close_error":process_error,
+                "reader_threads_alive":readers_alive,
+                "scope":"direct_owned_process_only; descendants_unverified",
+                "owned_group_absent":None,"remote_cancellation_confirmed":None,"pipe_close_error":pipe_error}
+            temporary_cwd=getattr(self,"_temporary_cwd",None)
+            if temporary_cwd is not None:temporary_cwd.cleanup();self._temporary_cwd=None
         return self.local_closeout
 
     def __enter__(self) -> "CodexAppServerClient":
@@ -1078,6 +1238,14 @@ def _declared_evidence_section_lines(outbound_text: str) -> dict[str, list[str]]
     active_kind: str | None = None
     for raw_line in outbound_text.splitlines():
         line = raw_line.strip()
+        # Packed excerpts may contain PDF line breaks and source bullets.
+        # Discover every subsequent packed header even after a continuation
+        # ended legacy single-line section discovery.
+        if (re.match(r"^- \[[A-Z][A-Z ]*\] \[[^\]\n]+\]\.", line)
+                and "Title: " in line and ". Source: " in line and ". Excerpt: " in line):
+            records["document"].append(line)
+            active_kind = "document"
+            continue
         if line in header_kinds:
             active_kind = header_kinds[line]
             continue
@@ -1107,9 +1275,24 @@ def _validate_evidence_section_completeness(
     graph_rows: Sequence[Mapping[str, Any]],
     guard_rows: Sequence[Mapping[str, Any]],
 ) -> None:
-    section_lines = _declared_evidence_section_lines(outbound_text)
+    discovery_text = outbound_text
+    for record in documents:
+        fragment = str(record.get("content_fragment") or "")
+        marker = f"Title: {record.get('title')}. Source: {record.get('source')}. Excerpt: "
+        if "\n" in fragment and marker in fragment.split("\n", 1)[0]:
+            excerpt = fragment.split(marker, 1)[1]
+            if not str(record.get("source_text") or "").startswith(excerpt):
+                raise CodexAppServerError("cannot mask an unbound packed source continuation")
+            # A dash in a validated PDF continuation is source content, not a
+            # new evidence record. Keep its header visible for completeness.
+            header, continuation = fragment.split("\n", 1)
+            discovery_text = discovery_text.replace(fragment, header + "\n" * (continuation.count("\n") + 1))
+    section_lines = _declared_evidence_section_lines(discovery_text)
     declared = {
-        "document": {str(record.get("content_fragment") or "").strip() for record in documents},
+        # A packed document can contain a multiline, source-bound excerpt.
+        # Section discovery identifies its header; membership validation below
+        # independently checks the full rendered excerpt, including its body.
+        "document": {str(record.get("content_fragment") or "").split("\n", 1)[0].strip() for record in documents},
         "graph": {str(record.get("evidence_fragment") or "").strip() for record in graph_rows},
         "tool": set(),
         "guard": {str(record.get("outbound_fragment") or "").strip() for record in guard_rows},
@@ -1287,6 +1470,11 @@ def _validate_egress_records(envelope, artifact_contract, question_fragment):
             raise CodexAppServerError(
                 f"benchmark egress document fragment lacks source membership: {doc_id}"
             )
+        packed_marker = f"Title: {title}. Source: {source}. Excerpt: "
+        if packed_marker in content_fragment:
+            rendered_excerpt = content_fragment.split(packed_marker, 1)[1]
+            if not rendered_excerpt or not source_text.startswith(rendered_excerpt):
+                raise CodexAppServerError(f"benchmark egress packed excerpt differs from source prefix: {doc_id}")
         expected_document_identity = _sha256(
             _canonical_json(
                 {
@@ -1481,14 +1669,21 @@ def _validate_egress_records(envelope, artifact_contract, question_fragment):
     return documents, graph_rows, guard_rows
 
 
-def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
+def _validate_canonical_header(envelope, *, authorization, artifact_contract,
         suite_case_contract, static_prompt_contract, expected_candidate_output_sha256,
-        expected_phase, expected_arm, messages):
+        expected_phase, expected_arm, messages, _schema_version=CANONICAL_ENVELOPE_SCHEMA,
+        _render_profile_sha256=None):
     fields={"schema_version","eval_id","phase","arm","question_fragment","field_context",
         "source_sha256","suite_case_contract_sha256","egress_artifact_contract_sha256","static_prompt_contract_sha256",
         "private_knowledge_policy","private_knowledge_overlay_loaded","whole_corpus_included",
         "outbound_messages_sha256","selected_document_excerpts","graph_evidence","governed_guard_notes","payload_classes"}
     if expected_phase=="verification":fields|={"candidate_draft_text","verifier_evidence_text","candidate_generation_output_sha256"}
+    if _render_profile_sha256 is not None:
+        fields.add("render_profile_sha256")
+        if envelope.get("render_profile_sha256") != _render_profile_sha256:
+            raise CodexAppServerError("canonical render profile differs")
+    if envelope.get("schema_version") != _schema_version:
+        raise CodexAppServerError("canonical envelope version differs")
     if set(envelope)!=fields:raise CodexAppServerError("unclassified canonical envelope fields")
     if authorization.get("schema_version")!=CANONICAL_EGRESS_AUTHORIZATION_SCHEMA:
         raise CodexAppServerError("legacy grant cannot authorize canonical egress")
@@ -1526,12 +1721,31 @@ def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
                 or not isinstance(evidence,str) or _sha256(evidence)!=row["verification_evidence_sha256"]):
             raise CodexAppServerError("canonical editor draft/evidence mismatch")
         _validate_verifier_application_message_contract(messages,envelope=envelope,static_prompt_contract=static_prompt_contract)
+
+
+def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
+        suite_case_contract, static_prompt_contract, expected_candidate_output_sha256,
+        expected_phase, expected_arm, messages):
+    _validate_canonical_header(envelope, authorization=authorization, artifact_contract=artifact_contract,
+        suite_case_contract=suite_case_contract, static_prompt_contract=static_prompt_contract,
+        expected_candidate_output_sha256=expected_candidate_output_sha256,
+        expected_phase=expected_phase, expected_arm=expected_arm, messages=messages)
+    question, facts = envelope["question_fragment"], envelope["field_context"]
+    phase, arm = envelope["phase"], envelope["arm"]
     documents,graphs,guards=_validate_egress_records(envelope,artifact_contract,question)
+    return _finalize_canonical_outbound(envelope, messages=messages,
+        documents=documents, graphs=graphs, guards=guards)
+
+
+def _finalize_canonical_outbound(envelope, *, messages, documents, graphs, guards,
+        check_completeness=True):
+    facts, phase, arm = envelope["field_context"], envelope["phase"], envelope["arm"]
     instructions,user=split_chat_messages(messages)
     outbound=instructions+"\n\n"+user
     for rows,key in ((documents,"content_fragment"),(graphs,"evidence_fragment"),(guards,"outbound_fragment")):
         if any(record[key] not in outbound for record in rows):raise CodexAppServerError("canonical evidence fragment absent")
-    _validate_evidence_section_completeness(outbound,documents=documents,graph_rows=graphs,guard_rows=guards)
+    if check_completeness:
+        _validate_evidence_section_completeness(outbound,documents=documents,graph_rows=graphs,guard_rows=guards)
     actual=["project_owned_frozen_benchmark_questions"]
     if any(m["role"]=="system" for m in messages):actual.append("benchmark_system_and_answer_contract_prompts")
     if arm=="production_full" and facts:actual.append("case_bound_synthetic_facts")
@@ -1551,6 +1765,82 @@ def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
         sanitized[key]=[{k:v for k,v in record.items() if k not in private} for record in sanitized[key]]
     return {"instructions":instructions,"user_text":user,"sanitized_envelope":sanitized,
             "payload_classes":actual}
+
+
+def _validate_render_bound_outbound(envelope, *, authorization, artifact_contract,
+        suite_case_contract, static_prompt_contract, expected_candidate_output_sha256,
+        expected_phase, expected_arm, messages):
+    from agronomy_agent.benchmark_render_provenance import (
+        ARTIFACT_SCHEMA, ENVELOPE_SCHEMA, KINDS, build_records,
+    )
+    if artifact_contract.get("schema_version") != ARTIFACT_SCHEMA:
+        raise CodexAppServerError("render-bound envelope requires its admitted artifact profile")
+    profile = artifact_contract["render_profile"]
+    _validate_canonical_header(envelope, authorization=authorization,
+        artifact_contract=artifact_contract, suite_case_contract=suite_case_contract,
+        static_prompt_contract=static_prompt_contract,
+        expected_candidate_output_sha256=expected_candidate_output_sha256,
+        expected_phase=expected_phase, expected_arm=expected_arm, messages=messages,
+        _schema_version=ENVELOPE_SCHEMA, _render_profile_sha256=profile["sha256"])
+    question = envelope["question_fragment"]
+    try:
+        expected = build_records(profile, eval_id=envelope["eval_id"],
+            phase=expected_phase, arm=expected_arm, messages=messages,
+            question=question, verifier_evidence_text=envelope.get("verifier_evidence_text"))
+    except (ValueError, KeyError, TypeError) as exc:
+        raise CodexAppServerError("render-bound source projection is invalid") from exc
+    for group in expected:
+        if envelope.get(group) != expected[group]:
+            raise CodexAppServerError("render-bound records differ from exact frozen message spans")
+    # Full templates prove public-source membership through the unchanged strict
+    # validator. Only actual transmitted prefixes count toward delivery bounds.
+    for group, records in expected.items():
+        for record in records:
+            identity = record["render_provenance"]["record_id"]
+            template = profile["records"][identity]
+            _validate_egress_records({group: [template["full_record"]]},
+                artifact_contract["base_artifact_contract"], question)
+    documents, graphs, guards = (expected[name] for name in
+        ("selected_document_excerpts", "graph_evidence", "governed_guard_notes"))
+    def occurrence_count(record):
+        return len(record["render_provenance"]["spans"])
+    if (sum(occurrence_count(r) for r in documents) > _MAX_SELECTED_DOCUMENT_EXCERPTS
+            or sum(occurrence_count(r) for r in graphs) > _MAX_GRAPH_EVIDENCE_ROWS
+            or sum(len(r["content_fragment"])*occurrence_count(r) for r in documents) > _MAX_SELECTED_DOCUMENT_CHARS
+            or sum(len(r["evidence_fragment"])*occurrence_count(r) for r in graphs) > _MAX_GRAPH_EVIDENCE_CHARS
+            or sum(len(r["outbound_fragment"])*occurrence_count(r) for r in guards) > _MAX_GUARD_NOTE_CHARS):
+        raise CodexAppServerError("render-bound actual source delivery exceeds its bound")
+    # Mask entire independently validated occurrences, including their headers.
+    # A unique nonempty bullet preserves section discovery across source PDF
+    # newlines. Any remaining structured record is necessarily unbound, even
+    # when its text duplicates the header of a bound record.
+    sentinel = "- BOUND_SOURCE_" + envelope["outbound_messages_sha256"]
+    if any(sentinel in m["content"] for m in messages):
+        raise CodexAppServerError("render-bound completeness sentinel collision")
+    masked = [m["content"] for m in messages]
+    spans = [span for records in expected.values() for record in records
+        for span in record["render_provenance"]["spans"]]
+    for span in sorted(spans, key=lambda item: (item["message_index"], item["start"]), reverse=True):
+        index, start, end = span["message_index"], span["start"], span["end"]
+        fragment = messages[index]["content"][start:end]
+        masked[index] = masked[index][:start] + "\n".join(sentinel for _ in fragment.split("\n")) + masked[index][end:]
+    if expected_phase == "verification":
+        prefix = f"USER QUESTION\n{question}\n\nALLOWED EVIDENCE\n"
+        discovery = envelope["verifier_evidence_text"].strip()
+        for span in sorted(spans, key=lambda item: item["start"], reverse=True):
+            a, b = span["start"]-len(prefix), span["end"]-len(prefix)
+            fragment = envelope["verifier_evidence_text"].strip()[a:b]
+            discovery = discovery[:a] + "\n".join(sentinel for _ in fragment.split("\n")) + discovery[b:]
+    else:
+        discovery = "\n\n".join(masked)
+    discovered = _declared_evidence_section_lines(discovery)
+    discovered["document"].extend(line.strip() for line in discovery.splitlines()
+        if line.startswith("Source: "))
+    for kind, lines in discovered.items():
+        if any(line != sentinel for line in lines):
+            raise CodexAppServerError("render-bound envelope has unbound " + kind + " source lines")
+    return _finalize_canonical_outbound(envelope, messages=messages,
+        documents=documents, graphs=graphs, guards=guards, check_completeness=False)
 
 
 def _validated_suite_case_contract(
@@ -1650,6 +1940,18 @@ def _validated_static_prompt_contract(
 def _validated_artifact_contract(contract: Mapping[str, Any] | None) -> dict[str, Any]:
     if not isinstance(contract, Mapping):
         raise ValueError("Codex App Server benchmark generation requires an artifact contract")
+    from agronomy_agent.benchmark_render_provenance import ARTIFACT_SCHEMA, checked_profile
+    if contract.get("schema_version") == ARTIFACT_SCHEMA:
+        if set(contract) != {"schema_version", "base_artifact_contract", "render_profile", "sha256"}:
+            raise ValueError("render-bound artifact contract fields differ")
+        if contract.get("sha256") != _sha256(_canonical_json({k:v for k,v in contract.items() if k != "sha256"})):
+            raise ValueError("render-bound artifact contract hash differs")
+        base = contract["base_artifact_contract"]
+        if not isinstance(base, Mapping) or base.get("schema_version") != BENCHMARK_EGRESS_ARTIFACT_CONTRACT_SCHEMA:
+            raise ValueError("render-bound artifact contract requires a strict V1 public inventory")
+        _validated_artifact_contract(base)
+        checked_profile(contract["render_profile"], base_artifact_contract=base)
+        return json.loads(_canonical_json(contract))
     expected_keys = {
         "schema_version",
         "sha256",
@@ -1930,9 +2232,18 @@ def _validate_outbound_envelope(
     expected_arm: str,
     messages: Sequence[Mapping[str, str]],
 ) -> dict[str, Any]:
+    from agronomy_agent.benchmark_render_provenance import ENVELOPE_SCHEMA as RENDER_BOUND_ENVELOPE_SCHEMA
+    from agronomy_agent.benchmark_render_provenance import ARTIFACT_SCHEMA as RENDER_BOUND_ARTIFACT_SCHEMA
+    if (artifact_contract.get("schema_version") == RENDER_BOUND_ARTIFACT_SCHEMA) != (envelope.get("schema_version") == RENDER_BOUND_ENVELOPE_SCHEMA):
+        raise CodexAppServerError("render-bound envelope and artifact authority versions differ")
     canonical=suite_case_contract.get("schema_version")==CANONICAL_SUITE_SCHEMA
-    if canonical != (envelope.get("schema_version")==CANONICAL_ENVELOPE_SCHEMA):
+    if canonical != (envelope.get("schema_version") in {CANONICAL_ENVELOPE_SCHEMA, RENDER_BOUND_ENVELOPE_SCHEMA}):
         raise CodexAppServerError("envelope and suite authority versions differ")
+    if envelope.get("schema_version") == RENDER_BOUND_ENVELOPE_SCHEMA:
+        return _validate_render_bound_outbound(envelope, authorization=authorization,
+            artifact_contract=artifact_contract, suite_case_contract=suite_case_contract,
+            static_prompt_contract=static_prompt_contract, expected_candidate_output_sha256=expected_candidate_output_sha256,
+            expected_phase=expected_phase, expected_arm=expected_arm, messages=messages)
     if envelope.get("schema_version") == CANONICAL_ENVELOPE_SCHEMA:
         return _validate_canonical_outbound(envelope, authorization=authorization,
             artifact_contract=artifact_contract, suite_case_contract=suite_case_contract,
@@ -2334,6 +2645,10 @@ class CodexAppServerGenerator:
             suite_case_contract,
             benchmark_suite_sha256=benchmark_suite_sha256,
         )
+        from agronomy_agent.benchmark_render_provenance import ARTIFACT_SCHEMA as RENDER_BOUND_ARTIFACT_SCHEMA
+        if (self.expected_artifact_contract["schema_version"] == RENDER_BOUND_ARTIFACT_SCHEMA
+                and self.expected_suite_case_contract["schema_version"] != CANONICAL_SUITE_SCHEMA):
+            raise ValueError("render-bound artifacts require a canonical suite")
         self.expected_suite_case_contract_sha256 = self.expected_suite_case_contract["sha256"]
         self.expected_static_prompt_contract = _validated_static_prompt_contract(
             static_prompt_contract
@@ -2437,8 +2752,13 @@ class CodexAppServerGenerator:
         self._attempt_id=getattr(self,"_attempt_id",0)+1
         evidence={"attempt_id":self._attempt_id,"phase":self.egress_phase,"arm":self.benchmark_arm,
             "eval_id":envelope.get("eval_id") if isinstance(envelope,Mapping) else None,
-            "state":"pre_dispatch","submitted":False}
+            **_new_provider_attempt()}
         try:
+            # A reused adapter can reject a new envelope before entering the
+            # client. Its fallback evidence must describe this attempt rather
+            # than the preceding completed thread/turn.
+            if self._client is not None:
+                self._client.last_attempt_evidence = _new_provider_attempt()
             evidence["envelope_sha256"]=_sha256(_bounded_protocol_json(envelope,1048576).decode("utf-8"))
             return self._generate_with_egress_impl(messages,envelope)
         except BaseException as exc:

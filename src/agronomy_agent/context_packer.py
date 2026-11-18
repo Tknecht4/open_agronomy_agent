@@ -13,17 +13,12 @@ from agronomy_agent.decision_route import build_decision_route_state
 from agronomy_agent.geographic_context import format_trusted_geographic_context
 from agronomy_agent.paths import repo_path
 from agronomy_agent.router import evidence_interpretation_kind
+from agronomy_agent.evidence_handshake import named_regional_product_matches
 
 
 DEFAULT_CONTEXT_POLICY_PATH = "configs/context_policy_v1.yaml"
 DEFAULT_SOURCE_TYPE_BUDGETS = {"applied_guidance": 4, "boundary": 2, "regional_environment": 2, "ontology": 1}
 USER_FIELD_CONTEXT_KEYS = ("crop_current", "region_text", "province_state", "management_notes")
-_AAFC_CROP_HEALTH_PRODUCT_RE = re.compile(
-    r"(?:\baafc\b.{0,100}\b(?:crop[- ]health (?:index|indices)|crop stress index|crop development stage|growth[- ]stage raster)\b|"
-    r"\b(?:crop[- ]health (?:index|indices)|crop stress index)\b|"
-    r"\bcrop development stage (?:layer|raster|product|values?)\b|\bgrowth[- ]stage raster\b)",
-    re.IGNORECASE,
-)
 
 
 def estimate_tokens(text: str) -> int:
@@ -89,7 +84,7 @@ class _RankedDocCandidate:
 
 
 class ContextPacker:
-    """Versioned context ordering and budget enforcement for Phase 5 experiments."""
+    """Ordered, bounded runtime evidence with explicit omission receipts."""
 
     def __init__(self, policy: dict[str, Any]) -> None:
         self.policy = policy
@@ -211,10 +206,10 @@ class ContextPacker:
             ),
         )
         if context.tool_notes:
-            self._append(
-                sections,
-                "guard_summary",
-                "Guard notes:\n" + "\n".join(f"- {note.name}: {note.text}" for note in context.tool_notes),
+            self._append_complete_records(
+                sections, "guard_summary", "Guard notes:",
+                [(note.name, f"- {note.name}: {note.text}") for note in context.tool_notes],
+                budget_report=budget_report,
             )
         self._append_docs(
             sections,
@@ -228,8 +223,11 @@ class ContextPacker:
             hints = []
             for hit in context.graph_hits[: self._slot_limit("kg_vocabulary_hints", "max_items", 3)]:
                 neighbors = "; ".join(hit.neighbors) if hit.neighbors else "no direct neighbors"
-                hints.append(f"- {hit.name} ({hit.kind}): {hit.evidence} Related: {neighbors}.")
-            self._append(sections, "kg_vocabulary_hints", "Knowledge graph vocabulary hints:\n" + "\n".join(hints))
+                hints.append((hit.node_id, f"- {hit.name} ({hit.kind}): {hit.evidence} Related: {neighbors}."))
+            self._append_complete_records(
+                sections, "kg_vocabulary_hints", "Knowledge graph vocabulary hints:", hints,
+                budget_report=budget_report,
+            )
         if context.coverage_checklist and bool(self.policy.get("include_internal_answer_audit", False)):
             self._append(
                 sections,
@@ -249,6 +247,11 @@ class ContextPacker:
             ),
         )
         budgeted = self._fit_budget(sections)
+        packed_slots = {section.slot for section in budgeted}
+        for slot, record_budget in budget_report.get("record_budget", {}).items():
+            selected = record_budget["selected_ids"]
+            record_budget["packed_ids"] = selected if slot in packed_slots else []
+            record_budget["dropped_for_total_budget_ids"] = selected if slot not in packed_slots else []
         text = "\n\n".join(section.text for section in budgeted if section.text)
         return PackedContext(
             version=self.version,
@@ -393,7 +396,7 @@ class ContextPacker:
             evidence_roles=evidence_roles,
             max_tokens_override=(
                 int(self._slots.get("regional_context", {}).get("named_product_max_tokens") or 1100)
-                if _AAFC_CROP_HEALTH_PRODUCT_RE.search(question)
+                if any(named_regional_product_matches(question, doc) for doc in regional_docs)
                 else None
             ),
         )
@@ -615,6 +618,28 @@ class ContextPacker:
             source_ids=tuple(source_ids),
             max_tokens_override=max_tokens_override,
         )
+
+    def _append_complete_records(
+        self, sections: list[ContextSection], slot: str, header: str,
+        records: list[tuple[str, str]], *, budget_report: dict[str, Any],
+    ) -> None:
+        """Keep a record's conditions together, or disclose its omission."""
+        limit = int(self._slots.get(slot, {}).get("max_tokens") or self.max_context_tokens)
+        kept: list[str] = []
+        identities: list[str] = []
+        dropped: list[str] = []
+        for identity, text in records:
+            candidate = header + "\n" + "\n".join([*kept, text])
+            if estimate_tokens(candidate) > limit:
+                dropped.append(identity)
+            else:
+                kept.append(text)
+                identities.append(identity)
+        budget_report.setdefault("record_budget", {})[slot] = {
+            "max_tokens": limit, "selected_ids": identities, "dropped_ids": dropped,
+        }
+        if kept:
+            self._append(sections, slot, header + "\n" + "\n".join(kept), source_ids=tuple(identities))
 
     def _append(
         self,

@@ -34,7 +34,7 @@
       "reason": "Source-exact active offline corpus shard.",
       "rights_status": "project_authored",
       "runtime_eligibility": "context_only",
-      "sha256": "6a3eb04006b4dafdc9234cda826dd3de54397bb655b67394cac4300c6a4159e2",
+      "sha256": "ad0909927171c516c77ab6779e4c0c0a0641150f1361cf74ae329fb86e313b0c",
       "shard_policy_role": [
         "context_only"
       ],
@@ -811,7 +811,7 @@
   "composite_release": {
     "profile_id": "offline-agronomy",
     "active_store": "data/derived/rag/offline_agronomy/active/store_manifest.json",
-    "active_store_sha256": "48ec600b95132c412b5901c9af56e0cef3fae52fa71f47eb48a209cc5580dc0d",
+    "active_store_sha256": "8dfed922ce1acbf8c658383d1aff54f94feecb14ca7ac41ae14267bb7d4afe46",
     "us_reference_store": "data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json",
     "us_reference_store_sha256": "03db2d31b97f2cdef876b7f87a6500b3bf10bb36af1d930067fa0fc4edec2ead",
     "canadian_authority_priority": true,

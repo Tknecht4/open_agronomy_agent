@@ -288,3 +288,29 @@ def test_truncated_column_index_does_not_hide_alias_collision(tmp_path):
         if stem == "Show rows":
             assert "partial preview" in results[0].answer
     store._conn.close()
+
+
+@pytest.mark.parametrize('question', [
+    'My uploaded field intersects AAFC Soil Erosion Risk 2021. What does that mean?',
+    'What does the average yield in my uploaded map mean for crop planning?',
+    'My uploaded boundary has a total area. Does that prove planted area?',
+    'The uploaded field has distinct zones. What observations should I collect?',
+])
+def test_uploaded_spatial_context_and_statistic_mentions_do_not_claim_table_operations(imported_context, question):
+    for context in (None, imported_context):
+        plan = plan_tools(question, field_context=context)
+        assert not any(row.tool_id == 'field_table_query' for row in plan.invocations)
+
+
+def test_explicit_mapped_column_preview_keeps_its_existing_owner(imported_context):
+    plan, results = plan_and_execute_tools('Show yield_kg_ha from my uploaded data', field_context=imported_context)
+    assert plan.status == 'ready' and results[0].tool_id == 'field_table_query'
+
+
+@pytest.mark.parametrize('question', [
+    'What is the total effect of uploaded soil maps on a recommendation?',
+    'Show the unique advantages of my uploaded map',
+    'What is the mean difference between my uploaded map and actual field measurements?',
+])
+def test_statistic_head_without_a_table_operand_and_scope_does_not_claim_missing_import(question):
+    assert plan_tools(question).status == 'not_applicable'

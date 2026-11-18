@@ -145,12 +145,71 @@ without retry and cannot turn unknown execution into a successful observation.
 
 ### Provider diagnostics
 
-The optional Python-only App Server integration is a nonqualifying diagnostic
-boundary, exercised with fake providers. It does not activate an HTTP route,
-change the active model, or add a supported release-runner profile. Native
-revision, editor and termination requirements remain unchanged.
+Packed public excerpts can retain PDF line breaks. Their complete rendered
+source prefix, corpus membership and rights are checked before hosted dispatch;
+a source ID mentioned in a planning note is not the excerpt. Guard notes and
+graph hints are packed as complete records within their slot budgets, with
+omitted identities recorded in the context budget report. Dropping a record
+does not establish its fact or remove an application authority requirement.
+
+The draft quantity screen distinguishes valid calendar dates from scalar
+amounts for explicit calendar-event questions. ISO and English named-month
+forms may identify the same full date; changing a date, inventing a year or
+reusing date digits as a physical quantity is not authorized by that match.
+An explicitly requested fictional fertilizer illustration has a separate,
+bounded internal check for labelled mass fractions, nutrient identity,
+consistent mass/area bases and arithmetic. It does not validate a real product,
+choose a field target or provide a general algebra proof. Other claims still
+need their normal evidence and authority checks.
+
+The production calculator separately handles supplied P/K elemental-to-oxide
+basis conversions, two-term apparent nutrient balances, and liquid-product
+totals. It checks named inputs and units instead of accepting a derived number
+because it resembles a source number. Conflicting bases, factors or operands
+need clarification. These results retain their arithmetic-only boundary, and
+the final renderer replays the current calculation before preserving its
+answer. An apparent balance is not a measured soil change; product quantity
+is not carrier volume or permission to apply. Other unsupported arithmetic
+remains outside this bounded capability.
+
+Mechanism and differential-evidence explanations use whole-request intent.
+A topic word alone does not require a field-management checklist. Actual field
+diagnosis, product permission and follow-up action requests retain their
+evidence requirements. Targeted repairs and deterministic replay are software
+evidence; new model behavior requires the complete source-bound campaign.
+
+The optional App Server integration is a nonqualifying diagnostic boundary.
+An explicitly selected version-3 registry
+(`open_agronomy_agent.release_evaluation_registry.v3`) can wire
+`codex_app_server` into the canonical runner's existing profiles for
+`raw_model` and `production_full`. The default version-1 registry and its
+native MLX execution are unchanged. The diagnostic registry requires four
+content-pinned controls under `external_generation`: `authorization`, `suite`,
+`artifacts` and `static_prompts`. Each declares a repository-relative `path`
+and `sha256`. Controls bind the actual source and complete case inventory,
+are frozen before dispatch, and are rechecked before later cells. Effective
+per-trial configuration hashes select separately bound grants.
+
+This does not activate an HTTP route, select a new product model, grant egress
+authority, or qualify native provider weights. A hosted revision must be
+explicitly `null`. An attributed provider return is recorded separately from
+native model eligibility; missing effective output limits, terminal evidence
+and weight identity remain unknown. Native revision, editor and termination
+requirements remain unchanged. Lazy phase factories let valid deterministic
+bypasses avoid provider construction. A failed turn stops its dependent
+conversation, retaining the observed prefix instead of dispatching later turns
+without their antecedent.
 Retain application-message and transport-instruction hashes separately: the
 App Server text-only control also changes its raw-reference prompt recipe.
+
+The version-one canonical case contract binds the first question, supplied facts
+and exact compiled messages. Retained follow-up turns do not by themselves admit
+changed provider questions, history transcripts or updated facts. A raw history
+transcript also differs from the admitted single-user message shape; the provider
+client accepts one turn per instance. Deterministic product follow-ups may still
+complete locally. Extending hosted conversation coverage requires a versioned
+turn-aware contract, reviewed per-turn payloads, fresh single-use clients and a
+new whole hosted assessment. A contract rejection is not model refusal evidence.
 
 A live diagnostic needs fresh source-bound authorization for the exact cases,
 compiled prompts, synthetic facts, selected licensed evidence and verification
@@ -158,6 +217,47 @@ payloads. Legacy authorizations do not grant the current production recipe or
 additional payload classes. Private records, controller references and whole
 corpora are excluded. Deterministic bypasses remain local and do not require
 provider construction. A rejected egress contract is a failed observation.
+
+A canonical diagnostic can opt into
+`open_agronomy_agent.render_bound_artifact_contract.v1` and the corresponding
+version-2 egress envelope to describe an unchanged historical rendering. The
+wrapper retains the strict public artifact inventory and adds a frozen,
+source-bound render profile compiled through the actual product path. The
+consumer checks public source membership, renderer bytes, document policy,
+graph neighbors, exact message/evidence hashes and every delivered occurrence.
+It accepts complete renderings or exact prefixes without changing model inputs;
+character and row bounds charge every occurrence. Version-1 envelopes retain
+their existing strict validation and cannot downgrade a render-bound contract.
+
+Delivery provenance records the actual source-body prefix length. A header-only
+fragment has zero delivered source characters and receives no source-body
+evidence credit. An incomplete header has controller-inferred identity only:
+graph fragments require the original ordered, budget-bound slot; document and
+guard fragments require a unique header in the original selected context.
+Ambiguous or unframed fragments fail. Complete source text and profile templates
+stay in the controller; sanitized receipts retain hashes, positions and delivery
+states. This mechanism grants no additional payload class, first-turn or
+follow-up scope, scoring authority, or native model qualification. A comparison
+using different transport versions must disclose that difference and retain the
+original failed attempts as pipeline evidence.
+
+Check the actual account transport with a neutral generation before a complete
+collection; a catalog listing or thread handshake alone is insufficient. An
+isolated command may be pinned in the private model configuration under
+`app_server_command`. The returned instruction-source list must remain empty;
+do not allow global instructions merely to make a run proceed.
+
+Current App Server `turn/start` responses contain only a turn. When an explicit
+thread binding is absent there, a matching `turn/started` notification and the
+matching completed notification are required before accepting its output.
+Settings notifications must retain the selected model, requested effort,
+dedicated working directory, read-only network-disabled sandbox and no active
+permission profile. Only the known warnings for intentionally denied global
+instructions and disabled Code Mode are admitted and recorded. Unknown warnings,
+foreign events, changed authentication and forbidden tool items, including
+terminal-only items, still fail. Attributed moderation and sparse account quota
+metadata remain provider observations; they do not grant application authority
+or establish a category meaning, effective output cap or available quota.
 Model-bound typed-tool results remain unsupported and are rejected; admitting
 them requires a separately reviewed payload contract and authorization.
 
@@ -169,6 +269,39 @@ unknown. Local process closeout does not establish remote cancellation. Record
 every draft and editor attempt, including failed and unknown outcomes, without
 automatic retries. Such diagnostics cannot satisfy native qualification or
 support a matched three-model performance claim.
+
+Current adapter and client invocations reset attempt evidence before local
+validation. A predispatch rejection must not inherit an earlier call's submitted
+state or thread/turn identifiers. Genuine current initialization and transport
+evidence remains attached to its own failure. Historical records retain their
+original bytes; qualify any stale-attempt metadata with source-order evidence
+rather than rewriting it or counting it as a new provider call.
+
+### Complete comparison campaigns
+
+A campaign must declare its complete model/arm/trial matrix and freeze cases,
+controller rubrics, scoring policies, source, model revisions and budgets before
+generation. Run every declared cell and all six components for each canonical
+run. Preserve blocked, failed, interrupted and unknown outcomes. A case limit or
+a targeted regression panel cannot stand in for the full declared comparison.
+
+The retained 560-case comparison contains 36 harness scenarios, 256 successor
+development cases, 240 scientific-reference tasks and 28 CCA-reference tasks.
+The scientific and CCA references remain project-authored and pending expert
+alignment. With three configured backends, raw/full arms and two trials it
+contains 6,720 planned observations, including explicit synthetic fault controls.
+This is an exposed development instrument, not an independent holdout.
+Additional refusal/crop-scope regressions use a separately versioned cohort and
+policy, preserving the original cohort's denominator and weights. The repository
+README links the current campaign's reviewed record, whose status distinguishes
+planned work from completed observations.
+
+Keep reference answers, rubric text and numeric oracles in the controller;
+inspect the actual `worker_case` projection before dispatch. A Colab controller
+and its model workers remain separate boundaries. No controller gold enters
+runtime retrieval, generation prompts or training. Keep private overlays and
+grower records disabled. GPU observations describe their recorded environment;
+hosted-provider results do not establish native Mac timing or immutable weights.
 
 Larger finite output ceilings require a new frozen execution configuration and
 budget. They do not establish information retention or answer quality. Review
@@ -242,6 +375,12 @@ time before launching a worker, stops new dispatch after a required failure,
 known length failure or required unknown evidence, and contains its owned process
 groups on cancellation. Attempted, unledgered and unstarted cells remain distinct;
 unstarted cells are not fabricated failed observations.
+
+A child can exit successfully after an OS-limited short write. A captured log
+that reaches its file ceiling therefore returns `file_hardcap_reached` rather
+than establishing complete output. The retained limited bytes are not repaired
+or treated as the full original log. The dispatch receipt records the effective
+ceiling, including a stricter inherited OS hard limit.
 
 Retain `run-clock.json`, `closeout.json`, `terminal-closeout.json` and any expected
 `closeout-failure.json` with the ordinary run artifacts. The terminal seal binds
@@ -341,6 +480,15 @@ applicability remain separate dimensions. Tool correctness is reported
 separately; an explicitly inapplicable manual/no-attempt observation differs
 from an unassessable attempt or missing evidence.
 
+The release report's top-level `metrics.numeric_accuracy` and
+`counts.numeric_required` summarize `production_full` only. Missing numeric-score
+checks span all arms; lane/family numeric summaries pool them. Use arm-filtered
+observation records or arm-specific model-metric groups for comparisons.
+
+Keep the instruments distinct: recorded `numeric_tolerance` scores and rubric
+`numeric_unit_accuracy` labels can cover different cases. A finite parser zero
+is an observed proxy score, not a missing value or a diagnosis of the error.
+
 Supply an explicit versioned project policy for domain/dimension weights,
 failure, truncation, missingness and sensitivity profiles. Hash equality binds
 the policy to a plan but does not prove prospective preregistration. Unknown
@@ -349,6 +497,22 @@ safety remain visible; descriptive aggregates grant no promotion or ranking
 authority. Contrasts require recorded matching facts, criterion masks and cohort,
 with configuration/source/runtime and each arm's recipe identities retained.
 Hardware and timing comparability need their own evidence.
+
+For each observation, exclude only outcome dimensions explicitly marked
+`not_applicable` by the rubric/arm mask, and normalize the declared weights over
+the remaining dimensions. A non-numeric explanation therefore does not need a
+numeric label. Missing applicable labels or rubrics remain unknown; an empty
+set of applicable weighted outcomes does not create a success. Failure,
+truncation, termination, safety and fixed domain/cluster denominators retain
+their separate rules. Matching criterion masks remain required for contrasts.
+
+Earlier scorer code required every global policy dimension even when the rubric
+marked one inapplicable. Reports from that implementation can contain artificial
+unknown composites. Retain their original code and output identities, then run
+the maintained analyzer into a separately identified derived directory after
+the repair. Record the changed evaluator mechanics explicitly; unchanged policy
+bytes do not mean the historical implementation used this normalization.
+Do not replace labels, references or genuine unknowns to obtain a complete score.
 
 `configs/model_scoring_development_v1.json` supplies a provisional policy for
 the ten exposed agronomic development domains. Each domain has weight 0.1;
@@ -365,7 +529,7 @@ and truncated observations receive a descriptive outcome penalty of zero,
 while their semantic and safety labels can remain unknown. Report fatal failures
 and missing safety review separately; neither a high average nor complete
 synthetic labels authorize a ranking, rollout or promotion. Complete scores
-require every planned weighted domain/cluster/label or the declared execution
+require every planned applicable weighted domain/cluster/label or the declared execution
 penalty. Contrasts additionally require matching facts, criterion masks and
 recorded compatible conditions. This policy does not admit cases, run a model,
 or replace the release gate.
@@ -430,6 +594,12 @@ plans remain controller-only. They have no automatic public projection. Use a
 new output directory outside every immutable input directory. A later ordinary
 reanalysis does not silently inherit these optional criterion labels.
 
+Each model-metric input file is limited to 2 MiB. Check the complete export
+before starting reanalysis. Unlike `--reviews`, `--criterion-reviews` labels
+are not inherited or accumulated from parent analyses: each invocation needs
+the complete intended label set. Separate segment analyses retain only that
+invocation's labels and leave the remaining eligible labels unknown.
+
 Workspace feedback aggregation is a review summary, not executed regression
 evidence. An ideal answer or approved feedback cannot qualify a rollout-review
 gate. Read actual execution status and source-bound reports separately.
@@ -489,6 +659,170 @@ transport, and uses offline model loading after explicit snapshot provisioning.
 The recorded GPU environment is its performance reference; it does not measure
 native Mac latency.
 
+Keep the pinned CUDA 12 runtime headers installed with the CUDA 12 MLX extra.
+Without them, MLX can fall back to Colab's system CUDA 13 headers: a small
+matrix multiplication may pass while model kernel compilation fails. Validate
+an actual pinned-model generation before dispatching the full suite. The
+canonical CLI and child environment explicitly disable private knowledge with
+`AGRONOMY_AGENT_PRIVATE_KNOWLEDGE=0`; the external envelope independently checks
+that boundary before any outbound request.
+
 The offline retrieval scorer reports source recall separately from retrieval
 policy and authority compliance. A configured compliance threshold cannot pass
 if any case covered by that threshold has unknown compliance.
+
+## Revised seed-establishment contract
+
+The current default registry selects `release_harness_v2.jsonl` and capability
+conformance v5. The revised seed fixture explicitly declares survival after
+germination; its successor case identity and provenance distinguish it from
+the original v1 case. Existing v1 case files and conformance v1–v4 remain intact.
+The calculator's structured seed inputs require `survival_basis`: `seeds_sown`
+uses overall emergence once, while `germinated_seeds` additionally requires
+`germination_pct`. Both imperial methods retain their stated conversion method.
+
+Frozen full-comparison cases retain their original questions, gold, masks and
+weights. Some historical seed questions leave the denominator unspecified while
+their numeric reference assumes conditional survival. Preserve those mechanical
+results and annotate the reference ambiguity separately. A correct overall
+emergence calculation or an appropriate denominator question must not be called
+an agronomic error solely because it differs from that unstated assumption.
+The original mechanical report and any later scientific triage remain distinct.
+
+The historical v2 synthetic contract executor also records current operation
+versions individually: current seed arithmetic is v5, while unchanged legacy
+operations retain v1. A declared `operation_versions` map must cover every
+declared operation with a nonempty version; malformed maps fail negotiation.
+These implementation identities change the system fingerprint, not the frozen
+construct or cohort. The executor records actual planner clarification fields,
+including the unstated seed denominator in two old wheat cases. This remains
+synthetic trace QA and cannot establish agronomic performance.
+
+The v6 planner wrapper supports conditional seed-survival clarification records in
+the current product path. These contain two checked v5 arithmetic children,
+retain ASK/PARTIAL and choose no rate. Their semantics are outside the historical
+frozen-v1 construct. The version-2 **synthetic contract executor** is restricted
+to executing ready calculations and recording current planner clarification
+states; it does not execute and discard conditional scenarios. The frozen
+construct, validator, metric identity, cases and gold stay unchanged. Qualify the
+current scenario feature through persisted production/preview/follow-up tests
+and the complete canonical release assessment, not a historical V2 fixture
+score. Tool implementation receipts include the scenario module.
+
+
+### Supplied-model calculations and transport maintenance
+
+The current calculator contract is
+`configs/benchmark_capability_conformance_v5.json` (46 structured operations).
+Prior conformance contracts retain their original bytes and cannot qualify the
+expanded implementation. Natural requests use bounded operand and whole-request
+ownership; structured operation coverage does not imply every phrasing is parsed.
+The tools README describes material bases and interpretation limits.
+
+App Server writes use the platform selector, including descriptors above the
+`select()` limit. Explicit close unregisters the exit callback, releases all
+owned pipes, and bounds reader joins even when termination or waiting fails.
+Failure to reap still propagates; receipts distinguish direct-process reaping,
+unresolved reader state and unknown remote cancellation. Failed or interrupted
+historical judgments remain unknown under their frozen retry policy. A later
+transport repair cannot turn them into successful original observations.
+
+
+Bounded stewardship questions distinguish current-label PPE sources, general
+recommendation safety checks and efficacy versus registration/residue evidence
+from requests to select or authorize a product. The source rationale is the
+[EPA applicator core manual](https://nepis.epa.gov/Exe/ZyPURL.cgi?Dockey=P1017DIK.txt)
+and [Health Canada residue-limit explanation](https://www.canada.ca/en/health-canada/services/consumer-product-safety/pesticides-pest-management/public/protecting-your-health-environment/pesticides-food/maximum-residue-limits-pesticides/how-they-are-set.html).
+They do not provide the current label for a particular proposed use.
+
+Stored-grain probe monitoring is distinct from field-edge scouting and treatment
+selection. [Manitoba's monitoring guidance](https://gov.mb.ca/agriculture/crops/insects/prevention-and-management-of-insects-and-mites-in-farm-stored-grain.html)
+uses grain temperature to vary checking intervals. The software's bounded method
+preserves that scope and count-interpretation limits; it does not invent a local
+interval or promote trap catches into a pesticide threshold. The active retrieved
+bundle still controls which numerical source facts can support a model answer.
+
+Task ownership also controls completeness checks. An explicitly unidentified
+activity needs clarification; a model-validation or causal explanation must not
+inherit an unrelated irrigation or harvest checklist. Supplied endpoints of an explicitly named uncertainty interval
+may be restated separately on the same unit basis. This does not admit interior
+values, altered signs or conversions as evidence, or establish the statistical
+interpretation by itself. Appended operations retain ordinary evidence checks.
+
+Verification also preserves useful content: an accepted edit cannot discard a
+previously satisfied observation-method facet while repairing a separate claim.
+Explicit report-issued dates retain their role alongside collection and analysis
+dates. Inspecting roots for visible decay does not itself assert a disease;
+named diseases, confirmed findings and causal claims still require support.
+
+Symptom investigation and preventive disease planning have different evidence
+needs. [Manitoba's potato late-blight guidance](https://www.gov.mb.ca/agriculture/crops/plant-diseases/late-blight-potatoes.html)
+describes preventive protection informed by forecasting before infection, without
+an economic threshold. The project context therefore asks for diagnosis where
+relevant, crop-specific risk and current local guidance for prevention, and
+thresholds where applicable. This does not select a product or rate, establish
+current registration, or replace the label for the proposed crop and target.
+
+The authored potato decision method follows the same distinction: an alert is
+neither a blanket instruction to spray every field nor merely a scouting cue.
+It can inform preventive planning using applicable local risk guidance, crop
+susceptibility, weather, canopy growth and prior protection. A fresh lesion
+sample belongs to an affirmative symptom investigation; unknown, denied or
+conditional symptoms cannot create that observation. No fixed product, rate or
+interval is supplied by this method.
+
+Whole-request analytical scope binds a request head to its actual object and
+remaining clauses. Population sampling, measurement comparisons, comparator
+analysis, forecast-versus-observation bookkeeping and economic concepts must
+not inherit an incidental stress, irrigation or nutrient-rate checklist.
+Estimating a dose **from** population counts is still a dose request. Earlier
+commands, embedded instructions and unknown additional tasks retain their own
+checks. An independent output check rejects unasked application instructions
+in these nonauthorizing answers, including instructions without a numeric rate.
+Source tests exercise a finite grammar; they do not establish universal natural
+language coverage.
+
+Evidence selection also binds the named product and requested facet to passage
+content. Shared publisher names, titles and tags do not make an unrelated
+specification or metadata page decisive. For the
+[AAFC Crop Health Indices](https://open.canada.ca/data/en/dataset/84d1ff0d-4689-466c-b792-f860a1fb1603),
+the retained specification distinguishes model inputs, crop-family models and
+stage-code meanings. Stage-code explanations need not repeat an unrequested
+resolution. A claim that these products are remotely sensed must not override
+supplied station-temperature, precipitation and VSMB source evidence. This is
+a product-specific source check, not a claim that all remote-sensing statements
+are verified.
+
+Crop tolerance and registered use remain separate evidence roles. The bounded
+trait explanation checks current crop/trait identity and the actual applicable
+product label; it does not infer permission from biological tolerance. See
+[Health Canada's registered-product and label guidance](https://www.canada.ca/en/health-canada/services/about-pesticides/are-pesticides-safe.html)
+and the separate
+[crop-variety registration guidance](https://inspection.canada.ca/en/plant-health/plant-varieties/variety-registration/registration-procedures/guidance-document).
+Held application decisions can still include reviewed pest-sampling or
+integrated weed-management methods. Grasshopper density uses a defined ground
+area rather than automatically inheriting a sweep or plant count; the
+[Saskatchewan sampling guide](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/insects/economic-thresholds-of-insect-pests)
+distinguishes in-field sampling from roadside observations. No generic numerical
+threshold is activated by this method.
+
+The current calculator contract is v5, with planner v6 and the v5 arithmetic
+selector. Its 46 structured operations include `allowable_water_depletion`:
+supplied total available water in millimetres multiplied by a supplied depletion
+fraction. An explicitly stated percentage is converted to a fraction; missing,
+conflicting, invalid or unsupported inputs are not filled from a crop table.
+[FAO-56 chapter 8](https://www.fao.org/4/x0490e/x0490e0e.htm) supplies the
+relationship RAW = p × TAW when p denotes the no-stress depletion fraction.
+An arbitrary management-allowed depletion limit can differ from physiological
+RAW. The tool reports depletion allowance under the supplied assumption,
+not current measured depletion, remaining water, an irrigation date
+or gross application depth. The accompanying explanation retains the dependence
+on crop, growth stage, soil and evaporative demand without selecting p.
+
+One shared whole-request metric area/areal-mass grammar also feeds the existing
+`field_product_total` operation and its completeness check. It computes mass on
+the supplied kg/ha basis without inferring a product analysis or converting
+nutrient mass into product mass. Extra quantities, basis qualifiers, compound
+units and additional requests cannot be silently consumed. The earlier v1–v4
+conformance files remain frozen; v5 is a new deterministic conformance contract,
+separate from the 608-case model assessment and its scientific interpretation.

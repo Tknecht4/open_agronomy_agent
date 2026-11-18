@@ -249,13 +249,15 @@ def _validate_executor_semantic_profile(
             if (
                 not str(tool_id)
                 or not isinstance(declaration, Mapping)
-                or set(declaration)
-                != {
+                or set(declaration) not in ({
                     "implementation_version",
                     "family",
                     "operations",
                     "authority_roles",
-                }
+                }, {
+                    "implementation_version", "family", "operations",
+                    "authority_roles", "operation_versions",
+                })
             ):
                 reasons.append(f"tool_implementation_mapping_malformed:{tool_id}")
                 continue
@@ -265,6 +267,15 @@ def _validate_executor_semantic_profile(
             authorities = tuple(
                 str(value) for value in declaration.get("authority_roles") or ()
             )
+            operation_versions = declaration.get("operation_versions")
+            if "operation_versions" in declaration and (
+                not isinstance(operation_versions, Mapping)
+                or set(operation_versions) != set(operations)
+                or not all(isinstance(value, str) and value.strip()
+                           for value in operation_versions.values())
+            ):
+                reasons.append(f"tool_operation_versions_malformed:{tool_id}")
+                continue
             if (
                 not isinstance(family, Mapping)
                 or not str(declaration.get("implementation_version") or "")
@@ -283,6 +294,8 @@ def _validate_executor_semantic_profile(
                 "operations": list(operations),
                 "authority_roles": list(authorities),
             }
+            if operation_versions is not None:
+                normalized_tools[str(tool_id)]["operation_versions"] = dict(operation_versions)
     evidence_implementations = raw.get("evidence_implementations")
     normalized_evidence: dict[str, Any] = {}
     allowed_modalities = set(

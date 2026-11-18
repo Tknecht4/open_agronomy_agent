@@ -2770,6 +2770,37 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('combobox', { name: 'Saved conversations' })).toHaveValue('field-two')
   })
 
+  it.each([
+    { label: 'identical dates', titles: ['What seed rate should I use?', 'What seed rate should I use?'], timestamp: '2026-11-12T12:00:00Z' },
+    { label: 'missing dates and a suffix already in a title', titles: ['', 'General chat', 'General chat · Chat 1'], timestamp: undefined },
+    { label: 'invalid dates and a suffix already in a title', titles: ['', 'General chat', 'General chat · Chat 1'], timestamp: 'unknown' },
+  ])('distinguishes saved chats with $label while reopening each original conversation', async ({ titles, timestamp }) => {
+    const listed = titles.map((title, index) => ({
+      session_id: `chat-${index}`, title,
+      context: { field_conversation_key: index === 0 ? 'general' : `general:chat:${index}` },
+      turns_included: false, turns: [], created_at: timestamp,
+    }))
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, listed)
+    const baseImplementation = baseFetch.getMockImplementation()!
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const id = String(input).match(/^\/api\/sessions\/([^/]+)$/)?.[1]
+      const session = listed.find(item => item.session_id === id)
+      return session ? jsonResponse({ ...session, turns_included: true,
+        turns: [{ turn_id: `${id}-turn`, user_message: `Question ${id}`, answer: `Original answer ${id}`, trace: {} }],
+      }) : baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Original answer chat-0')).toBeInTheDocument()
+    const picker = screen.getByRole('combobox', { name: 'Saved conversations' })
+    const options = within(picker).getAllByRole('option').filter(option => (option as HTMLOptionElement).value.startsWith('chat-'))
+    expect(options).toHaveLength(titles.length)
+    expect(new Set(options.map(option => option.textContent)).size).toBe(titles.length)
+    for (const session of listed.slice(1).concat(listed[0])) {
+      fireEvent.change(picker, { target: { value: session.session_id } })
+      expect(await screen.findByText(`Original answer ${session.session_id}`)).toBeInTheDocument()
+    }
+  })
+
   it('ignores a delayed conversation detail after selecting another saved chat', async () => {
     const listed = [
       { session_id: 'slow', title: 'Slow general', context: { field_conversation_key: 'general' }, turns_included: false, turns: [] },
@@ -3638,6 +3669,8 @@ describe('production request-bound calculator Ask gate', () => {
     })
     render(<OpenAgronomyApp />)
     await screen.findByText('Model weights are not installed.')
+    expect(screen.getByText('Model optional for calculations')).toBeInTheDocument()
+    expect(screen.getByText('Enter a question to check local calculation support, or install a model for generated answers.')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Exact calculator request' } })
     const ask = screen.getByRole('button', { name: 'Ask' })
     await waitFor(() => expect(ask).toBeEnabled())
@@ -3647,7 +3680,7 @@ describe('production request-bound calculator Ask gate', () => {
     expect(screen.getByLabelText('Answer execution and origin')).toHaveTextContent(`${status === 'ready' ? 'Local tool result' : 'Local tool clarification'} · Model not used`)
     expect(screen.getByLabelText('Your question')).toHaveValue('')
     expect(screen.getByText('Next question readiness')).toBeInTheDocument()
-    expect(screen.getByText('Model setup required')).toBeInTheDocument()
+    expect(screen.getByText('Model optional for calculations')).toBeInTheDocument()
     const submission = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/turns/stream'))
     const payload = JSON.parse(String(submission?.[1]?.body))
     expect(payload.readiness_binding).toBe('a'.repeat(64))
@@ -3678,11 +3711,15 @@ describe('production request-bound calculator Ask gate', () => {
     const question = screen.getByLabelText('Your question')
     fireEvent.change(question, { target: { value: 'Old exact question' } })
     await waitFor(() => expect(resolveOld).toBeDefined())
+    expect(screen.getByText('Checking calculation support')).toBeInTheDocument()
+    expect(screen.queryByText('Model setup required')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
     fireEvent.change(question, { target: { value: 'Why are wheat leaves yellow?' } })
     await act(async () => resolveOld!(jsonResponse(readinessResponse(oldBody!))))
     expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
     expect(question).toHaveValue('Why are wheat leaves yellow?')
     await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/turn-readiness')).toHaveLength(2))
+    expect(await screen.findByText('Model setup required')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
   })
@@ -3781,6 +3818,7 @@ it('server calculator readiness cannot enable Ask for newly edited unsaved geome
   fireEvent.click(screen.getByRole('button', { name: 'Conversation' }))
   expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
   expect(screen.getByText('Save field changes before asking.')).toBeInTheDocument()
+  expect(screen.queryByText('Model setup required')).not.toBeInTheDocument()
   expect(screen.getByLabelText('Your question')).toHaveValue('Exact conversion for saved field')
   expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
 })
@@ -3887,22 +3925,34 @@ describe('production answer origin and publicity wording', () => {
     render(<OpenAgronomyApp />)
     await screen.findByText(turn.answer)
     expect(screen.getByLabelText('Answer execution and origin')).toHaveTextContent(label)
-    expect(screen.getByText('Model setup required')).toBeInTheDocument()
+    expect(screen.getByText('Model optional for calculations')).toBeInTheDocument()
     expect(screen.getByText('Next question readiness')).toBeInTheDocument()
     expect(JSON.stringify(turn)).toBe(before)
   })
 
-  it('never assigns an origin to pending stream text before the completed receipt arrives', async () => {
+  it('keeps setup notices and final-origin claims out of pending answers', async () => {
     const fetchMock = installFetchMock(), base = fetchMock.getMockImplementation()!
     let release!: (value: Response) => void
     const pending = new Promise<Response>(resolve => { release = resolve })
     const completed = publicityTurn('tool')
+    let streamRequested = false
+    let backgroundReadinessReturned = false
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/configs') return jsonResponse(missingModelConfig)
-      if (url === '/api/turn-readiness') return jsonResponse(readinessResponse(JSON.parse(String(init?.body))))
+      if (url === '/api/turn-readiness') {
+        const body = JSON.parse(String(init?.body))
+        if (streamRequested) {
+          backgroundReadinessReturned = true
+          return jsonResponse(readinessResponse(body, 'model_required'))
+        }
+        return jsonResponse(readinessResponse(body))
+      }
       if (url === '/api/sessions' && init?.method === 'POST') return jsonResponse({ session_id: 'pending-origin', context: JSON.parse(String(init.body)).context, turns: [] })
-      if (url === '/api/sessions/pending-origin/turns/stream') return pending
+      if (url === '/api/sessions/pending-origin/turns/stream') {
+        streamRequested = true
+        return pending
+      }
       return base(input, init)
     })
     render(<OpenAgronomyApp />)
@@ -3911,9 +3961,12 @@ describe('production answer origin and publicity wording', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
     expect(await screen.findByLabelText('Answer execution and origin')).toHaveTextContent('Preparing answer…')
+    await waitFor(() => expect(backgroundReadinessReturned).toBe(true))
+    expect(screen.queryByText(/^(Model setup required|Calculation ready|Calculation input needed|Checking calculation support|Model optional for calculations)$/)).not.toBeInTheDocument()
     await act(async () => { release({ ok: true, status: 200, body: null, text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn: completed })}\n\n` } as Response) })
     await screen.findByText(completed.answer)
     expect(screen.getByLabelText('Answer execution and origin')).toHaveTextContent('Local tool result · Model not used')
+    expect(screen.getByText('Model optional for calculations')).toBeInTheDocument()
   })
 
   it.each(['missing', 'failed', 'disabled_by_arm'])('does not expose verifier final labels with %s verification', async state => {

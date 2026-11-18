@@ -40,6 +40,7 @@ path observed; it is not a second agent implementation.
 | Candidate general-method transfer | `method_context.py`, `query_context.py`, `decision_contract.py` | Country-scoped method obligations and source/applicability separation; active profile has no method release |
 | Safety/verification | `answerability.py`, `answer_verifier.py`, `answer_safety.py`, `high_consequence.py` | Validation cannot create evidence or current authority |
 | Deterministic tools | `agronomic_calculations.py`, `local_tools.py`, `tools/` | Supported calculations bypass model drafting |
+| Supplied arithmetic inputs | `arithmetic_input_roles.py`, `foundation_math_parser.py`, `seed_establishment.py`, `supplied_water_parser.py`, `supplied_model_parser.py`, `supplied_model_arithmetic.py`, `request_scope.py` | Shared noncapturing operand names; typed parsers retain numeric/unit validation and whole-request guards retain additional work |
 | Public adapters | `local_tools.py`, `server/services/chat_service.py` | Network/cache/jurisdiction dependent; unavailable is a typed state |
 | Persistence | `server/storage/db.py`, `server/storage/runtime.py` | SQLite serializes cursor scopes on its shared connection, with outermost commit/rollback ownership and atomic personal workspace creation; Postgres remains a separate schema-checked boundary |
 | Local runtime services | `server/rate_limit.py`, `server/storage/object_store.py` | In-memory rate limits and filesystem artifacts only; Redis/S3 selection was removed |
@@ -114,9 +115,10 @@ complete retained model-comparison harness. Its results therefore support the
 QA/QC merge and model-specific diagnostics, not a product-parity or sealed-v3
 claim.
 
-## What helps the small models
+## Historical small-model findings
 
-The most effective components are deterministic and selective:
+The frozen September two-Gemma assessment found these benefits from
+deterministic and selective components:
 
 - typed calculations bypass generation and reached 16/16 in every full-system
   trial;
@@ -129,11 +131,14 @@ The most effective components are deterministic and selective:
 - claim/action-level verification can preserve supported text instead of
   suppressing an entire answer.
 
-The remaining cost is excessive fallback dependence: 148/241 full-system
+That checkpoint still relied heavily on fallback: 148/241 full-system
 cases for Gemma 3 270M and 98–100/241 for Gemma 4 E2B. Gemma 4 also varied in
 27 full-system cases across otherwise deterministic trials. Improving those
-two boundaries is more valuable than adding another broad trigger ladder or
-larger prompt.
+two boundaries motivated later repairs. These counts describe that frozen
+checkpoint and do not measure the current runtime. The current raw/full-system
+comparison uses the complete release-evaluation suite; its source identities,
+coverage and pending reviews are recorded separately in the
+[evaluation operator guide](../operations/release-evaluation.md).
 
 ## Configuration and data authority
 

@@ -54,6 +54,23 @@ rejects requests that ask for this guarantee with HTTP 501
   limit, or artifact-store selection remains.
 - Trace and evidence identities survive rendering and persistence.
 
+Localized agronomic concept corrections retain the original model draft and
+explicit changed spans. The execution boundary accepts this provenance only
+with a named supported defect, a nonempty edit record, a clean final assessment,
+unchanged other prose and no editor/fallback claim. They remain bounded project
+rules, not retrieved source evidence or a general scientific validation result.
+
+A validated seed-survival clarification may execute two hypothetical arithmetic
+scenarios while the plan remains `clarification_required`. The tool-execution
+stage is `executed` with reason
+`conditional_arithmetic_scenarios_no_selected_result`; this does not promote the
+plan to ready or its evidence to ADEQUATE. The saved parent has no selected
+value. Preview still performs no capability execution. Subsequent denominator
+selection uses authorized prior user inputs and preserves the original turn.
+The answer renderer skips Canadian source-gap prose only after exact whole
+calculator-response replay; mixed requests, changed answers and other safety or
+conflict disclosures retain their existing checks.
+
 ## Add or change an endpoint
 
 1. Define or reuse a request/response schema in `schemas.py`.
@@ -96,8 +113,10 @@ return a useful status rather than fabricating a successful capability result.
 `POST /api/turn-readiness` previews the same turn payload through the canonical
 tool/capability planners after authentication and field/session authorization.
 It reads an optional existing session and creates no session, turn or operation
-receipt. `requires_model` is false for validated unit conversion, tank coverage,
-fertilizer field totals, soil-water storage, or the canonical missing-input
+receipt. `requires_model` is false for validated unit conversion, supplied area
+× mass-rate totals (for example, “For 120 ha at 75 kg/ha, what is the total
+product mass?”), tank coverage,
+fertilizer field totals, soil-water storage, the qualified supplied-model arithmetic forms, or the canonical missing-input
 clarification. Unvalidated complete calculations remain
 unknown. The response binds the request and current field/history state. Turn
 submission reauthorizes, replans and rejects a stale binding, including after
@@ -128,6 +147,16 @@ operand, explicit new requests remain authoritative, and ambiguous references
 stay unresolved. The original user text is saved unchanged; the effective
 question, source turn and policy are recorded in the trace and execution hashes.
 The current tool recomputes the result, independent of the prior model's success.
+The v5 calculation-reference policy also accepts an explicit whole-reply seed
+denominator choice for seed-mass or seed-count calculations when that is the sole seed-calculator gap. A restated
+survival percentage must exactly match the prior user input; “among” and “of”
+identify the same denominator. Changed percentages and extra actions stay
+authoritative as new requests. If conditional
+survival then leaves only laboratory germination missing, one adjacent explicit
+percentage reply can complete it. Both steps reconstruct only authorized user
+requests, preserve all previous operands and the operation, and replan through
+the current calculator. Extra actions, unrelated turns, failed/rejected history,
+missing roots and other missing roles cannot supply this bounded seed chain.
 Typed-tool ablations and baseline modes disable this interpretation. The legacy
 stream bridge resolves references only from a contiguous suffix of completed
 visible user/assistant pairs linked to saved turn IDs. A failed visible message
@@ -234,3 +263,32 @@ read-back verification. Display overlays use a separate worker reprojection.
 No browser supplies a worker path, arbitrary asset URL or execution environment.
 
 Season records retain structured crop entries and an explicit single/intercrop/sequence/separate-areas system. Legacy single-crop rows are projected without changing their crop year; edits use the existing revision precondition. The trusted question compiler carries the saved structure and does not infer per-crop acreage or dates. Canadian dossier crop-cover refresh opts into `year: latest`, with a catalog response receipt; direct tool calls retain their pinned default or explicit year.
+
+Seedling loss is not automatically the complement of overall emergence.
+The two-scenario clarification requires directly supplied survival; mortality
+inputs do not gain that path. A stage-specific seedling loss needs actual
+overall emergence or an explicit loss definition among germinated seeds. The
+parser and short follow-up resolver do not turn its complement into a supplied
+overall survival fact. Explicit post-germination mortality remains supported.
+
+
+### Timeline record bundles
+
+The main timeline form posts `/api/fields/{field_id}/records` through
+`farm_routes.py::RecordBundle` and `storage/field_record_store.py::append_bundle`.
+This is separate from the single-event FieldSyncPanel protocol described above.
+The local SQLite bundle transaction binds `(field_id, operation_id)` to the
+normalized event payload digest in `field_record_operations`; exact retries
+return the original events with `already_saved`, and changed payloads conflict.
+Pydantic validation rejects a first invalid request before append with HTTP 422;
+store validation conflicts return HTTP 409. A later rejection following an
+unknown outcome does not prove the earlier attempt failed. Backups must include
+the operation ledger, not just the event rows.
+
+`RecordEntryDialog` captures its event JSON and operation UUID before dispatch,
+locks edits during unknown outcomes, and checks returned IDs, field and submitted
+content before clearing storage. It uses field/season/correction draft slots and
+expected-version checks, rather than the separate sync client's actor partitions
+and native Web Locks. `FarmRecords` offers recovery on a superseded original
+when that correction slot remains unconfirmed. Neither client may interpret an
+unknown observation date as a measured date or erase the immutable original.

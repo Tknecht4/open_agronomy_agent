@@ -461,7 +461,7 @@ def test_command_excludes_inherited_private_overlay(tmp_path, monkeypatch):
         timeout=3,
     )
     assert result == (0, "completed")
-    assert (tmp_path / "log").read_text() == "disabled\nNone\n"
+    assert (tmp_path / "log").read_text() == "0\nNone\n"
     assert _command(
         [
             sys.executable,
@@ -953,6 +953,29 @@ def test_order3_real_child_file_hardcap_and_descendant_containment(tmp_path):
     assert not sentinel.exists()
 
 
+def test_successful_short_write_at_inherited_file_limit_is_not_complete_output(tmp_path):
+    # Lower only an owned subprocess's limit, never the pytest controller's.
+    script = """
+import json,os,resource,sys,time
+from pathlib import Path
+from agronomy_agent.release_eval_runner import _command
+root=Path(sys.argv[1])
+resource.setrlimit(resource.RLIMIT_FSIZE,(2048,2048))
+policy={'retention_budget_bytes':131072,'finalization_reserve_bytes':4096,
+        'minimum_free_bytes':1,'file_hardcap_bytes':4096}
+status,reason=_command([sys.executable,'-c',"import os; os.write(1,b'x'*8192)"],
+    cwd=root,output=root/'limited.log',timeout=3,
+    execution_guard={'directory':str(root),'policy':policy,'deadline_monotonic':time.monotonic()+3})
+print(json.dumps({'status':status,'reason':reason,'bytes':(root/'limited.log').stat().st_size,
+    'applied_cap':json.loads((root/'child-dispatch.json').read_text())['effective_file_hardcap_bytes']}))
+"""
+    result = subprocess.run([sys.executable, '-c', script, str(tmp_path)],
+        cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+    observed = json.loads(result.stdout)
+    assert observed == {'status':125, 'reason':'file_hardcap_reached', 'bytes':2048, 'applied_cap':2048}
+
+
 def test_order3_legacy_cancel_propagates_without_later_dispatch(tmp_path, monkeypatch):
     import agronomy_agent.release_eval_runner as runner
     monkeypatch.setattr(runner, "_command", lambda *_a, **_k: (_ for _ in ()).throw(KeyboardInterrupt("cancel")))
@@ -1235,9 +1258,10 @@ def test_completed_profiler_envelope_cannot_hide_missing_cell_work(
     assert report["checks"][0]["passed"] is False
 
 
+@pytest.mark.parametrize("initial_denial", [False, True])
 @pytest.mark.parametrize("persistent", [False, True])
 def test_group_probe_permission_race_retries_but_persistent_denial_fails(
-    monkeypatch, persistent
+    monkeypatch, persistent, initial_denial
 ):
     class OwnedChild:
         pid = 12345
@@ -1252,6 +1276,8 @@ def test_group_probe_permission_race_retries_but_persistent_denial_fails(
 
     def probe(pid, sig):
         nonlocal probes
+        if sig == signal.SIGTERM and initial_denial:
+            raise PermissionError("initial native exit race")
         if sig == 0:
             probes += 1
             if persistent or probes == 1:
