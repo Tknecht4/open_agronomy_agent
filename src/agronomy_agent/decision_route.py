@@ -10,7 +10,7 @@ from agronomy_agent.answerability import simple_definition_subject, is_mechanism
 from agronomy_agent.request_scope import information_request_kind
 from agronomy_agent.observation_guidance import sample_event_roles_stated, stored_grain_probe_monitoring
 from agronomy_agent.request_scope import seed_quality_workflow_requested, soil_test_repeatability_requested
-from agronomy_agent.plant_health_scope import root_inspection_only_request, foliar_symptoms_reported
+from agronomy_agent.plant_health_scope import root_inspection_only_request, foliar_symptoms_reported, foliar_observation_request_kind
 from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
 
@@ -727,6 +727,16 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
             decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
             constraints=("Give the requested practical root-inspection and recording method. "
                          "Do not infer a pathogen, add a treatment plan or authorize an operation.",),
+            capsule=None,
+        )
+
+    if foliar_observation_request_kind(question):
+        return DecisionRouteState(
+            question=question, decision="foliar_observation", crop=crop, country=signals.country,
+            decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
+            constraints=("Answer the requested scouting or affected-normal comparison method. "
+                         "Do not substitute a disease program, confirm a diagnosis or authorize an application. "
+                         "Preventive planning does not universally require confirmed field infection.",),
             capsule=None,
         )
 

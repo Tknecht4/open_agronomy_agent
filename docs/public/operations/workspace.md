@@ -36,6 +36,10 @@ Install the optional worker before processing. HLS uses `requirements-imagery.tx
 
 Analyses retain provider, exact scene, boundary revision, masks and index support. The map display is a separate nearest-neighbor reprojection; numerical statistics stay on the processing grid. Historical results remain labeled for their original boundary. Positive pixel support does not establish representative crop conditions, diagnosis or action authority. Save an analysis reference into field records or use it to start a scoped question.
 
+Field scouting can proceed while imagery is unavailable or its quality checks
+are incomplete. Those checks limit what you can infer from the imagery; they do
+not replace direct observations of affected and nearby normal areas.
+
 **Add to field** captures observations, operations, notes, outcomes or multi-analyte soil-report transcriptions. Sample metadata is shared across analytes; method, units and depth stay explicit. Drafts remain on this device until acknowledged. A transport retry does not duplicate the record. Corrections preserve originals. Transcription does not imply the original report was uploaded; retain structured originals through Data tables and keep their provenance separate.
 
 ![Compact general chat and calculator example, with no field selected](../assets/workspace.png)

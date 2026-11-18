@@ -15,11 +15,12 @@ study below must not be read as an evaluation of this successor.
 
 The successor repairs requested-task ownership, false authority holds,
 terminal-answer selection and jurisdiction-specific fallback wording. Exact
-serving-source checks passed 6,141 backend tests with 58 skipped. UI-only changes
-in the separate integration checkout pass 532 frontend tests, type checking and
-build, with strict docs and public-scope checks. All 364 model-producer files
-remain byte- and mode-identical to the frozen generation checkout. Source checks
-and this equivalence do not replace real model observations or final PR CI.
+serving-source checks passed 6,141 backend tests with 58 skipped. At integration
+checkpoint `1ff92fd`, the UI changes passed 532 frontend tests, type checking and
+build, with strict docs and public-scope checks. All 364 model-producer files at
+that checkpoint were byte- and mode-identical to the frozen generation checkout.
+Source checks and this equivalence do not replace real model observations or
+final PR CI.
 
 Synthetic browser checks exercised calculator clarification, saved and unsaved
 field context, conversations, record corrections and unknown dates. Two readiness
@@ -31,6 +32,32 @@ the SQLite ledger retained one operation and one event per submitted write.
 A replaced original exposes recovery of an unresolved correction. These checks
 used a real local API with synthetic records, not an installed native package,
 real farm data or live terrain-provider validation.
+
+Reading the retained Luna regression answers identified further grower-facing
+repairs after the model-source freeze. An imagery fallback incorrectly delayed
+field scouting until imagery QA; scouting can proceed in parallel. A complete
+affected-versus-healthy leaf comparison was replaced by an unrequested potato
+disease-program checklist. Healthy-crop monitoring also admitted a model clause
+that implied diagnosis must precede preventive fungicide consideration;
+[Manitoba guidance](https://www.manitoba.ca/agriculture/crops/plant-diseases/late-blight-potatoes.html)
+describes preventive protection before infection.
+
+The separate integration repair preserves the observation task and its
+completeness checks, retains mixed application/entry boundaries, and screens
+the bounded prevention contradiction. Offline replay preserves both retained
+Luna comparison drafts and replaces the contradictory healthy-crop draft with
+complete monitoring guidance. The focused suites pass 652 tests. Replay is not
+new inference or a semantic regrade; benchmark observations keep their original
+`d4def84` source identity. No model run was restarted for these repairs.
+
+A liquid-fertilizer definition also reused a product-rate formula after naming
+both mass and volume rates. Its mass-basis qualification was defensible, but
+insufficiently explicit for liquid w/w analysis. Authored guidance now states
+the mass relationship and the required density conversion, while allowing a
+declared nutrient mass/volume concentration with compatible units. This is a
+clarification, not a demonstrated numerical application error or a new guard.
+[USDA's agronomy manual](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)
+explains that liquid calculation basis.
 
 Final answer review, current canonical reports, source/document integration,
 independent review, exact PR CI and workspace retirement remain unfinished.

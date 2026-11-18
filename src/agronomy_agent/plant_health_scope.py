@@ -55,6 +55,63 @@ def foliar_symptoms_reported(question: str) -> bool:
     return False
 
 
+def foliar_observation_request_kind(question: str) -> str | None:
+    """Own a complete scouting/comparison task, never a diagnosis or operation.
+
+    A disease name can identify what to watch for without requesting a disease
+    program. Unknown clauses retain ordinary handling rather than disappearing.
+    """
+    from agronomy_agent.request_scope import has_action_directive
+
+    text = " ".join(question.casefold().split()).strip()
+    if has_action_directive(text):
+        return None
+    healthy_crop = r"(?:(?:my|our|the)\s+)?healthy\s+potato(?:es)?(?:\s+(?:crop|plants?))?"
+    monitoring = (
+        rf"how\s+(?:should|can|could|do)\s+(?:i|we)\s+(?:scout|monitor|inspect|check)\s+{healthy_crop}"
+        rf"|what\s+should\s+(?:i|we)\s+look for\s+while\s+(?:scouting|monitoring)\s+{healthy_crop}"
+    )
+    if re.fullmatch(
+        rf"(?:{monitoring})\s+for\s+(?:signs of\s+)?late blight[.!?]*", text,
+    ):
+        return "healthy_potato_monitoring"
+
+    clauses = [part.strip() for part in re.split(r"[.!?;]", text) if part.strip()]
+    if len(clauses) < 2:
+        return None
+    declaration = (
+        r"(?:(?:my|our|the|these|this)\s+)?(?:[a-z-]+\s+){0,2}"
+        r"(?:leaves|foliage|stems?|plants?)\s+(?:have|has|show|shows|developed|are showing|with)\s+"
+        r"(?:[a-z-]+\s+){0,4}(?:lesions?|leaf spots?|spots?|necrosis|blighting)"
+        r"(?:\s+(?:today|now|currently))?"
+    )
+    if not all(re.fullmatch(declaration, part) and foliar_symptoms_reported(part)
+               for part in clauses[:-1]):
+        return None
+    part = r"(?:plants?|leaves|foliage|stems?|ones)"
+    request = re.fullmatch(
+        rf"how\s+(?:should|can|could|do)\s+(?:i|we)\s+(?:compare|inspect|examine)\s+"
+        rf"(?:the\s+)?(?:affected|symptomatic|suspect)(?:\s+{part})?\s+"
+        rf"(?:and|with|against|to)\s+(?:the\s+)?(?:nearby\s+|neighbouring\s+|neighboring\s+)?"
+        rf"(?:apparently\s+)?(?:healthy|normal)\s+{part}"
+        rf"(?:\s+for\s+(?P<target>[a-z-]+(?:\s+[a-z-]+){{0,4}}))?",
+        clauses[-1],
+    )
+    if request is None:
+        return None
+    target = request.group("target") or ""
+    if re.search(r"\b(?:and|or|then|also|to|if|when|unless|before|after|should|must|may|will|would|please)\b", target):
+        return None
+    if target and (
+        not re.fullmatch(r"(?:possible|suspected|signs of)\s+[a-z-]+(?:\s+[a-z-]+){0,3}", target)
+        or re.search(r"\b(?:approv\w*|authoriz\w*|permission|selection|recommend\w*|confirmed|diagnos\w*|"
+                     r"treatment|fungicides?|herbicides?|insecticides?|pesticides?|spray\w*|application|"
+                     r"rates?|doses?|harvest\w*|graz\w*|entry)\b", target)
+    ):
+        return None
+    return "foliar_comparison"
+
+
 # A declared subject/predicate keeps observations separate from definitions,
 # quotations, historical reports and commands. Crop identity stays open: the
 # article/possessive form accepts multiword crops without a host whitelist.

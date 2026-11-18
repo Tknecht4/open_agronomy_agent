@@ -12,7 +12,7 @@ import re
 from datetime import date
 
 from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, is_sampling_basis_explanation, is_evapotranspiration_explanation, product_action_request_text, stewardship_explanation_kind
-from agronomy_agent.plant_health_scope import root_inspection_requested, current_root_inspection_is_soybean, clubroot_workflow_applicable
+from agronomy_agent.plant_health_scope import root_inspection_requested, current_root_inspection_is_soybean, clubroot_workflow_applicable, foliar_observation_request_kind
 from agronomy_agent.request_scope import explicitly_unspecified_management_task, soil_test_repeatability_requested
 
 
@@ -57,6 +57,21 @@ class ObservationGuidance:
     def unsupported_inference(self, answer: str) -> bool:
         """Reject bounded contradictions even when a correct check is appended."""
         for sentence in re.split(r"[.!?;]\s*|\n+", answer):
+            if self.has_method("healthy_potato_monitoring"):
+                for claim in re.finditer(
+                    r"\bif\s+(?:considering|planning)\s+(?:a|any)\s+fungicide(?:\s+(?:application|use))?,?\s+"
+                    r"(?:first\s+)?confirm\s+(?:the\s+)?diagnosis\b|"
+                    r"\bwait for\s+(?:(?:visible|confirmed|laboratory-confirmed)\s+)?(?:symptoms|infection|diagnosis)\b"
+                    r"[^.;]{0,70}\b(?:before|prior to)\b[^.;]{0,70}\b(?:preventive|protective)\b[^.;]{0,40}\bfungicide\b|"
+                    r"\b(?:preventive|protective)\s+fungicide(?:\s+(?:planning|use|protection|program))?\s+"
+                    r"(?:always\s+)?(?:requires|needs|must wait for)\b[^.;]{0,75}\b(?:diagnosis|confirmed infection|visible symptoms)\b",
+                    sentence, re.I,
+                ):
+                    prefix = sentence[:claim.start()]
+                    denied = (_proposition_explicitly_denied(prefix)
+                              or re.search(r"\b(?:do not|don't|never)\s*$", prefix, re.I))
+                    if not denied:
+                        return True
             if self.has_method("efficacy_authority_boundary"):
                 for claim in re.finditer(
                     r"\b(?:trial|efficacy)(?: alone)?\s+(?:establishes|proves|confirms|demonstrates)\b"
@@ -225,6 +240,23 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
+    if foliar_observation_request_kind(question) == "foliar_comparison":
+        yield ObservationGuidance("foliar_comparison", (
+            "Compare several affected plants and nearby apparently healthy plants of the same crop stage and variety where possible. "
+            "Inspect comparable upper and lower leaf surfaces and stems; record lesion appearance, expansion, canopy position and field distribution, and take labelled photos of both groups. "
+            "Keep samples from the groups separate and ask a local diagnostic service about collection and handling when confirmation is needed. "
+            "These comparisons describe the symptoms and pattern; they do not by themselves confirm a disease or select a treatment."
+        ), (
+            ("foliar_paired_comparison", "Compare affected and nearby healthy or normal plants.",
+             (r"\baffected\b[^.]{0,160}\b(?:healthy|normal)\b", r"\b(?:healthy|normal)\b[^.]{0,160}\baffected\b")),
+            ("foliar_matched_plants", "Compare plants at a comparable stage or variety.",
+             (r"\bsame\b[^.]{0,50}\b(?:stage|variety)\b", r"\bcomparable\b[^.]{0,50}\b(?:stage|variety)\b")),
+            ("foliar_symptom_pattern", "Describe symptoms across representative plants or locations.",
+             (r"\b(?:several|representative|pattern|distribution|patch|locations|elsewhere)\b",)),
+            ("foliar_diagnosis_limit", "Do not treat the comparison alone as disease confirmation.",
+             (r"\b(?:do not|does not|cannot|can't|not enough)\b[^.]{0,75}\b(?:confirm|diagnos)\w*\b",)),
+        ))
+        return
     if explicitly_unspecified_management_task(question):
         yield ObservationGuidance("unspecified_management_task", (
             "Which job or management task do you mean? A field or crop category alone does not identify the activity or its frequency. "
@@ -420,7 +452,7 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             parts.append("A product rate describes the amount of the commercial formulation on its stated application basis, such as product mass or volume per area.")
             facets.append(("product_rate_basis", "Explain the commercial-product amount basis.", (r"\bproduct\b[^.]{0,100}\b(?:amount|mass|volume|quantity)\b", r"\b(?:amount|mass|volume|quantity)\b[^.]{0,100}\bproduct\b")))
         if has(r"\bnutrient\b"):
-            parts.append("For a field application, a fertilizer nutrient rate commonly expresses the mass of a named nutrient per area. Other application systems may use an explicitly stated concentration or volume basis. Use the declared nutrient basis and product analysis to convert nutrient mass into product amount; it is not a nutrient concentration measured in the crop or soil.")
+            parts.append("For a field application, a fertilizer nutrient rate commonly expresses the mass of a named nutrient per area. Other application systems may use an explicitly stated concentration or volume basis. For a w/w analysis, nutrient mass per area equals product mass per area multiplied by the nutrient mass fraction. Convert liquid product volume to mass using its declared density before applying that fraction; a declared nutrient mass per product volume can instead be used directly with compatible units. Keep the declared nutrient basis explicit. Product analysis is not a nutrient concentration measured in the crop or soil.")
             facets.append(("nutrient_rate_basis", "Explain nutrient mass per area, distinct from product amount or measured crop concentration.", (r"\b(?:mass|amount|kg|kilograms?|lb|pounds?)\b[^.]{0,100}\b(?:nutrient|nitrogen|phosphorus|N|P|K)\b[^.]{0,60}\b(?:area|hectare|ha|acre|ac)\b", r"\bnutrient\b[^.]{0,60}\bmass per (?:unit )?area\b")))
         if has(r"\bexample\b"):
             parts.append("For a hypothetical illustration, suppose a fictional fertilizer contains 20% N. A product rate of 60 kg/ha supplies a nutrient rate of 12 kg N/ha (60 × 0.20 = 12). These invented quantities illustrate the mass-fraction relationship; they do not select a field target or establish a real product's analysis or permission.")
@@ -508,7 +540,7 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             "A lower displayed NDVI alone does not establish a real crop-vigor decline, a cause, or a yield loss. "
             "First check each scene's cloud, shadow, snow and other QA masks, valid pixel counts and valid field coverage. "
             "Match the field boundary and comparable spatial support; check sensor/product definitions, harmonization, processing and resolution. Documented harmonization such as HLS can make different sensors comparable, subject to QA and remaining uncertainty. Use comparable valid pixels rather than different clear fragments of the field. "
-            "Then compare acquisition dates, crop stage, canopy cover, harvest and management history. Only after those checks should you scout the corresponding affected and normal areas, including roots and soil moisture, to test possible causes. "
+            "Then compare acquisition dates, crop stage, canopy cover, harvest and management history. You can scout affected and normal areas, including roots and soil moisture, while checking the imagery; field inspection need not wait for usable imagery. Use those observations to test possible causes rather than assuming the NDVI difference identifies one. "
             "Until QA and comparable support are available, the apparent difference remains unverified and cannot justify a treatment."
         ), (
             ("imagery_qa", "Check cloud/shadow masks before interpreting a change.", (r"\b(?:cloud|shadow)\b[^.]{0,90}\b(?:mask|QA)",)),

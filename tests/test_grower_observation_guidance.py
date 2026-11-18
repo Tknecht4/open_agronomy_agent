@@ -38,6 +38,111 @@ class UnavailableEditor:
         raise RuntimeError("imposed editor failure")
 
 
+FOLIAR_COMPARISON = (
+    "Compare several affected plants with nearby healthy plants of the same variety and crop stage. "
+    "Inspect upper and lower leaf surfaces and stems, photograph the lesions, and map their distribution. "
+    "The comparison describes a pattern; lesions alone do not confirm a disease."
+)
+
+
+@pytest.mark.parametrize("question", [
+    "Our potato leaves show brown spots. How can we compare affected leaves with nearby normal leaves?",
+    "My barley foliage has lesions. How should I compare affected and healthy plants for suspected leaf disease?",
+])
+def test_foliar_comparison_keeps_the_inspection_task_without_a_disease_program(question, tmp_path, monkeypatch):
+    from agronomy_agent.answer_verifier import _intent_requirements
+    from agronomy_agent.decision_route import build_decision_route_state
+    route = classify_query(question)
+    state = build_decision_route_state(question, route.question_type)
+    assert state.decision == "foliar_observation"
+    assert not state.answer_violations(FOLIAR_COMPARISON)
+    method = observation_guidance(question)
+    assert method and method.has_method("foliar_comparison")
+    assert not method.missing(FOLIAR_COMPARISON)
+    requirements = {item.name for item in _intent_requirements(question, route.question_type)}
+    assert "foliar_paired_comparison" in requirements
+    assert "weather_disease_risk" not in requirements and "current_label_context" not in requirements
+    _assert_persisted_product_answer(tmp_path, monkeypatch, question,
+        ("same variety", "leaf surfaces", "distribution"), draft=FOLIAR_COMPARISON)
+
+
+@pytest.mark.parametrize("addition", [
+    "Then choose a fungicide.",
+    "What application rate should I spray?",
+    "Is it safe to enter the field?",
+    "Also mow the field.",
+])
+@pytest.mark.parametrize("action_first", [False, True])
+def test_foliar_comparison_does_not_consume_an_additional_action(addition, action_first):
+    from agronomy_agent.decision_route import build_decision_route_state
+    from agronomy_agent.plant_health_scope import foliar_observation_request_kind
+    question = "Our potato leaves show brown spots. How can we compare affected leaves with nearby normal leaves?"
+    mixed = addition + " " + question if action_first else question + " " + addition
+    assert foliar_observation_request_kind(mixed) is None
+    assert build_decision_route_state(mixed, classify_query(mixed).question_type).decision != "foliar_observation"
+
+
+@pytest.mark.parametrize("question", [
+    "Last season our potato leaves had spots. How can we compare affected and normal plants?",
+    "Our potato leaves have no lesions. How can we compare affected and normal plants?",
+    "If our potato leaves have lesions, how should we compare affected and normal plants?",
+    "Our potato leaves have lesions. Does that confirm late blight?",
+])
+def test_foliar_comparison_does_not_invent_current_symptoms_or_consume_a_diagnosis(question):
+    from agronomy_agent.plant_health_scope import foliar_observation_request_kind
+    assert foliar_observation_request_kind(question) is None
+
+
+def test_healthy_potato_scouting_prompt_does_not_request_a_diagnostic_program():
+    from agronomy_agent.decision_route import build_decision_route_state
+    question = "What should we look for while monitoring our healthy potato plants for signs of late blight?"
+    state = build_decision_route_state(question, classify_query(question).question_type)
+    assert state.decision == "foliar_observation" and state.capsule is None
+    assert not state.decisive_evidence and not state.premise_anchors
+    assert build_decision_route_state(question + " Choose a fungicide.", "plant_health").decision != "foliar_observation"
+
+
+@pytest.mark.parametrize("claim", [
+    "If considering a fungicide, confirm the diagnosis first.",
+    "Wait for visible symptoms before starting a preventive fungicide program.",
+    "Preventive fungicide use requires a confirmed infection.",
+    "If symptoms appear, collect samples, but preventive fungicide use requires confirmed infection.",
+])
+def test_healthy_crop_monitoring_does_not_require_infection_before_preventive_planning(claim):
+    question = "How can we monitor our healthy potato plants for signs of late blight?"
+    method = observation_guidance(question)
+    assert method and method.has_method("healthy_potato_monitoring")
+    draft = claim + " " + method.answer
+    assert method.unsupported_inference(draft)
+    route = classify_query(question)
+    result = verify_answer(draft, question=question, evidence_text="", question_type=route.question_type,
+        risk_level=route.risk_level, editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer != draft and not method.unsupported_inference(result.answer)
+    assert not method.missing(result.answer)
+
+
+@pytest.mark.parametrize("claim", [
+    "Do not wait for visible symptoms before discussing preventive fungicide protection.",
+    "Preventive fungicide planning does not require confirmed field infection.",
+    "If symptoms appear, ask a diagnostic service to confirm the cause before treating affected plants.",
+])
+def test_healthy_crop_monitoring_keeps_prevention_and_conditional_diagnostic_help(claim):
+    method = observation_guidance("How can we monitor our healthy potato plants for signs of late blight?")
+    assert method and not method.unsupported_inference(claim)
+
+
+@pytest.mark.parametrize("purpose", [
+    "harvest approval", "treatment authorization", "fungicide selection", "spray permission",
+    "a confirmed diagnosis", "possible treatment authorization",
+])
+def test_foliar_comparison_does_not_grant_an_operational_or_certification_purpose(purpose):
+    from agronomy_agent.decision_route import build_decision_route_state
+    from agronomy_agent.plant_health_scope import foliar_observation_request_kind
+    question = f"Our potato leaves show brown spots. How can we compare affected and nearby healthy plants for {purpose}?"
+    assert foliar_observation_request_kind(question) is None
+    assert build_decision_route_state(question, classify_query(question).question_type).decision != "foliar_observation"
+
+
 @pytest.mark.parametrize("subject", ["My soybean", "My corn", "My potato", "My carrot", "My millet", "My faba bean", "The"])
 def test_current_swollen_root_inspection_requires_a_practical_method(subject):
     from agronomy_agent.decision_route import build_decision_route_state

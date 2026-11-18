@@ -176,11 +176,20 @@ semantic completeness.
 by drafting, completeness review and fallback selection. Applicable methods
 cover paired scouting, current swollen-root inspection, healthy-potato late-blight
 monitoring, satellite comparability, empty terrain coverage, point versus area
-geometry, crop-guide scope and regional stress interpretation. Root methods
-require a reported current root symptom and an inspection request; normal
+geometry, crop-guide scope and regional stress interpretation.
+Imagery QA limits interpretation of an apparent change; it does not delay
+direct field scouting, which can proceed in parallel.
+Root methods require a reported current root symptom and an inspection request; normal
 soybean nodules are discussed only when the currently affected roots are
 explicitly associated with soybean. History, negated observations, healthy
 reference crops and additional operational requests retain their own scope.
+Complete foliar-comparison and healthy-potato monitoring requests retain an
+observation scope instead of acquiring an unasked disease program. Foliar
+comparisons check paired plants, comparable stage or variety, symptom patterns
+and the limit on disease confirmation. Additional diagnosis, application or
+entry requests retain ordinary handling. Healthy-potato output checks reject
+bounded claims that make confirmed infection a universal prerequisite for
+preventive fungicide planning; this does not authorize a product or application.
 The output application check recognizes reported root-inspection intent even
 with extra location or crop-stage context. Its stricter whole-request predicate
 still owns decision-plan selection; an explicit operation, rate or product
