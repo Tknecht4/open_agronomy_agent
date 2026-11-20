@@ -136,22 +136,48 @@ def test_trial_bundle_rejects_mislabeled_config_and_unbound_trial(tmp_path):
         read_external_inputs(declaration, tmp_path)
 
 
-@pytest.mark.parametrize("change", [None, "source", "inventory", "missing_case"])
-def test_external_controls_bind_actual_source_and_complete_inventory(change):
+@pytest.mark.parametrize("change", [None, "source", "inventory", "missing_case", "question",
+                                            "facts", "raw_messages", "duplicate_case", "same_question_follow_up"])
+def test_external_preflight_checks_planned_first_turn_bindings_and_discloses_followups(tmp_path, change):
     from agronomy_agent.release_eval_external import suite_inventory_sha256, validate_external_plan
-    plan = {"suite_id": "synthetic", "source": {"source_sha256": "a" * 64},
-            "cases": [{"case_id": "one", "case_sha256": "b" * 64}]}
-    suite = {"source_sha256": "a" * 64, "benchmark_suite_sha256": suite_inventory_sha256(plan),
-             "cases": {"one": {}}}
+    from agronomy_agent.release_evaluation import digest
+    import test_codex_app_server_egress as fixtures
+
+    generator, _ = _controls(tmp_path)
+    suite = generator.expected_suite_case_contract
+    case_id = fixtures._EVAL_ID
+    question = "Explain a synthetic supplied observation."
+    first = {"case_id": case_id, "case_sha256": "b" * 64,
+             "turns": [question, question if change == "same_question_follow_up" else "What changed?"]}
+    plan = {"suite_id": "synthetic", "source": {"source_sha256": suite["source_sha256"]},
+            "cases": [first], "matrix": [{"case_id": case_id, "arm_id": "raw_model",
+                                          "backend": "codex_app_server"}]}
+    if change == "duplicate_case":
+        plan["cases"].append({**first, "case_sha256": "c" * 64})
+    suite = {**suite, "benchmark_suite_sha256": suite_inventory_sha256(plan)}
+    binding = {**suite["cases"][case_id], "field_context_sha256": digest({}),
+               "question_sha256": hashlib.sha256(question.encode()).hexdigest(),
+               "candidate_application_messages_sha256_by_arm": {
+                   **suite["cases"][case_id]["candidate_application_messages_sha256_by_arm"],
+                   "raw_model": digest([{"role": "user", "content": question}]),
+               }}
+    suite["cases"] = {case_id: binding}
     if change == "source": suite["source_sha256"] = "c" * 64
     if change == "inventory": suite["benchmark_suite_sha256"] = "d" * 64
     if change == "missing_case": suite["cases"] = {}
+    if change == "question": binding["question_sha256"] = "e" * 64
+    if change == "facts": binding["field_context_sha256"] = "e" * 64
+    if change == "raw_messages": binding["candidate_application_messages_sha256_by_arm"]["raw_model"] = "e" * 64
+    suite["sha256"] = digest({key: value for key, value in suite.items() if key != "sha256"})
     inputs = {"suite": {"value": suite}}
-    if change:
-        with pytest.raises(ValueError, match="actual source"):
+    if change and change != "same_question_follow_up":
+        with pytest.raises(ValueError, match="actual source|first-turn"):
             validate_external_plan(inputs, plan)
     else:
-        validate_external_plan(inputs, plan)
+        receipt = validate_external_plan(inputs, plan)
+        assert receipt["hosted_cases_checked"] == 1
+        assert receipt["planned_follow_ups_by_case"] == {case_id: 1}
+        assert receipt["provider_follow_up_status"] == "unsupported_by_first_turn_contract"
 
 
 def test_canonical_worker_passes_lazy_phase_factories_only_to_hosted_backend(tmp_path, monkeypatch):

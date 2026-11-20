@@ -50,6 +50,15 @@ def information_request_kind(text: str) -> str | None:
         r"\s+(?:crosses|moves|occurs|affects|is|are)\b)", r'\1drift', text)
     if re.search(r"\b(?:then|also)\b", text) or has_action_directive(text):
         return None
+    normal = r"(?:(?:an?|the) )?(?:seasonal |long[- ]term )?climate normals?"
+    forecast = (r"(?:(?:an?|the) )?(?:next week['’]s |short[- ]term )?"
+                r"(?:weather )?forecasts?(?: for next week)?")
+    if re.fullmatch(
+        rf"(?:compare|contrast|distinguish) (?:{normal} (?:with|and|from|against) {forecast}|"
+        rf"{forecast} (?:with|and|from|against) {normal})"
+        r"(?: (?:in|for) (?:seasonal planning|planting advice))?[.!?]*", text,
+    ):
+        return "explanation"
     if re.search(r"\b(?:today|tomorrow|tonight|currently|now|how much|how many)\b", text):
         return None
     # These are requested commitments, including embedded ones after 'explain'
@@ -212,7 +221,9 @@ def information_request_kind(text: str) -> str | None:
     causal = re.match(r"(?:explain|describe) (?:why|how)\b", text)
     concept = (causal or re.search(r"\b(?:concepts?|meanings?|definitions?|differences?|relationships?|roles?|mechanisms?|process(?:es)?|methods?|models?|influences?|effects?)\b", text)
         or re.fullmatch(r"(?:explain|describe) what .+ (?:is|means)[.!?]*", text))
-    forecast_read = (re.match(r"(?:explain|describe)\b|what (?:is|are) (?:the|this|that)\b", text)
+    forecast_read = (re.match(
+        r"(?:explain|describe)\b|what (?:is|are) "
+        r"(?:(?:the|this|that)\b|(?:this|next) (?:week|month)['’]s (?:weather )?forecasts?\b)", text)
         and re.search(r"\bforecasts?\b", text) and not concept)
     forecast_reference = (re.search(r"\b(?:the|this|that)\s+(?:weather\s+)?forecast\b", text)
         and not re.fullmatch(r"define (?:(?:an?|the) )?(?:weather )?forecasts?[.!?]*", text))
@@ -338,6 +349,15 @@ def analytical_request_kind(text: str) -> str | None:
                 r"(?=$|\s+(?:in|across|from|without|using|with|over|of|at|between)\b)", clause)
             if head:
                 kind = "sampling_design"
+        elif re.match(r"how (?:do|can|could|would|should) (?:i|we|you|one) compare\b", clause):
+            head = re.match(
+                r"how (?:do|can|could|would|should) (?:i|we|you|one) compare\s+"
+                r"(?:(?:these|those|the)\s+)?"
+                r"(?:(?!(?:and|or|to|for|with|between|across|in|from)\b)[a-z-]+\s+){0,4}"
+                r"(?:measurements?|readings?|observations?|counts?|results?|values?)\b", clause)
+            if head and (not clause[head.end():].strip()
+                         or re.match(r"\s+(?:between|across|in|from|with)\b", clause[head.end():])):
+                kind = "measurement_comparison_method"
         elif re.match(r"can\b", clause):
             head = re.match(r"can\s+([^!?;]+?)\s+be\s+(?:directly\s+)?(?:compared|interpreted|averaged|combined|regarded|treated)\b", clause)
             if head and re.search(r"\b(?:concentrations?|measurements?|values?|samples?|counts?|results?|estimates?)\b", head[1]):

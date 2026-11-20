@@ -74,6 +74,10 @@ def main() -> int:
             )
             plan = bind_controller_inputs(plan, read_controller_inputs(rubrics_path=args.model_rubrics, policy_path=args.model_policy), args.comparison_cohort)
             plan = bind_stop_policy(plan, read_stop_policy(args.stop_policy), registry["whole_run_timeout_seconds"])
+            if "external_generation" in registry:
+                from agronomy_agent.release_eval_external import read_external_inputs, validate_external_plan
+                external = read_external_inputs(registry["external_generation"], ROOT)
+                plan["external_admission"] = validate_external_plan(external, plan)
             print(
                 json.dumps(
                     {
@@ -86,6 +90,7 @@ def main() -> int:
                             "sampling",
                             "source",
                             "model",
+                            *(["external_admission"] if "external_admission" in plan else []),
                             *(["bounded_stop_policy"] if "bounded_stop_policy" in plan else []),
                         )
                     },

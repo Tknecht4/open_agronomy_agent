@@ -14,10 +14,12 @@ from typing import Any
 
 from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.seed_establishment import SEED_SURVIVAL_BASIS_GAP, SEED_GERMINATION_GAP
-from agronomy_agent.calculator_contracts import SEED_ESTABLISHMENT_OPERATIONS
+from agronomy_agent.arithmetic_input_roles import BASE_TEMPERATURE_ROLE
+from agronomy_agent.calculator_contracts import SEED_ESTABLISHMENT_OPERATIONS, calculation_request_is_complete
+from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER
 
 
-POLICY_VERSION = "conversation_calculation_reference.v5"
+POLICY_VERSION = "conversation_calculation_reference.v6"
 _MAX_CHAIN_DEPTH = 8
 _NUMBER = r"(?<![\w.])(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?(?!\w)"
 _NUMBER_RE = re.compile(_NUMBER)
@@ -40,6 +42,12 @@ _SEED_GERMINATION_SELECTION = re.compile(
     re.IGNORECASE,
 )
 
+_DAILY_GDD_BASE_REPLY = re.compile(
+    rf"\s*(?:the\s+)?{BASE_TEMPERATURE_ROLE}\s*(?:is|of|:)?\s*"
+    rf"(?P<value>{SUPPLIED_NUMBER})\s*°?\s*C\s*[.!]?\s*",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class ConversationResolution:
@@ -53,7 +61,7 @@ class ConversationResolution:
 def resolve_calculation_follow_up(
     current_question: str, recent_turns: list[dict[str, Any]]
 ) -> ConversationResolution:
-    """Resolve a bounded seed clarification or unique numeric substitution.
+    """Resolve a bounded calculator clarification or unique numeric substitution.
 
     A prior elliptical request may itself be resolved through consecutive,
     validated user calculation turns. Seed replies may select a denominator
@@ -70,6 +78,9 @@ def resolve_calculation_follow_up(
     germination = _SEED_GERMINATION_SELECTION.fullmatch(current_question)
     if germination is not None:
         return _resolve_seed_germination(current_question, recent_turns, germination.group("percent"))
+    base = _DAILY_GDD_BASE_REPLY.fullmatch(current_question)
+    if base is not None:
+        return _resolve_daily_gdd_base(current_question, recent_turns, base.group("value"))
     return _resolve(current_question, recent_turns, depth=0)
 
 
@@ -181,6 +192,40 @@ def _resolve_seed_germination(
     return ConversationResolution(effective, "resolved_seed_germination",
                                   source_turn_id=str(prior.get("turn_id") or prior.get("id") or "") or None,
                                   chain_depth=chain_depth)
+
+
+def _resolve_daily_gdd_base(
+    current_question: str, recent_turns: list[dict[str, Any]], base: str,
+) -> ConversationResolution:
+    if len(base) > 32:
+        return ConversationResolution(current_question, "reference_out_of_bounds")
+    antecedent = _prior_user_question(current_question, recent_turns)
+    if isinstance(antecedent, ConversationResolution):
+        return antecedent
+    prior, question = antecedent
+    original = plan_tools(question)
+    if (original.status != "clarification_required" or len(original.invocations) != 1
+            or not calculation_request_is_complete(question, "daily_gdd")):
+        return ConversationResolution(current_question, "antecedent_not_daily_gdd_base_clarification")
+    invocation = original.invocations[0]
+    if (invocation.tool_id != "agronomic_calculator" or invocation.operation != "daily_gdd"
+            or invocation.missing_inputs != ("base_temp_c",)
+            or "base_temp_c" in invocation.inputs):
+        return ConversationResolution(current_question, "antecedent_not_daily_gdd_base_clarification")
+    effective = question.rstrip().rstrip(".?!") + f", base temperature {base} C."
+    resolved = plan_tools(effective)
+    if resolved.status != "ready" or len(resolved.invocations) != 1:
+        return ConversationResolution(current_question, "base_not_same_calculation")
+    completed = resolved.invocations[0]
+    expected = {**invocation.inputs, "base_temp_c": float(base.replace(",", ""))}
+    if (completed.tool_id != invocation.tool_id or completed.operation != invocation.operation
+            or completed.inputs != expected or not calculation_request_is_complete(effective, "daily_gdd")):
+        return ConversationResolution(current_question, "base_not_same_calculation")
+    return ConversationResolution(
+        effective, "resolved_daily_gdd_base",
+        source_turn_id=str(prior.get("turn_id") or prior.get("id") or "") or None,
+        chain_depth=1,
+    )
 
 
 def _resolve(

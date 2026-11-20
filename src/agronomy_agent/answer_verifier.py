@@ -33,7 +33,7 @@ from agronomy_agent.observation_guidance import observation_guidance, sample_eve
 from agronomy_agent.agronomic_concepts import correct_concept_claims
 from agronomy_agent.request_scope import seed_quality_workflow_requested, topic_is_supplied_arithmetic_context, proposition_assertion_status
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
-from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, non_prescriptive_help_requested, has_application_instruction
+from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, non_prescriptive_help_requested, has_application_instruction, remove_separate_application_sentences
 from agronomy_agent.request_scope import information_request_kind
 from agronomy_agent.answerability import has_access_or_harvest_instruction
 
@@ -2587,6 +2587,9 @@ def _verify_answer_policy(
                     "other_prose_unchanged": True, "editor_invoked": False})
     if non_prescriptive_help_requested(question):
         application_cleaned, application_removed = remove_numeric_application_instructions(draft)
+        if has_application_instruction(application_cleaned):
+            application_cleaned, additional_removed = remove_separate_application_sentences(application_cleaned)
+            application_removed += additional_removed
         if application_removed:
             retained = application_cleaned or bounded_decision_support(question, question_type)
             original_assessment = assess_claim_risk(draft, question=question, evidence_text=evidence_text,

@@ -203,13 +203,25 @@ Retain application-message and transport-instruction hashes separately: the
 App Server text-only control also changes its raw-reference prompt recipe.
 
 The version-one canonical case contract binds the first question, supplied facts
-and exact compiled messages. Retained follow-up turns do not by themselves admit
+and exact compiled messages. Before dispatch, the runner checks the suite hash,
+unambiguous case IDs, first question, compiled fact hash and exact first raw
+message hash. The versioned `external_admission` record in the retained plan and
+`--dry-run` output lists the planned follow-up count per affected case and marks
+provider follow-ups unsupported. Production messages still undergo the exact
+per-call validation after compilation. Retained follow-up turns do not by themselves admit
 changed provider questions, history transcripts or updated facts. A raw history
 transcript also differs from the admitted single-user message shape; the provider
 client accepts one turn per instance. Deterministic product follow-ups may still
 complete locally. Extending hosted conversation coverage requires a versioned
 turn-aware contract, reviewed per-turn payloads, fresh single-use clients and a
-new whole hosted assessment. A contract rejection is not model refusal evidence.
+new whole hosted assessment. A successor should bind each ordered user turn,
+resolved question, fact snapshot and phase to its case and trial. History needs
+a reviewed render policy and provenance for each included prior answer, since
+fresh provider returns cannot be frozen as text in advance. A new client must
+admit each phase after validation and close on success or failure. Run negative
+controls for stale, reordered and cross-trial history, changed facts and missing
+predecessors before authorizing dispatch. A contract rejection is an instrument
+failure and retained evidence of the portion that ran.
 
 A live diagnostic needs fresh source-bound authorization for the exact cases,
 compiled prompts, synthetic facts, selected licensed evidence and verification

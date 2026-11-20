@@ -568,7 +568,7 @@ def test_descriptions_data_methods_and_negative_application_boundaries_are_not_i
 
 
 def test_rewrite_can_remove_an_unasked_application_and_keep_the_explanation():
-    draft = APPLICATION_EXPLANATION + " Spray the whole field now."
+    draft = APPLICATION_EXPLANATION.rstrip(".").replace(". ", "; ") + "; spray the whole field now."
     result = verify_answer(draft, question=APPLICATION_EXPLANATION_QUESTION,
         evidence_text="", question_type="exam_review", risk_level="low",
         editor=Editor(APPLICATION_EXPLANATION), review_mode="risk_conditioned_selective_v3")
@@ -622,6 +622,60 @@ def test_persisted_non_prescriptive_help_rejects_an_imposed_nonnumeric_spray_ins
             generation_backend=backend))
         assert backend.calls >= 1 and len(result.stage_receipts) == 17
         assert result.answer != draft and not has_application_instruction(result.answer)
+        assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize("trailing,retained", [
+    ("", ""),
+    (" Then apply the fertilizer to the field.", ""),
+    (" If symptoms persist, spray at dusk.", ""),
+    (" Apply 10 kg/ha nitrogen. Spray tomorrow.", ""),
+    ("\n- **Apply nitrogen.**", ""),
+    ("\n1. Spray tomorrow.", ""),
+    ("\n1) Spray tomorrow.", ""),
+    ("\n+ Apply *nitrogen*.", ""),
+    ("\n_Spray tomorrow._", ""),
+    (" **Spray tomorrow.** Keep plot identifiers with the readings.", " Keep plot identifiers with the readings."),
+    ("\n**Do not spray tomorrow based on this comparison.**", "\n**Do not spray tomorrow based on this comparison.**"),
+    (' The record says "Spray tomorrow."', ' The record says "Spray tomorrow."'),
+])
+def test_persisted_analytical_measurements_survive_application_guard(tmp_path, monkeypatch, trailing, retained):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+
+    method = "Use the nitrogen uptake measurements to compare the replicated strips. Compare matched sampling dates and units."
+
+    class Backend:
+        backend_id = "synthetic_analytical_measurements"
+        intervention_profile = "balanced"
+        calls = 0
+
+        def generate(self, messages):
+            self.calls += 1
+            return method + trailing
+
+        def close(self):
+            pass
+
+    backend = Backend()
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *a, **k: backend)
+    db = tmp_path / "synthetic.sqlite3"
+    store = TraceStore(db)
+    try:
+        session = store.create_session("Synthetic analytical comparison", {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(
+            store=store,
+            settings=build_settings(db_path=db, artifact_root=tmp_path / "artifacts", network_mode="offline"),
+            session_id=session["session_id"], mode="agronomic_rag", model_id="imposed",
+            message="How do I compare nitrogen uptake measurements between replicated strips?",
+            rag_config="configs/rag.yaml", max_tokens=200, generation_backend=backend,
+        ))
+        assert backend.calls and len(result.stage_receipts) == 17
+        assert result.answer == method + retained
         assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
     finally:
         store._conn.close()

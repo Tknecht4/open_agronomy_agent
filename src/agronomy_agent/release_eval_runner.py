@@ -1163,7 +1163,7 @@ def run_suite(
     plan = bind_controller_inputs(build_plan(registry, profile=profile, run_id=run_id, limit=limit), controller, comparison_cohort)
     if external_inputs:
         from agronomy_agent.release_eval_external import validate_external_plan
-        validate_external_plan(external_inputs, plan)
+        plan["external_admission"] = validate_external_plan(external_inputs, plan)
     model_bytes = checked_path(ROOT, registry["model_config"]).read_bytes()
     if hashlib.sha256(model_bytes).hexdigest() != plan["model"]["config_sha256"]:
         raise ValueError("model config changed during planning")

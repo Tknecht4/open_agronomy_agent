@@ -881,7 +881,7 @@ def _mean_temperature_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
                                         "thermal accumulation is not a crop-yield prediction or field-stage observation"))
 
 
-def _daily_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_daily_gdd_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal | None]:
     _require_only(
         inputs,
         required={"max_temp_c", "min_temp_c", "base_temp_c"},
@@ -896,6 +896,14 @@ def _daily_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     upper_cap = _optional_decimal(inputs, "upper_cap_c")
     if lower_cap is not None and upper_cap is not None and lower_cap > upper_cap:
         raise ValueError("lower_cap_c must be less than or equal to upper_cap_c")
+    return {"max_temp_c": maximum, "min_temp_c": minimum, "base_temp_c": base,
+            "lower_cap_c": lower_cap, "upper_cap_c": upper_cap}
+
+
+def _daily_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_daily_gdd_inputs(inputs)
+    maximum, minimum, base = values["max_temp_c"], values["min_temp_c"], values["base_temp_c"]
+    lower_cap, upper_cap = values["lower_cap_c"], values["upper_cap_c"]
     adjusted_max = _clamp(maximum, lower_cap, upper_cap)
     adjusted_min = _clamp(minimum, lower_cap, upper_cap)
     answer = max(Decimal("0"), (adjusted_max + adjusted_min) / Decimal("2") - base)
@@ -909,13 +917,7 @@ def _daily_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         answer,
         "GDD",
         f"max(0, (({_format_operand(adjusted_max)} + {_format_operand(adjusted_min)}) ÷ 2) − {_format_operand(base)}) {_format_formula_result(answer)} GDD",
-        {
-            "max_temp_c": maximum,
-            "min_temp_c": minimum,
-            "base_temp_c": base,
-            "lower_cap_c": lower_cap,
-            "upper_cap_c": upper_cap,
-        },
+        values,
         assumptions=assumptions,
     )
 
