@@ -28,8 +28,8 @@ dill==0.4.1
 docstring-parser==0.18.0
 et-xmlfile==2.0.0
 execnet==2.1.2
-fastapi==0.163.1
-filelock==4.2.10
+fastapi==0.163.2
+filelock==4.2.11
 fonttools==4.68.0
 frozenlist==1.8.0
 # Keep this in sync with the upper bound declared by the pinned datasets version.
@@ -43,10 +43,10 @@ h2==4.4.1
 hf-xet==1.8.0
 hpack==4.2.0
 httpcore==1.0.9
-httpcore2==2.16.0
+httpcore2==2.16.2
 httptools==0.9.0
 httpx==0.28.1
-httpx2==2.16.0
+httpx2==2.16.2
 huggingface-hub==2.4.0
 hyperframe==6.1.0
 idna==3.20
@@ -72,7 +72,7 @@ mlx-lm==0.32.2
 mlx-metal==0.32.4
 multidict==7.2.1
 multiprocess==0.70.19
-narwhals==2.28.0
+narwhals==2.29.0
 numpy==2.5.4
 openpyxl==3.1.5
 packaging==26.3
@@ -80,7 +80,7 @@ paginate==0.5.7
 pandas==3.1.1
 pathspec==1.1.1
 pillow==13.0.0
-platformdirs==4.14.5
+platformdirs==4.14.6
 pluggy==1.7.0
 propcache==0.5.4
 protobuf==7.36.2
@@ -101,7 +101,7 @@ pytest==9.2.0
 pytest-xdist==3.8.0
 python-dateutil==4.0.0
 python-dotenv==1.2.4
-python-multipart==0.0.33
+python-multipart==0.0.34
 pyyaml==6.0.3
 pyyaml-env-tag==1.1
 rdflib==7.6.0

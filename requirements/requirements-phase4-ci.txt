@@ -2,11 +2,11 @@ pyyaml>=6.0.0
 pytest>=9.2.0
 pytest-xdist>=3.6,<4
 jsonschema>=4.26.0
-fastapi>=0.163.1
+fastapi>=0.163.2
 httpx>=0.28.0
-httpx2>=2.16.0,<3
+httpx2>=2.16.2,<3
 psycopg[binary]>=3.3.9
-python-multipart>=0.0.33
+python-multipart>=0.0.34
 PyMuPDF>=2.1
 cryptography>=50.0.1,<51
 # Synthetic imagery assessment contracts run in backend CI, without EO weights.
