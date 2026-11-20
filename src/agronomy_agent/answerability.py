@@ -810,6 +810,7 @@ def has_application_instruction(answer: str) -> bool:
     This is a bounded output check, not a label validator. Noun phrases such
     as spray drift and instructions to read a label are not applications.
     """
+    answer = re.sub(r"\*\*|__|`", "", answer)
     reference = r"(?:labels?(?!\s+rates?\b)|records?|history|analysis|tests?|data|information|curves?|models?|formula|identity|name|number|comparisons?|effects?|groups?|arms?|contrasts?|prices?|costs?|values?|measurements?|readings?|results?)"
     # Read the head of the object: nitrogen uptake data and herbicide response
     # data are analytical inputs. A preposition, conjunction or time cue ends
@@ -911,7 +912,10 @@ def has_application_instruction(answer: str) -> bool:
 
 def remove_separate_application_sentences(answer: str) -> tuple[str, tuple[str, ...]]:
     """Remove detected applications that can be isolated without rewriting prose."""
-    sentences = re.split(r"(?<=[.!?])(?=\s)|(?<=\n)(?=\S)", answer)
+    # Preserve closing emphasis and line breaks. Leave numeric list markers
+    # with their instructions so removal does not strand an empty item.
+    parts = re.split(r"((?:[!?]|(?<!\d)\.)[*_`]*(?=\s|$)|\n+)", answer)
+    sentences = (body + ending for body, ending in zip(parts[::2], parts[1::2] + [""], strict=True))
     kept, removed = [], []
     for sentence in sentences:
         (removed if has_application_instruction(sentence) else kept).append(sentence)

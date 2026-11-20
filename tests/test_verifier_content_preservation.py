@@ -627,10 +627,17 @@ def test_persisted_non_prescriptive_help_rejects_an_imposed_nonnumeric_spray_ins
         store._conn.close()
 
 
-@pytest.mark.parametrize("trailing", [
-    "", " Then apply the fertilizer to the field.", " If symptoms persist, spray at dusk.",
+@pytest.mark.parametrize("trailing,retained", [
+    ("", ""),
+    (" Then apply the fertilizer to the field.", ""),
+    (" If symptoms persist, spray at dusk.", ""),
+    (" Apply 10 kg/ha nitrogen. Spray tomorrow.", ""),
+    ("\n- **Apply nitrogen.**", ""),
+    ("\n1. Spray tomorrow.", ""),
+    (" **Spray tomorrow.** Keep plot identifiers with the readings.", " Keep plot identifiers with the readings."),
+    ("\n**Do not spray tomorrow based on this comparison.**", "\n**Do not spray tomorrow based on this comparison.**"),
 ])
-def test_persisted_analytical_measurements_survive_application_guard(tmp_path, monkeypatch, trailing):
+def test_persisted_analytical_measurements_survive_application_guard(tmp_path, monkeypatch, trailing, retained):
     from agronomy_agent.execution_core import AgentExecutionRequest
     from agronomy_agent.server.services import chat_service
     from agronomy_agent.server.settings import build_settings
@@ -664,9 +671,7 @@ def test_persisted_analytical_measurements_survive_application_guard(tmp_path, m
             rag_config="configs/rag.yaml", max_tokens=200, generation_backend=backend,
         ))
         assert backend.calls and len(result.stage_receipts) == 17
-        assert method in result.answer
-        if trailing:
-            assert trailing.strip() not in result.answer
+        assert result.answer == method + retained
         assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
     finally:
         store._conn.close()

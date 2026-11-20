@@ -2587,8 +2587,9 @@ def _verify_answer_policy(
                     "other_prose_unchanged": True, "editor_invoked": False})
     if non_prescriptive_help_requested(question):
         application_cleaned, application_removed = remove_numeric_application_instructions(draft)
-        if not application_removed and has_application_instruction(draft):
-            application_cleaned, application_removed = remove_separate_application_sentences(draft)
+        if has_application_instruction(application_cleaned):
+            application_cleaned, additional_removed = remove_separate_application_sentences(application_cleaned)
+            application_removed += additional_removed
         if application_removed:
             retained = application_cleaned or bounded_decision_support(question, question_type)
             original_assessment = assess_claim_risk(draft, question=question, evidence_text=evidence_text,
