@@ -81,6 +81,16 @@ provide no field application or irrigation recommendation.
 
 Select a field when its known details matter to the question. Field observations and soil tests are user records; map intersections and provider data are separate contextual inputs. If a field is incomplete, leave unknowns blank and ask a bounded question. A model answer should not turn an unknown into a zero, a pass, or a prescription.
 
+When comparing wet forage yields, use dry matter on common mass and harvested-area
+units. Use wet-basis moisture as a fraction of the reported mass. Leave missing
+moisture measurements explicit. [Penn State Extension pasture yield](https://extension.psu.edu/determining-pasture-yield)
+
+Questions about the immediate boundaries of a reported pesticide spill get
+fixed exposure and reporting guidance. It covers what to report and when to
+contact local emergency services, a poison centre, or the spill-response
+authority. Follow the responders' incident-specific instructions.
+[Health Canada pesticide incident reporting](https://www.canada.ca/en/health-canada/services/consumer-product-safety/pesticides-pest-management/public/protecting-your-health-environment/report-pesticide-incident.html)
+
 ## Continue a saved conversation
 
 Use **Saved conversations** to reopen a general chat or a chat for the selected

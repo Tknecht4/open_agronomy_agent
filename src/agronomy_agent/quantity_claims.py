@@ -337,6 +337,29 @@ def _checked_rate_illustration_spans(answer: str, question: str) -> set[tuple[in
     return checked
 
 
+def _checked_moisture_arithmetic_spans(answer: str, question: str) -> set[tuple[int, int]]:
+    """Bind dimensionless operands to the moisture equation or a percent conversion."""
+    if (not re.search(r"\b(?:forage|hay|silage|grain)\b", question, re.I)
+            or not re.search(r"\bmoisture\b", question, re.I)):
+        return set()
+    equation = re.compile(
+        r"\bdry[- ]matter (?P<basis>yield|mass)\s*=\s*"
+        r"(?:as[- ]reported|as[- ]harvested|reported|wet|fresh) (?P=basis)"
+        r"\s*[×*]\s*\(\s*(?P<whole>1)\s*[-−]\s*(?:wet[- ]basis )?moisture fraction\s*\)"
+        r"(?=[*_`]*[ \t]*(?:[.](?!\d)|[!?;\n]|,\s+(?:where|with)\b|$))", re.I,
+    )
+    spans = {match.span("whole") for match in equation.finditer(answer)}
+    for example in re.finditer(
+        r"\bfor example,\s*(?:use )?(?P<percent>\d{1,3}(?:\.\d{1,6})?\s*%)"
+        r"\s+moisture\s+(?:as|=|equals)\s+(?P<fraction>(?:[01])?\.\d{1,8}|[01])"
+        r"(?=\s*(?:[.](?!\d)|[!?;\n]|$))", answer, re.I,
+    ):
+        percent = Decimal(example["percent"].removesuffix("%").strip())
+        if 0 <= percent <= 100 and percent / 100 == Decimal(example["fraction"]):
+            spans.update((example.span("percent"), example.span("fraction")))
+    return spans
+
+
 def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tuple[str, ...]:
     source = f"{question}\n{evidence}"
     source_dates: set[str] = set()
@@ -347,7 +370,8 @@ def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tupl
         answer, answer_dates = _calendar_dates(answer)
     normalized_source, source_annotations = _scientific_notation(source)
     answer, answer_annotations = _scientific_notation(answer)
-    illustrative_spans = _checked_rate_illustration_spans(answer, question)
+    checked_spans = (_checked_rate_illustration_spans(answer, question)
+                     | _checked_moisture_arithmetic_spans(answer, question))
     allowed = {_quantity(m) for m in NUMBER_RE.finditer(normalized_source)}
     # A stated range owns its exact endpoints on the range's unit basis.
     # Restating an endpoint separately is not new arithmetic; intermediate
@@ -369,7 +393,7 @@ def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tupl
     values: list[str] = sorted((answer_annotations - source_annotations) | (answer_dates - source_dates)
                                | {value for value in answer_dates if value.startswith("invalid calendar date:")})
     for match in NUMBER_RE.finditer(answer):
-        if match.span() in illustrative_spans:
+        if match.span() in checked_spans:
             continue
         q = _quantity(match)
         prefix = answer[max(0, match.start() - 80):match.start()]
