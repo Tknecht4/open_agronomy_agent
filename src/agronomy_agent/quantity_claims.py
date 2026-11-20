@@ -343,9 +343,10 @@ def _checked_moisture_arithmetic_spans(answer: str, question: str) -> set[tuple[
             or not re.search(r"\bmoisture\b", question, re.I)):
         return set()
     equation = re.compile(
-        r"\bdry[- ]matter (?:yield|mass)\s*=\s*"
-        r"(?:as[- ]reported|as[- ]harvested|reported|wet|fresh) (?:yield|mass)"
-        r"\s*[×*]\s*\(\s*(?P<whole>1)\s*[-−]\s*(?:wet[- ]basis )?moisture fraction\s*\)", re.I,
+        r"\bdry[- ]matter (?P<basis>yield|mass)\s*=\s*"
+        r"(?:as[- ]reported|as[- ]harvested|reported|wet|fresh) (?P=basis)"
+        r"\s*[×*]\s*\(\s*(?P<whole>1)\s*[-−]\s*(?:wet[- ]basis )?moisture fraction\s*\)"
+        r"(?=[*_`]*[ \t]*(?:[.](?!\d)|[!?;\n]|,\s+(?:where|with)\b|$))", re.I,
     )
     spans = {match.span("whole") for match in equation.finditer(answer)}
     for example in re.finditer(

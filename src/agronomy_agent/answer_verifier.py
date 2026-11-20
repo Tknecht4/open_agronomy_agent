@@ -5527,6 +5527,20 @@ def _mixed_rate_support(question: str) -> str | None:
     )
 
 
+def incident_information_answer(question: str) -> str | None:
+    """Give the immediate boundaries for a reported pesticide spill."""
+    if bounded_product_help_kind(question) != "incident_information":
+        return None
+    return (
+        "Keep people and animals away and avoid contact with the spill. If anyone needs immediate medical help, "
+        "call local emergency services. For possible exposure, contact the local poison centre. "
+        "For the spill itself, contact the local environmental emergency or spill-response authority. "
+        "Report the time, location, possible amount, signs of exposure, and any nearby drains or water. "
+        "Share a container or label description if you can see it from a safe location. "
+        "Leave the product and amount unknown if you cannot verify them. Do not improvise cleanup or wash the material away."
+    )
+
+
 def bounded_decision_support(question: str, question_type: str) -> str | None:
     """Reuse reviewed procedural fallbacks when an unsupported action is held.
 
@@ -5577,14 +5591,8 @@ def _conservative_failure_answer(question_type: str, *, question: str = "", _inc
     lower = question.lower()
     focus = request_focus(lower)
     decision_state = build_decision_route_state(question, question_type)
-    if decision_state.decision == "incident_information":
-        return (
-            "Keep people and animals away and avoid contact with the spill. If someone may have been exposed, contact "
-            "the local poison centre or emergency service as appropriate. For the spill itself, contact the local "
-            "environmental emergency or spill-response authority. Report the time, location, possible amount, signs of exposure, "
-            "and any nearby drains or water. Share a container or label description if you can see it from a safe location. "
-            "Leave the product and amount unknown if you cannot verify them. Do not improvise cleanup or wash the material away."
-        )
+    if decision_state.decision == "incident_information" and (incident_answer := incident_information_answer(question)):
+        return incident_answer
     premise_correction = decision_state.premise_correction_answer()
     if premise_correction:
         return premise_correction

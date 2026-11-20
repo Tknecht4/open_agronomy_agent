@@ -798,6 +798,11 @@ MOISTURE_EXAMPLE = "For example, use 35% moisture as 0.35."
     (f"{MOISTURE_FORMULA} The measured crop yield was 1 t/ha.", ("1 t/ha",)),
     (f"{MOISTURE_EXAMPLE} The current forage moisture is 35%.", ("35%",)),
     (MOISTURE_FORMULA.replace("(1", "(2"), ("2",)),
+    (MOISTURE_FORMULA.replace("reported yield", "reported mass"), ("1",)),
+    (MOISTURE_FORMULA[:-1] + " × dry weight.", ("1",)),
+    (MOISTURE_FORMULA.replace("wet-basis", "dry-basis"), ("1",)),
+    (f"**{MOISTURE_FORMULA[:-1]}**.", ()),
+    (MOISTURE_FORMULA.replace("yield", "mass"), ()),
     (MOISTURE_EXAMPLE.replace("0.35", "0.40"), ("35%", "0.40")),
     (MOISTURE_EXAMPLE.replace("0.35", "0.35 kg/ha"), ("35%", "0.35 kg/ha")),
 ])
