@@ -810,7 +810,7 @@ def has_application_instruction(answer: str) -> bool:
     This is a bounded output check, not a label validator. Noun phrases such
     as spray drift and instructions to read a label are not applications.
     """
-    reference = r"(?:labels?(?!\s+rates?\b)|records?|history|analysis|tests?|data|information|curves?|models?|formula|identity|name|number|comparisons?|effects?|groups?|arms?|contrasts?|prices?|costs?)"
+    reference = r"(?:labels?(?!\s+rates?\b)|records?|history|analysis|tests?|data|information|curves?|models?|formula|identity|name|number|comparisons?|effects?|groups?|arms?|contrasts?|prices?|costs?|values?|measurements?|readings?|results?)"
     # Read the head of the object: nitrogen uptake data and herbicide response
     # data are analytical inputs. A preposition, conjunction or time cue ends
     # that noun phrase, so an application cannot borrow a later data word.
@@ -828,10 +828,11 @@ def has_application_instruction(answer: str) -> bool:
     # the label". Do not treat every pronoun as a pesticide reference.
     physical_target = (
         rf"(?:{field}|roots?\b|soil\b|foliage\b|seeds?\b|seedlings?\b)"
-        rf"(?!(?:[- ]{modifier}){{0,3}}[- ](?:{reference}|values?|measurements?|readings?|results?)(?![-\w]))"
+        rf"(?!(?:[- ]{modifier}){{0,3}}[- ]{reference}(?![-\w]))"
     )
+    timing = r"(?:now|today|tomorrow|tonight|next\s+week|at\s+(?:dawn|dusk))\b"
     physical_tail = (
-        rf"(?=\s+(?:now\b|today\b|tomorrow\b|tonight\b|next\s+week\b|"
+        rf"(?=\s+(?:{timing}|"
         rf"(?:on|to|onto|in|into|over|across)\s+{determiner}"
         rf"{physical_target}))"
     )
@@ -841,7 +842,7 @@ def has_application_instruction(answer: str) -> bool:
     )
     def application(spray: str, apply: str, use: str, treat: str) -> str:
         return (
-            rf"(?:{spray}\s+(?:{determiner}(?:{field}|{material})|{physical_object}|now\b|today\b)|"
+            rf"(?:{spray}\s+(?:{determiner}(?:{field}|{material})|{physical_object}|{timing})|"
             rf"{apply}\s+(?:{determiner}{material}|{physical_object})|"
             rf"{use}\s+(?:{determiner}{material}|{physical_object})|"
             rf"{treat}\s+(?:the|your|our|this|that)\s+{field})"
@@ -906,6 +907,20 @@ def has_application_instruction(answer: str) -> bool:
         or re.search(rf"{start}(?:I|we) recommend(?: that you)?\s+(?:{operation}|{gerund})", answer, re.I)
         or re.search(rf"{start}(?:it is time to|the next step is to)\s+{operation}", answer, re.I)
     )
+
+
+def remove_separate_application_sentences(answer: str) -> tuple[str, tuple[str, ...]]:
+    """Remove detected applications that can be isolated without rewriting prose."""
+    sentences = re.split(r"(?<=[.!?])(?=\s)|(?<=\n)(?=\S)", answer)
+    kept, removed = [], []
+    for sentence in sentences:
+        (removed if has_application_instruction(sentence) else kept).append(sentence)
+    if not removed or not kept:
+        return answer, ()
+    remainder = "".join(kept).strip()
+    if not remainder or has_application_instruction(remainder):
+        return answer, ()
+    return remainder, tuple(removed)
 
 
 def has_access_or_harvest_instruction(answer: str) -> bool:

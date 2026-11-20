@@ -101,13 +101,51 @@ def test_shared_agronomic_roles_agree_in_readiness_and_persisted_execution(runti
     assert saved['trace']['metadata'].get('generation_stats') is None
 
 
-def test_legacy_daily_gdd_role_aliases_keep_unvalidated_readiness_unknown(runtime):
-    # Legacy daily_gdd has no independently callable canonical input validator.
-    # A ready parser plan must not invent model-free readiness qualification.
-    client, _ = runtime
-    view = preview(client, turn('Calculate daily GDD from high 25 C, low 9 C and base 7 C.'))
-    assert view['requires_model'] is None and view['status'] == 'unknown'
-    assert view['calculator']['operation'] == 'daily_gdd'
+@pytest.mark.parametrize("question", [
+    "At 75 kg/ha on 120 ha, how many kilograms of seed are needed?",
+    "How much seed do I need for 120 ha at 75 kg/ha?",
+    "Calculate the total seed required for 120 ha at 75 kg/ha.",
+])
+def test_seed_total_wording_previews_and_persists_without_a_model(runtime, monkeypatch, question):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    sid = session(client)
+    view = preview(client, turn(question), sid)
+    assert view["requires_model"] is False
+    assert view["calculator"]["operation"] == "field_product_total"
+    response = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                           json={**turn(question), "readiness_binding": view["readiness_binding"]})
+    assert response.status_code == 200, response.text
+    saved = store.get_turn(response.json()["turn_id"])
+    assert saved["answer"].startswith("9,000 kg")
+    assert saved["trace"]["metadata"]["generation_path"] == "deterministic_tool_result"
+
+
+def test_daily_gdd_clarification_accepts_only_the_requested_celsius_base(runtime, monkeypatch):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    sid = session(client)
+    question = "Calculate daily GDD from Tmax 26 C, Tmin 16 C."
+    initial = preview(client, turn(question), sid)
+    assert initial["status"] == "clarification_required" and initial["requires_model"] is False
+    first = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                        json={**turn(question), "readiness_binding": initial["readiness_binding"]})
+    assert first.status_code == 200, first.text
+    assert "base temperature in Celsius" in store.get_turn(first.json()["turn_id"])["answer"]
+    for unrelated in ("10 C.", "Base 50 F.", "Base 10 C. When should I harvest?"):
+        assert preview(client, turn(unrelated), sid)["requires_model"] is not False
+    reply = "Base 10 C."
+    view = preview(client, turn(reply), sid)
+    assert view["status"] == "ready" and view["requires_model"] is False
+    assert view["calculator"]["inputs"] == {"max_temp_c": 26, "min_temp_c": 16, "base_temp_c": 10}
+    response = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                           json={**turn(reply), "readiness_binding": view["readiness_binding"]})
+    assert response.status_code == 200, response.text
+    saved = store.get_turn(response.json()["turn_id"])
+    assert saved["user_message"] == reply
+    assert saved["answer"].startswith("11 GDD")
+    assert saved["trace"]["metadata"]["generation_path"] == "deterministic_tool_result"
+    assert preview(client, turn("Base 12 C."), sid)["requires_model"] is not False
 
 
 @pytest.mark.parametrize('question', [
@@ -117,6 +155,9 @@ def test_legacy_daily_gdd_role_aliases_keep_unvalidated_readiness_unknown(runtim
     'For 120 ha at 75 kg/ha, what is the total product mass? Then spray it.',
     'For 120 ha at 75 kg/ha, what is the total product mass? Also flarn the crop.',
     'For 120 ha at 7.5e1 kg/ha, what is the total product mass?',
+    'How much seed do I need for 120 ha at 75 kg/ha with 10% extra?',
+    'How much seed do I need for 120 ha?',
+    'At 75 kg/ha on 120 ha, how many kilograms of seed are needed? Also choose a rate.',
 ])
 def test_supplied_mass_preview_cannot_own_extra_units_quantities_or_tasks(runtime, monkeypatch, question):
     client, _ = runtime

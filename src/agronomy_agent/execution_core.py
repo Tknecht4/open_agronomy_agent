@@ -496,7 +496,7 @@ def classify_verification_origin(
             and bool(cleanup["removed_text"])
             and all(isinstance(text, str) and text.strip() for text in cleanup["removed_text"])
             and isinstance(original_reasons, (list, tuple))
-            and "unasked_application_instruction" in original_reasons
+            and any(reason in original_reasons for reason in ("unasked_application_instruction", "unrequested_application_instruction"))
             and isinstance(final_reasons, (list, tuple)) and not final_reasons
         )
         concept_edits = cleanup.get("edits") if isinstance(cleanup, Mapping) else None

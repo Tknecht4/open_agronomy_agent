@@ -27,11 +27,14 @@ def unit_owned_area_mass_total(text: str) -> dict[str, str] | None:
     area = rf"(?P<area>{NUMBER})\s*(?:ha|hectares?)"
     rate = rf"(?P<rate>{NUMBER})\s*kg\s*(?:/|per\s+)(?:ha|hectares?)"
     premise = rf"{area}\s+(?:at|with a supplied rate of)\s+{rate}"
-    output = r"(?:the\s+)?(?:total(?:\s+(?:product\s+)?mass)?|mass needed)"
+    output = r"(?:the\s+)?(?:total(?:\s+(?:product\s+)?mass|\s+seed\s+(?:required|needed|mass|weight))?|mass needed)"
+    seed_kg_question = r"how many (?:kilograms|kg) of seed (?:are (?:needed|required)|do (?:I|we) need)"
     patterns = (
         rf"(?:for\s+)?{premise}\s*[,;.]?\s*(?:what is|calculate|compute|work out)\s+{output}",
         rf"(?:calculate|compute|work out)\s+{output}\s+for\s+{premise}",
         rf"what is\s+{output}\s+for\s+{premise}",
+        rf"how much seed (?:do (?:I|we) need|is (?:needed|required)) for\s+{premise}",
+        rf"at\s+{rate}\s+(?:on|over|for)\s+{area}\s*,?\s*{seed_kg_question}",
     )
     for pattern in patterns:
         match = re.fullmatch(rf"\s*(?:please\s+)?{pattern}[.!?]*\s*", text, re.I)

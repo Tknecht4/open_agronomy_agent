@@ -55,7 +55,7 @@ from agronomy_agent.agronomic_calculations import (
     validate_grain_harvest_index_inputs,
     validate_circular_sampling_area_inputs,
     validate_single_nozzle_inputs,
-    validate_mean_temperature_gdd_inputs,
+    validate_mean_temperature_gdd_inputs, validate_daily_gdd_inputs,
     validate_seed_calculation_inputs,
 )
 from agronomy_agent.decision_contract import build_decision_contract
@@ -442,6 +442,17 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
+                reason = "invalid_calculator_inputs"
+        elif calculator.operation == "daily_gdd":
+            try:
+                values = validate_daily_gdd_inputs(calculator.inputs)
+                # Keep conservative formatting headroom across averaging and subtraction.
+                if any(value and (len(value.as_tuple().digits) > 12 or
+                                  not -12 <= value.adjusted() <= 10)
+                       for value in values.values()):
+                    raise ValueError("daily GDD operands exceed preview precision")
+                validated_inputs = True
+            except (ValueError, DecimalException):
                 reason = "invalid_calculator_inputs"
         elif calculator.operation in SEED_ESTABLISHMENT_OPERATIONS:
             try:
