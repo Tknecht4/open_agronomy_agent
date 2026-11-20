@@ -248,6 +248,8 @@ def test_variety_checklist_drift_is_corrected_in_rotation_definition():
     ("Why can equal herbicide doses have different outcomes when target weeds differ in growth stage?", "Weed growth stage can change leaf area, uptake, translocation and physiological sensitivity, so the same dose can produce different responses. Species, environmental conditions and exposure also matter. This explains a mechanism and does not select or authorize a field dose."),
     ("Repeated weed escapes follow the same herbicide program. How would you distinguish resistance from application failure?", "Identify the surviving weed species and growth stages and map their distribution. Review the exact product, application timing, coverage, weather and prior herbicide groups. Compare injured and uninjured survivors with missed strips and later emergence. Those observations can distinguish plausible application failure from suspected resistance; confirm consequential resistance claims with suitable testing rather than survival alone."),
     ("Which evidence is needed to assess whether an insecticide seed treatment is justified rather than routinely assumed necessary?", "Identify the target pest and review field history, representative pest observations and locally relevant untreated-versus-treated response evidence. Consider crop susceptibility, planting conditions, expected avoided stand loss, treatment cost and environmental risks. An insecticide seed treatment is not automatically justified; any proposed use must fit the exact current crop-and-target label."),
+    ("Two forage yields are reported at different moisture contents. How should they be compared?",
+     "Compare them on the same moisture basis, usually dry matter. Dry-matter yield = as-reported yield × (1 − wet-basis moisture fraction). For example, use 35% moisture as 0.35. Compare yields in the same mass and harvested-area units."),
     ("A pesticide spill is reported with unknown product and quantity. What information and immediate boundaries matter?", "Keep people and animals away and avoid contact with the unknown material. Record the location, time, container and product identification if safely observable, possible quantity, exposure and nearby drains or water. Contact the appropriate emergency or spill-response service for current local instructions. Do not improvise cleanup, mix chemicals or wash the spill into drains."),
     ("Explain what a pesticide dose-response curve means. I am not asking for a dose to apply.", "A dose-response curve relates dose to a measured biological response under specified test conditions. Its shape can differ with the organism, endpoint and conditions. It does not establish a suitable or permitted field application rate."),
     ("What is product rate versus nutrient rate?", "Product rate describes the amount of formulated product per area. Nutrient rate describes the mass of a specified nutrient per area; product concentration connects the two quantities."),
@@ -1940,3 +1942,43 @@ def test_crop_health_model_inputs_reach_the_actual_production_draft_prompt(tmp_p
     assert 'VSMB' not in question and 'temperature' not in question
     test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer,
         required_prompt_terms=('VSMB', 'temperature', 'precipitation'))
+
+
+def test_unusable_spill_draft_recovers_incident_guidance_and_keeps_it_persisted(tmp_path, monkeypatch):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+
+    draft = ("- Decision: Information and immediate boundaries for an unknown pesticide spill report.\n"
+             "- Commit rule: Answer the named question; preserve applicable source scope.\n- Preserve: None.")
+
+    class Backend:
+        backend_id = "synthetic_incident_recovery"
+        intervention_profile = "balanced"
+
+        def generate(self, messages):
+            return draft
+
+        def close(self):
+            pass
+
+    backend = Backend()
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *args, **kwargs: backend)
+    db = tmp_path / "incident.sqlite3"
+    store = TraceStore(db)
+    try:
+        session = store.create_session("Synthetic reported incident", {}, {})
+        request = AgentExecutionRequest(
+            store=store, settings=build_settings(db_path=db, artifact_root=tmp_path / "artifacts", network_mode="offline"),
+            session_id=session["session_id"], mode="agronomic_rag", model_id="imposed",
+            message="A pesticide spill is reported with unknown product and quantity. What information and immediate boundaries matter?",
+            rag_config="configs/rag.yaml", max_tokens=200, generation_backend=backend,
+        )
+        result = chat_service.execute_agent_request(request)
+        assert result.answer.startswith("Keep people and animals away")
+        assert "spill-response authority" in result.answer and "Do not improvise cleanup" in result.answer
+        assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
+        assert len(result.stage_receipts) == 17
+    finally:
+        store._conn.close()

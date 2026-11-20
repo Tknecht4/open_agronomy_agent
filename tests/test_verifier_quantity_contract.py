@@ -785,3 +785,21 @@ def test_canola_differential_accepts_both_sulfur_spellings(name, missing):
         question_type='crop_management',
     )
     assert ('sulfur_young_growth' in assessment.missing_intent_facets) is missing
+
+
+MOISTURE_COMPARISON = "Two forage yields are reported at different moisture contents. How should they be compared?"
+MOISTURE_FORMULA = "Dry-matter yield = reported yield × (1 − wet-basis moisture fraction)."
+MOISTURE_EXAMPLE = "For example, use 35% moisture as 0.35."
+
+
+@pytest.mark.parametrize("statement,unsupported", [
+    (MOISTURE_FORMULA, ()),
+    (f"{MOISTURE_FORMULA} {MOISTURE_EXAMPLE}", ()),
+    (f"{MOISTURE_FORMULA} The measured crop yield was 1 t/ha.", ("1 t/ha",)),
+    (f"{MOISTURE_EXAMPLE} The current forage moisture is 35%.", ("35%",)),
+    (MOISTURE_FORMULA.replace("(1", "(2"), ("2",)),
+    (MOISTURE_EXAMPLE.replace("0.35", "0.40"), ("35%", "0.40")),
+    (MOISTURE_EXAMPLE.replace("0.35", "0.35 kg/ha"), ("35%", "0.35 kg/ha")),
+])
+def test_moisture_arithmetic_binds_only_equation_and_checked_example_numbers(statement, unsupported):
+    assert unsupported_quantities(statement, question=MOISTURE_COMPARISON, evidence="") == unsupported

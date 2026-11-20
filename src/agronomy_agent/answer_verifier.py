@@ -5554,7 +5554,7 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
     if state.decision in {
         "pesticide_rate_request", "underspecified_spray", "plant_health_diagnostic",
         "crop_stress_differential", "drought_nitrogen_adjustment", "spray_weather_window",
-        "clubroot_containment", "pest_treatment", "weed_escape_management",
+        "clubroot_containment", "pest_treatment", "weed_escape_management", "incident_information",
     } or question_type == "plant_health":
         return _conservative_failure_answer(question_type, question=question)
     return concept
@@ -5577,6 +5577,14 @@ def _conservative_failure_answer(question_type: str, *, question: str = "", _inc
     lower = question.lower()
     focus = request_focus(lower)
     decision_state = build_decision_route_state(question, question_type)
+    if decision_state.decision == "incident_information":
+        return (
+            "Keep people and animals away and avoid contact with the spill. If someone may have been exposed, contact "
+            "the local poison centre or emergency service as appropriate. For the spill itself, contact the local "
+            "environmental emergency or spill-response authority. Report the time, location, possible amount, signs of exposure, "
+            "and any nearby drains or water. Share a container or label description if you can see it from a safe location. "
+            "Leave the product and amount unknown if you cannot verify them. Do not improvise cleanup or wash the material away."
+        )
     premise_correction = decision_state.premise_correction_answer()
     if premise_correction:
         return premise_correction
