@@ -257,6 +257,8 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
                 "--paths", str(root), "--paths", str(root / "src"),
                 "--collect-all", "mlx", "--collect-all", "mlx_lm",
                 "--collect-submodules", "transformers",
+                # Pyogrio loads Cython siblings and GDAL data at runtime.
+                "--collect-submodules", "pyogrio", "--collect-data", "pyogrio",
                 str(root / "macos_app/backend.py"),
             ],
             cwd=root,
