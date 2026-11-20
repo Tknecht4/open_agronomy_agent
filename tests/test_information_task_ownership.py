@@ -339,3 +339,20 @@ def test_source_lookup_retains_current_weather_evidence_requirement(question):
     assert classify_high_consequence_domains('Explain why weather forecasts are uncertain.') == []
     assert classify_high_consequence_domains('Explain how forecasts are produced.') == []
     assert classify_high_consequence_domains('Define the weather forecast.') == []
+
+
+@pytest.mark.parametrize("question", [
+    "Distinguish a seasonal climate normal from next week's weather forecast in planting advice.",
+    "Compare a climate normal with the weather forecast for next week.",
+])
+def test_climate_normal_comparison_does_not_require_live_weather(tmp_path, monkeypatch, question):
+    from agronomy_agent.high_consequence import classify_high_consequence_domains
+
+    answer = ("A climate normal summarizes historical conditions for a place and season. "
+              "A weather forecast estimates conditions for a specific future period, with uncertainty. "
+              "Use the normal for seasonal planning and the forecast with field observations for timing.")
+    result, calls = persisted_answer(tmp_path, monkeypatch, question, answer)
+    assert calls > 0 and result.answer == answer
+    assert classify_high_consequence_domains(question) == []
+    assert classify_high_consequence_domains(question + " Should I plant tomorrow?") == ["current_weather"]
+    assert classify_high_consequence_domains("What is next week's weather forecast?") == ["current_weather"]

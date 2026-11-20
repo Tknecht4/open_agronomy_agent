@@ -22,12 +22,64 @@ def suite_inventory_sha256(plan: Mapping[str, Any]) -> str:
         key=lambda row: row["case_id"])})
 
 
-def validate_external_plan(inputs: Mapping[str, Any], plan: Mapping[str, Any]) -> None:
+def validate_external_plan(inputs: Mapping[str, Any], plan: Mapping[str, Any]) -> dict[str, Any]:
+    """Check the v1 first-turn projection and disclose the hosted coverage limit."""
+    from agronomy_agent.codex_app_server import (
+        CANONICAL_SUITE_SCHEMA, CodexAppServerError, _validate_exact_application_message_shape,
+        _validated_suite_case_contract,
+    )
+    from agronomy_agent.release_eval_executor import _questions, compile_case_field_context
+    from agronomy_agent.release_evaluation import digest
+
     suite = inputs["suite"]["value"]
+    inventory_sha = suite_inventory_sha256(plan)
+    case_ids = {row["case_id"] for row in plan["cases"]}
     if (suite.get("source_sha256") != plan["source"]["source_sha256"]
-            or suite.get("benchmark_suite_sha256") != suite_inventory_sha256(plan)
-            or set(suite.get("cases", {})) != {row["case_id"] for row in plan["cases"]}):
+            or suite.get("benchmark_suite_sha256") != inventory_sha
+            or len(case_ids) != len(plan["cases"])
+            or set(suite.get("cases", {})) != case_ids):
         raise ValueError("external controls do not bind the actual source and full case inventory")
+    if suite.get("schema_version") != CANONICAL_SUITE_SCHEMA:
+        raise ValueError("external plan requires the canonical suite-case contract")
+    _validated_suite_case_contract(suite, benchmark_suite_sha256=inventory_sha)
+
+    arms_by_case = {}
+    for cell in plan["matrix"]:
+        if cell["backend"] == "codex_app_server":
+            arms_by_case.setdefault(cell["case_id"], set()).add(cell["arm_id"])
+    followups = {}
+    for case in plan["cases"]:
+        case_id = case["case_id"]
+        arms = arms_by_case.get(case_id)
+        if not arms:
+            continue
+        questions = _questions(case)
+        question = questions[0]
+        compiled, _ = compile_case_field_context(case.get("field_context", {}))
+        binding = suite["cases"][case_id]
+        if (binding["question_sha256"] != hashlib.sha256(question.encode("utf-8")).hexdigest()
+                or binding["field_context_sha256"] != digest(compiled)):
+            raise ValueError(f"hosted first-turn question or supplied-fact binding differs for {case_id}")
+        if "raw_model" in arms:
+            try:
+                raw_sha = _validate_exact_application_message_shape(
+                    [{"role": "user", "content": question}],
+                    phase="candidate_generation", arm="raw_model",
+                )
+            except CodexAppServerError as exc:
+                raise ValueError(f"hosted first-turn raw message cannot be projected for {case_id}") from exc
+            if raw_sha != binding["candidate_application_messages_sha256_by_arm"]["raw_model"]:
+                raise ValueError(f"hosted first-turn raw message binding differs for {case_id}")
+        if len(questions) > 1:
+            followups[case_id] = len(questions) - 1
+
+    return {
+        "schema_version": "open_agronomy_agent.external_plan_admission.v1",
+        "suite_case_contract_sha256": suite["sha256"],
+        "hosted_cases_checked": len(arms_by_case),
+        "provider_follow_up_status": "unsupported_by_first_turn_contract",
+        "planned_follow_ups_by_case": followups,
+    }
 
 
 def read_external_inputs(declaration: Any, root: Path) -> dict[str, dict[str, Any]]:

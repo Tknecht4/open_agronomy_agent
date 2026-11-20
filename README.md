@@ -85,12 +85,13 @@ Current workflows include:
 - **Calculate from supplied inputs:** field totals, seed rates, nutrient and
   product quantities, water, sprayer calibration, grain moisture and thermal
   time. Recognized calculations with validated complete inputs can run without
-  loading a model. For
-  example, 120 ha at a supplied 75 kg/ha gives a total of 9,000 kg; the
-  calculation does not choose the rate.
+  loading a model. Ask “How much seed do I need for 120 ha at 75 kg/ha?”
+  to calculate 9,000 kg from the supplied rate.
 - **Clarify seed establishment:** when a survival percentage could mean overall
   emergence or survival after germination, inspect both labelled calculations.
   A short reply can select the intended basis and complete the calculation.
+  If a daily growing degree-day calculation asks for the base temperature,
+  reply in the same chat with the supplied value, such as “Base 10 C.”
 - **Keep useful field records:** save observations and soil tests with their
   known sample dates, depths and methods. Corrections preserve the original
   record; an unknown sample date stays unknown. Unconfirmed saves keep the exact

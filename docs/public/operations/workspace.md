@@ -60,7 +60,8 @@ preserving the unsent draft. A delayed recovery does not replace a newer field o
 chat selection. Device-only field notes remain on the device.
 
 With a working API, supported unit conversions, validated tank-coverage,
-nitrogen-product field-total and soil-water-storage calculations, and calculator
+nitrogen-product field totals, supplied seed totals, daily growing degree-days,
+soil-water-storage calculations, and calculator
 requests that need a missing input can proceed
 without a ready model. Tank coverage uses your supplied tank volume and
 application volume per hectare; it does not select an application rate. Supplied
@@ -96,6 +97,11 @@ Use **Saved conversations** to reopen a general chat or a chat for the selected
 field. **New chat** starts a separate conversation in that scope. Select the
 field to find its other conversations. Changing a conversation's field requires
 a new chat; previous answers remain attached to their original context.
+
+For a daily growing degree-day question with both Celsius temperature extremes
+already supplied, reply with the missing base, such as **“Base 10 C.”** The
+assistant reuses the temperatures from the immediately preceding question in
+the same conversation. A new question or different units need their own inputs.
 
 For a complete calculation request with one numeric input, a follow-up such as
 “What about 200 instead?” can reuse the operation and units from your previous
