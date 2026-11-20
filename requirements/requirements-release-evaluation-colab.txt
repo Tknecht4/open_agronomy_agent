@@ -5,7 +5,7 @@ mlx[cuda12]==0.32.4
 # Match NVRTC's major version even when Colab supplies system CUDA 13 headers.
 nvidia-cuda-runtime-cu12==12.9.79
 mlx-lm==0.32.2
-transformers==5.22.1
+transformers==5.23.0
 huggingface_hub==2.4.0
 numpy>=2.5.4,<3
 rdflib>=7,<8

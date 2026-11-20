@@ -18,6 +18,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    # The cockpit runs on Node 24. Keep the available API types on that major.
+    ignore:
+      - dependency-name: "@types/node"
+        versions: [">=25.0.0"]
     groups:
       react:
         patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
