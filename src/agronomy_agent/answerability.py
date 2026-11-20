@@ -810,7 +810,7 @@ def has_application_instruction(answer: str) -> bool:
     This is a bounded output check, not a label validator. Noun phrases such
     as spray drift and instructions to read a label are not applications.
     """
-    answer = re.sub(r"\*\*|__|`", "", answer)
+    answer = re.sub(r"[*`]+|(?<!\w)_+|_+(?!\w)", "", answer)
     reference = r"(?:labels?(?!\s+rates?\b)|records?|history|analysis|tests?|data|information|curves?|models?|formula|identity|name|number|comparisons?|effects?|groups?|arms?|contrasts?|prices?|costs?|values?|measurements?|readings?|results?)"
     # Read the head of the object: nitrogen uptake data and herbicide response
     # data are analytical inputs. A preposition, conjunction or time cue ends
@@ -851,7 +851,7 @@ def has_application_instruction(answer: str) -> bool:
     operation = application("spray", "apply", "use", "treat")
     gerund = application("spraying", "applying", "using", "treating")
     operation = rf"(?:{operation}|(?:add|spread|increase|reduce|raise|lower|choose|select|recommend)\s+{determiner}{material})"
-    start = r"(?:^|[.!?;:\n]|,\s*|\b(?:and|then|also)\s+)\s*(?:[-*]\s*)?"
+    start = r"(?:^|[.!?;:\n]|,\s*|\b(?:and|then|also)\s+)\s*(?:[-+•]\s*|\d+[.)]\s+)?"
     # Denying that evidence establishes permission is not a recommendation.
     # Mask only the modal subject in that explicit subordinate proposition;
     # a separate positive instruction remains visible to every check below.

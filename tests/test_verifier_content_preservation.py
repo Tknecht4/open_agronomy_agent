@@ -634,8 +634,12 @@ def test_persisted_non_prescriptive_help_rejects_an_imposed_nonnumeric_spray_ins
     (" Apply 10 kg/ha nitrogen. Spray tomorrow.", ""),
     ("\n- **Apply nitrogen.**", ""),
     ("\n1. Spray tomorrow.", ""),
+    ("\n1) Spray tomorrow.", ""),
+    ("\n+ Apply *nitrogen*.", ""),
+    ("\n_Spray tomorrow._", ""),
     (" **Spray tomorrow.** Keep plot identifiers with the readings.", " Keep plot identifiers with the readings."),
     ("\n**Do not spray tomorrow based on this comparison.**", "\n**Do not spray tomorrow based on this comparison.**"),
+    (' The record says "Spray tomorrow."', ' The record says "Spray tomorrow."'),
 ])
 def test_persisted_analytical_measurements_survive_application_guard(tmp_path, monkeypatch, trailing, retained):
     from agronomy_agent.execution_core import AgentExecutionRequest
