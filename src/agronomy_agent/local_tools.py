@@ -50,8 +50,7 @@ PMRA_PPID_EXTRACT_BASE_URL = "https://pest-control.canada.ca/pesticide-registry-
 PMRA_PPID_OPEN_DATA_URL = "https://open.canada.ca/data/en/dataset/e10b0d6e-04ac-4014-a64a-666c3874bbe0"
 PMRA_PPID_CACHE_VERSION = "v2"
 PMRA_PPID_DEFAULT_CACHE_MAX_AGE_HOURS = 24
-AAFC_ACI_CATALOG_URL = "https://agriculture.canada.ca/imagery-images/rest/services/annual_crop_inventory"
-AAFC_ACI_IMAGE_SERVER_TEMPLATE = AAFC_ACI_CATALOG_URL + "/{year}/ImageServer"
+AAFC_ACI_IMAGE_SERVER_TEMPLATE = crop_cover.AAFC_ACI_CATALOG_URL + "/{year}/ImageServer"
 AAFC_NASDI_OPEN_DATA_URL = "https://open.canada.ca/data/en/dataset/2b72996a-2905-4cea-a565-8bfb85cd42ac"
 AAFC_NASDI_IMAGE_SERVER_TEMPLATE = "https://agriculture.canada.ca/imagery-images/rest/services/nasdi/{service}/ImageServer"
 AAFC_NASDI_CACHE_VERSION = "v2"
@@ -167,7 +166,7 @@ CANADA_SOURCE_LANE_DEFINITIONS: dict[str, dict[str, Any]] = {
         "source_lane_id": "aafc_annual_crop_inventory",
         "source_name": "AAFC Annual Crop Inventory",
         "provider": "Agriculture and Agri-Food Canada",
-        "source": AAFC_ACI_CATALOG_URL,
+        "source": crop_cover.AAFC_ACI_CATALOG_URL,
         "status": "available",
         "coverage": "Canadian annual crop-cover and land-cover classification from the AAFC Annual Crop Inventory.",
         "decision_checks": [
@@ -1183,18 +1182,14 @@ def cansis_soil_landscapes_canada(
 def aafc_crop_inventory_catalog(*, cache_dir: str = "outputs/tool_cache/aafc_annual_crop_inventory",
                                 timeout: int = 20, offline_only: bool = False) -> dict[str, Any]:
     """Discover advertised years; the receipt is not proof of pixel availability."""
-    source = AAFC_ACI_CATALOG_URL
+    source = crop_cover.AAFC_ACI_CATALOG_URL
     path = Path(cache_dir) / "catalog_v1.json"
     cached = _read_fresh_json_cache(path, max_age_seconds=6 * 60 * 60)
     if cached is not None:
         return {**cached, "cache_hit": True}
     if offline_only:
         raise OfflineCacheMissError("No current ACI catalog receipt; external request not attempted")
-    request = urllib.request.Request(source + "?f=json", headers={"User-Agent": "agronomy-agent-local-tools/0.1"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        raw = response.read(2_000_001)
-    if len(raw) > 2_000_000:
-        raise RuntimeError("ACI catalog exceeds response limit")
+    raw = crop_cover.read_provider_response(source + "?f=json", "ACI catalog", timeout=timeout, limit=2_000_000)
     data = json.loads(raw)
     if not isinstance(data, dict) or data.get("error") or not isinstance(data.get("services"), list):
         raise RuntimeError("ACI catalog unavailable")
@@ -1223,6 +1218,16 @@ _CROP_COVER_BOUNDARY = (
 )
 
 
+def _crop_cover_error_details(exc: Exception) -> dict[str, Any]:
+    cause = exc.reason if isinstance(exc, urllib.error.URLError) and isinstance(exc.reason, Exception) else exc
+    detail = {"error_type": type(cause).__name__}
+    for key in ("errno", "verify_code"):
+        value = getattr(cause, key, None)
+        if type(value) is int:
+            detail[key] = value
+    return detail
+
+
 def _query_crop_cover(geometry: Any, *, cache_dir: str, service: str, crs: int, year: int, resolution: int,
                       labels: dict[int, str], no_class_codes: frozenset, timeout: int,
                       raster: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1240,7 +1245,8 @@ def _query_crop_cover(geometry: Any, *, cache_dir: str, service: str, crs: int, 
         return {"year": year, "source": service, "status": "unsupported_geometry", "message": str(exc), "cache_hit": False}
     except (OSError, RuntimeError) as exc:
         message = f"Crop-cover source query failed ({type(exc).__name__})." if isinstance(exc, OSError) else str(exc)
-        return {"year": year, "source": service, "status": "unavailable", "message": message, "cache_hit": False}
+        return {"year": year, "source": service, "status": "unavailable", "message": message, "cache_hit": False,
+                **_crop_cover_error_details(exc)}
     result["fetched_at"] = dt.datetime.now(dt.UTC).isoformat()
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as file:
@@ -1283,10 +1289,11 @@ def aafc_annual_crop_inventory(
     field = crop_cover.prepare_geometry(geometry, MAX_CDL_GEOMETRY_VERTICES, MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES)
     try:
         catalog = aafc_crop_inventory_catalog(cache_dir=cache_dir, timeout=timeout) if year is None else None
-    except (OSError, RuntimeError, ValueError):
+    except (OSError, RuntimeError, ValueError) as exc:
         return {"tool": "aafc_annual_crop_inventory", "status": "unavailable",
-                "source": AAFC_ACI_CATALOG_URL,
-                "message": "AAFC Annual Crop Inventory year catalog was unavailable."}
+                "source": crop_cover.AAFC_ACI_CATALOG_URL,
+                "message": "AAFC Annual Crop Inventory year catalog was unavailable.",
+                **_crop_cover_error_details(exc)}
     selected_year = int(catalog["selected_year"] if catalog else year)
     source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.format(year=selected_year)
     result = _query_crop_cover(
@@ -2395,8 +2402,9 @@ def _cdl_lookup(geometry: dict[str, Any], years: tuple[int, ...] | None, default
     payload["source"] = source
     try:
         catalog, digest = crop_cover.cdl_catalog(source, timeout=timeout)
-    except (OSError, RuntimeError, ValueError):
-        return {**payload, "status": "unavailable", "message": "USDA CDL annual raster catalog was unavailable."}
+    except (OSError, RuntimeError, ValueError) as exc:
+        return {**payload, "status": "unavailable", "message": "USDA CDL annual raster catalog was unavailable.",
+                **_crop_cover_error_details(exc)}
     selected = requested or sorted(catalog, reverse=True)[:default_count]
     records: dict[str, Any] = {}
     for year in selected:

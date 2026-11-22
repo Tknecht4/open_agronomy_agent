@@ -5,7 +5,10 @@ import hashlib
 import io
 import json
 import math
+import os
 import re
+import subprocess
+import sys
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
@@ -15,6 +18,7 @@ from agronomy_agent.geospatial.geometry import canonical_geometry, project_geome
 from agronomy_agent.geospatial.raster import fractional_weights
 
 COVERAGE_VERSION = "crop-cover.v1"
+AAFC_ACI_CATALOG_URL = "https://agriculture.canada.ca/imagery-images/rest/services/annual_crop_inventory"
 CDL_IMAGE_SERVER = "https://pdi.scinet.usda.gov/image/rest/services/CDL_WM/ImageServer"
 HAWAII_CDL_IMAGE_SERVER = "https://pdi.scinet.usda.gov/image/rest/services/CDL_WM_Hawaii/ImageServer"
 DOMINANT_FRACTION = 0.8
@@ -57,14 +61,53 @@ def cdl_service(geometry: Any) -> tuple[str, int] | None:
     return None
 
 
-def _read(service: str, operation: str, parameters: dict[str, Any], *, timeout: int, limit: int) -> bytes:
-    query = urllib.parse.urlencode(parameters)
-    request = urllib.request.Request(f"{service}/{operation}?{query}", headers={"User-Agent": "agronomy-agent-local-tools/0.1"})
+def _read_macos_aafc(url: str, *, timeout: int, limit: int, user_agent: str) -> bytes:
+    # The AAFC gateway resets the frozen OpenSSL client. macOS curl negotiates
+    # successfully with the platform TLS stack and keeps certificate verification.
+    command = [
+        "/usr/bin/curl", "--disable", "--silent", "--fail", "--globoff",
+        "--proto", "=https", "--http2", "--max-time", str(timeout),
+        "--max-filesize", str(limit), "--user-agent", user_agent,
+        "--write-out", "%{http_code}", "--", url,
+    ]
+    environment = {key: os.environ[key] for key in ("SSL_CERT_FILE", "SSL_CERT_DIR") if key in os.environ}
+    host = urllib.parse.urlsplit(url).netloc
+    proxy = urllib.request.getproxies().get("https")
+    if proxy and not urllib.request.proxy_bypass(host):
+        environment["https_proxy"] = proxy
+    try:
+        process = subprocess.run(
+            command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            timeout=timeout + 1, env=environment,
+        )
+    except subprocess.TimeoutExpired:
+        raise TimeoutError("AAFC crop-cover request timed out") from None
+    raw, status = process.stdout[:-3], process.stdout[-3:]
+    if process.returncode == 63 or len(raw) > limit:
+        raise RuntimeError("AAFC crop-cover response exceeds size limit")
+    if process.returncode or status != b"200":
+        http_status = int(status) if status.isdigit() else 0
+        raise RuntimeError(f"AAFC crop-cover request failed (curl exit {process.returncode}, HTTP {http_status}).")
+    return raw
+
+
+def read_provider_response(url: str, operation: str, *, timeout: int, limit: int) -> bytes:
+    user_agent = "agronomy-agent-local-tools/0.1"
+    if sys.platform == "darwin" and getattr(sys, "frozen", False) and url.startswith(
+        (AAFC_ACI_CATALOG_URL + "?", AAFC_ACI_CATALOG_URL + "/")
+    ):
+        return _read_macos_aafc(url, timeout=timeout, limit=limit, user_agent=user_agent)
+    request = urllib.request.Request(url, headers={"User-Agent": user_agent})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         raw = response.read(limit + 1)
     if len(raw) > limit:
         raise RuntimeError(f"Crop-cover {operation} response exceeds size limit")
     return raw
+
+
+def _read(service: str, operation: str, parameters: dict[str, Any], *, timeout: int, limit: int) -> bytes:
+    query = urllib.parse.urlencode(parameters)
+    return read_provider_response(f"{service}/{operation}?{query}", operation, timeout=timeout, limit=limit)
 
 
 def cdl_catalog(service: str, *, timeout: int) -> tuple[dict[int, dict[str, Any]], str]:

@@ -193,6 +193,8 @@ def test_desktop_serve_can_select_explicit_offline_mode(
     monkeypatch.setenv("AGRONOMY_AGENT_NETWORK_MODE", "online")
     monkeypatch.setattr(backend, "verify_model_receipt", lambda *_: None)
     monkeypatch.setitem(sys.modules, "scripts.run_cockpit", SimpleNamespace(main=lambda: 0))
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(backend, "_configure_provider_https", lambda: pytest.fail("offline startup must leave HTTPS unconfigured"))
     monkeypatch.setattr(sys, "argv", ["pytest"])
 
     assert backend.serve(tmp_path, tmp_path, tmp_path, port=18080, network_mode="offline") == 0
@@ -273,3 +275,38 @@ def test_desktop_startup_failure_keeps_traceback_private(tmp_path: Path) -> None
     assert len(private_logs) == 1
     assert private_logs[0].stat().st_mode & 0o077 == 0
     assert "model has not been installed" in private_logs[0].read_text()
+
+
+def test_frozen_provider_https_uses_verified_client_context(monkeypatch):
+    import ssl
+    import urllib.request
+
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
+    installed = []
+    standard_context = ssl.SSLContext
+    protocols = []
+
+    def native_context(protocol):
+        protocols.append(protocol)
+        return standard_context(protocol)
+
+    monkeypatch.setitem(sys.modules, "truststore", SimpleNamespace(SSLContext=native_context))
+    monkeypatch.setattr(urllib.request, "install_opener", installed.append)
+
+    backend._configure_provider_https()
+
+    assert protocols == [ssl.PROTOCOL_TLS_CLIENT]
+    https = next(handler for handler in installed[0].handlers if isinstance(handler, urllib.request.HTTPSHandler))
+    assert https._context.verify_mode == ssl.CERT_REQUIRED
+    assert https._context.check_hostname
+    assert ssl.SSLContext is standard_context
+
+
+@pytest.mark.parametrize("override", ["SSL_CERT_FILE", "SSL_CERT_DIR"])
+def test_mac_provider_https_preserves_explicit_certificate_settings(monkeypatch, override, tmp_path):
+    import urllib.request
+
+    monkeypatch.setenv(override, str(tmp_path))
+    monkeypatch.setattr(urllib.request, "install_opener", lambda _: pytest.fail("explicit trust settings must be preserved"))
+    backend._configure_provider_https()

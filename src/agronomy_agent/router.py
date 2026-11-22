@@ -3437,11 +3437,20 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
     # Reconcile the final decision object after broad retrieval signals have
     # been collected. These rules keep diagnosis ahead of treatment and make
     # missing-evidence guards consistent across unfamiliar question formats.
+    diagnosis_text = q
+    if named_annual_crop_inventory or has(r"\b(?:cdl|cropland data layer|crop[- ]cover)\b", q):
+        # Confirming a historical crop class against planting records is not diagnosis.
+        diagnosis_text = re.sub(
+            r"\bconfirm\s+(?:the\s+)?(?:actual\s+)?"
+            r"(?:planted crops?|(?:which |what )?crops? (?:were )?(?:planted|grown))\b(?=\s*[?.!]?\s*$)",
+            "",
+            q,
+        )
     diagnosis_first = bool(current_root_swelling_clauses(question)) or has(
         r"\b(?:is it|confirm|diagnos|not sure what|drift or|tank injury|"
         r"swollen roots?|yellow[- ]orange stripes?|rapidly expanding .*lesions?|"
         r"dying .*roots?|twisted after spraying|stand can recover)\b|\bclubroot\?",
-        q,
+        diagnosis_text,
     )
     explicit_product_identity = has(
         r"\b(?:registration number|pcp number|active ingredient|full product name|exact product)\b",

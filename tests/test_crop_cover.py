@@ -3,6 +3,10 @@ from __future__ import annotations
 
 import io
 import json
+import ssl
+import subprocess
+from types import SimpleNamespace
+from urllib.error import URLError
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -172,3 +176,92 @@ def test_long_narrow_boundary_uses_adjacent_windows(monkeypatch):
     with pytest.raises(crop_cover.WindowLimitError):
         crop_cover._windows(box(0, 0, 11_000, 11_000), 10)
     assert len(crop_cover._windows(box(0, 0, 11_000, 11_000), 30)) == 1
+
+
+
+@pytest.mark.parametrize("country", ["US", "CA"])
+def test_catalog_failure_reports_sanitized_tls_diagnostics(monkeypatch, tmp_path, country):
+    def unavailable(request, timeout):
+        error = ssl.SSLCertVerificationError(1, "untrusted certificate at /private/operator/path")
+        error.verify_code = 20
+        raise URLError(error)
+
+    monkeypatch.setattr(crop_cover.urllib.request, "urlopen", unavailable)
+    if country == "US":
+        result = local_tools.cropland_data_layer_geometry(
+            mapping(box(-96.651, 46.849, -96.649, 46.851)), cache_dir=str(tmp_path)
+        )
+    else:
+        result = local_tools.aafc_annual_crop_inventory(
+            geometry=mapping(box(-73.041, 45.619, -73.039, 45.621)), cache_dir=str(tmp_path)
+        )
+
+    assert result["status"] == "unavailable"
+    assert result["error_type"] == "SSLCertVerificationError"
+    assert result["errno"] == 1
+    assert result["verify_code"] == 20
+    assert "/private/operator/path" not in json.dumps(result)
+
+
+
+@pytest.mark.parametrize("bypass", [False, True])
+def test_frozen_macos_routes_only_aafc_crop_cover_through_system_https(monkeypatch, bypass):
+    inputs = []
+    monkeypatch.setattr(crop_cover, "sys", SimpleNamespace(platform="darwin", frozen=True))
+    proxy = "http://configured-proxy.example:8080"
+    monkeypatch.setattr(crop_cover.urllib.request, "getproxies", lambda: {"https": proxy})
+
+    def proxy_bypass(host):
+        assert host == "agriculture.canada.ca"
+        return bypass
+
+    monkeypatch.setattr(crop_cover.urllib.request, "proxy_bypass", proxy_bypass)
+    monkeypatch.setenv("SSL_CERT_DIR", "/custom/certs")
+    monkeypatch.setenv("UNRELATED_LOCAL_SECRET", "ignored")
+
+    def system_fetch(command, **options):
+        inputs.append(command[-1])
+        assert command[:2] == ["/usr/bin/curl", "--disable"]
+        assert command[-2] == "--"
+        assert command[command.index("--proto") + 1] == "=https"
+        assert command[command.index("--max-filesize") + 1] == "12"
+        assert "--http2" in command
+        assert "--insecure" not in command and "--location" not in command
+        assert options["timeout"] == 4
+        assert options["env"].get("https_proxy") == (None if bypass else proxy)
+        assert options["env"]["SSL_CERT_DIR"] == "/custom/certs"
+        assert "UNRELATED_LOCAL_SECRET" not in options["env"]
+        return subprocess.CompletedProcess(command, 0, b"proof200", None)
+
+    def urllib_fetch(request, timeout):
+        inputs.append(request.full_url)
+        return io.BytesIO(b"urllib")
+
+    monkeypatch.setattr(crop_cover.subprocess, "run", system_fetch)
+    monkeypatch.setattr(crop_cover.urllib.request, "urlopen", urllib_fetch)
+    ca_catalog = crop_cover.AAFC_ACI_CATALOG_URL + "?f=json"
+    ca_raster = crop_cover.AAFC_ACI_CATALOG_URL + "/2025/ImageServer/exportImage"
+    us = crop_cover.CDL_IMAGE_SERVER + "/query"
+    assert crop_cover.read_provider_response(ca_catalog, "catalog", timeout=3, limit=12) == b"proof"
+    assert crop_cover.read_provider_response(ca_raster, "export", timeout=3, limit=12) == b"proof"
+    assert crop_cover.read_provider_response(us, "catalog", timeout=3, limit=12) == b"urllib"
+    assert inputs == [ca_catalog, ca_raster, us]
+
+
+@pytest.mark.parametrize(
+    ("exit_code", "output", "message"),
+    [
+        (0, b"data302", "HTTP 302"),
+        (22, b"503", "HTTP 503"),
+        (63, b"200", "exceeds size limit"),
+        (0, b"oversized200", "exceeds size limit"),
+    ],
+)
+def test_frozen_macos_aafc_enforces_status_and_size(monkeypatch, exit_code, output, message):
+    monkeypatch.setattr(crop_cover, "sys", SimpleNamespace(platform="darwin", frozen=True))
+    monkeypatch.setattr(
+        crop_cover.subprocess, "run", lambda args, **_: subprocess.CompletedProcess(args, exit_code, output)
+    )
+
+    with pytest.raises(RuntimeError, match=message):
+        crop_cover.read_provider_response(crop_cover.AAFC_ACI_CATALOG_URL + "?f=json", "catalog", timeout=3, limit=5)

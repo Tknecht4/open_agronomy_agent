@@ -6,4 +6,5 @@
 mlx==0.32.4
 mlx-lm==0.32.2
 huggingface_hub==2.4.0
+truststore>=0.10.5,<1
 transformers==5.23.0

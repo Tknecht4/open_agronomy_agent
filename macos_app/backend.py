@@ -373,6 +373,21 @@ def install_model(runtime_root: Path, state_root: Path, model_cache: Path) -> di
     return {"phase": "ready", "model_id": model_id, "revision": revision, "file_count": len(files)}
 
 
+def _configure_provider_https() -> None:
+    """Use macOS system trust for the frozen app's urllib clients."""
+    if os.environ.get("SSL_CERT_FILE") or os.environ.get("SSL_CERT_DIR"):
+        return
+
+    import ssl
+    import urllib.request
+
+    from truststore import SSLContext
+
+    context = SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.set_alpn_protocols(["http/1.1"])
+    urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPSHandler(context=context)))
+
+
 def serve(
     runtime_root: Path, state_root: Path, model_cache: Path, *, port: int,
     network_mode: str = "online",
@@ -386,6 +401,8 @@ def serve(
     if network_mode not in {"online", "offline"}:
         raise ValueError("desktop network mode must be online or offline")
     os.environ["AGRONOMY_AGENT_NETWORK_MODE"] = network_mode
+    if network_mode == "online" and getattr(sys, "frozen", False):
+        _configure_provider_https()
     _write_startup_diagnostic(
         state_root,
         {"schema_version": "open_agronomy_agent.desktop_startup_diagnostic.v1",
