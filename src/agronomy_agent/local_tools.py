@@ -1223,6 +1223,16 @@ _CROP_COVER_BOUNDARY = (
 )
 
 
+def _crop_cover_error_details(exc: Exception) -> dict[str, Any]:
+    cause = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+    detail = {"error_type": type(cause).__name__}
+    for key in ("errno", "verify_code"):
+        value = getattr(cause, key, None)
+        if type(value) is int:
+            detail[key] = value
+    return detail
+
+
 def _query_crop_cover(geometry: Any, *, cache_dir: str, service: str, crs: int, year: int, resolution: int,
                       labels: dict[int, str], no_class_codes: frozenset, timeout: int,
                       raster: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1240,7 +1250,8 @@ def _query_crop_cover(geometry: Any, *, cache_dir: str, service: str, crs: int, 
         return {"year": year, "source": service, "status": "unsupported_geometry", "message": str(exc), "cache_hit": False}
     except (OSError, RuntimeError) as exc:
         message = f"Crop-cover source query failed ({type(exc).__name__})." if isinstance(exc, OSError) else str(exc)
-        return {"year": year, "source": service, "status": "unavailable", "message": message, "cache_hit": False}
+        return {"year": year, "source": service, "status": "unavailable", "message": message, "cache_hit": False,
+                **_crop_cover_error_details(exc)}
     result["fetched_at"] = dt.datetime.now(dt.UTC).isoformat()
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as file:
@@ -1283,10 +1294,11 @@ def aafc_annual_crop_inventory(
     field = crop_cover.prepare_geometry(geometry, MAX_CDL_GEOMETRY_VERTICES, MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES)
     try:
         catalog = aafc_crop_inventory_catalog(cache_dir=cache_dir, timeout=timeout) if year is None else None
-    except (OSError, RuntimeError, ValueError):
+    except (OSError, RuntimeError, ValueError) as exc:
         return {"tool": "aafc_annual_crop_inventory", "status": "unavailable",
                 "source": AAFC_ACI_CATALOG_URL,
-                "message": "AAFC Annual Crop Inventory year catalog was unavailable."}
+                "message": "AAFC Annual Crop Inventory year catalog was unavailable.",
+                **_crop_cover_error_details(exc)}
     selected_year = int(catalog["selected_year"] if catalog else year)
     source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.format(year=selected_year)
     result = _query_crop_cover(
