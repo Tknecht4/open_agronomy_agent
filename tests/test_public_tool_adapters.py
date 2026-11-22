@@ -884,3 +884,38 @@ def test_aci_discovery_failure_and_offline_do_not_guess_latest(monkeypatch, tmp_
     with pytest.raises(RuntimeError, match='no supported'):
         local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path))
     assert not list(tmp_path.glob('*.json'))
+
+
+@pytest.mark.parametrize("country", ["US", "CA"])
+@pytest.mark.parametrize("dispositions,expected", [
+    (("class", "class", "class"), "available"),
+    (("class", "empty", "error"), "partial_available"),
+    (("class", "empty", "empty"), "partial_available"),
+    (("empty", "empty", "empty"), "no_data"),
+    (("empty", "error", "error"), "unavailable"),
+])
+def test_crop_cover_distinguishes_missing_samples_from_provider_errors(country, dispositions, expected, monkeypatch):
+    from agronomy_agent import local_tools
+
+    geometry = {"type": "Polygon", "coordinates": [[
+        [-105, 49], [-104.996, 49], [-104.996, 49.003], [-105, 49.003], [-105, 49],
+    ]]}
+    responses = iter(dispositions)
+    def point(**kwargs):
+        disposition = next(responses)
+        if disposition == "error":
+            raise OSError("synthetic provider failure")
+        if country == "US":
+            return {"cdl_code": 1 if disposition == "class" else 0}
+        return {"aci_code": 147 if disposition == "class" else None}
+
+    if country == "US":
+        monkeypatch.setattr(local_tools, "cropland_data_layer_point", point)
+        result = local_tools.cropland_data_layer_geometry(geometry, years=(2025,), sample_points=3)
+        assert sum(entry["sample_count"] for entry in result["year_summary"].values()) == dispositions.count("class")
+    else:
+        monkeypatch.setattr(local_tools, "_aafc_annual_crop_inventory_point", point)
+        result = local_tools.aafc_annual_crop_inventory(geometry=geometry, year=2025, sample_points=3)
+        assert (result["class_summary"] or {}).get("sample_count", 0) == dispositions.count("class")
+    assert result["status"] == expected
+    assert len(result["sample_errors"]) == dispositions.count("error")

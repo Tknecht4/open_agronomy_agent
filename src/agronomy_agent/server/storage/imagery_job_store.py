@@ -48,10 +48,21 @@ def recover_interrupted(store: Any) -> None:
         cursor.execute("UPDATE field_imagery_jobs SET status='interrupted',updated_at=? WHERE status IN ('queued','running')", (_now(),))
 
 
-def get_job(store: Any, job_id: str) -> dict[str, Any] | None:
+def get_job(store: Any, job_id: str, *, field_id: str | None = None) -> dict[str, Any] | None:
     with store._cursor() as cursor:
-        row = cursor.execute("SELECT * FROM field_imagery_jobs WHERE id=?", (job_id,)).fetchone()
+        if field_id is None:
+            row = cursor.execute("SELECT * FROM field_imagery_jobs WHERE id=?", (job_id,)).fetchone()
+        else:
+            row = cursor.execute(
+                "SELECT * FROM field_imagery_jobs WHERE id=? AND field_id=?", (job_id, field_id),
+            ).fetchone()
         return _decode(row) if row else None
+
+
+def current_geometry_revision(store: Any, field_id: str) -> str | None:
+    with store._cursor() as cursor:
+        row = cursor.execute("SELECT revision_id FROM field_geometry_current WHERE field_id=?", (field_id,)).fetchone()
+        return row[0] if row else None
 
 
 def list_jobs(store: Any, field_id: str, limit: int = 30) -> list[dict[str, Any]]:

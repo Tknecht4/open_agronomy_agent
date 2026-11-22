@@ -10,6 +10,7 @@ from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, ap
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.server.services.leak_guard import detect_prompt_leaks
 from agronomy_agent.geospatial.context_support import mapped_coverage_label
+from agronomy_agent.server.services.field_context_compiler import IMAGERY_BOUNDARY
 
 
 @dataclass(frozen=True)
@@ -1065,6 +1066,19 @@ def _evidence_cards(trace: dict[str, Any]) -> list[dict[str, Any]]:
         )
     cards.extend(_public_adapter_cards(trace))
     cards.extend(_map_context_cards(trace))
+    compiled = (trace.get("metadata") or {}).get("field_context_compiler") or {}
+    if imagery := compiled.get("imagery_observation"):
+        cards.append({
+            "source_id": imagery["result_sha256"],
+            "title": "Selected satellite analysis",
+            "source": imagery["scene_id"],
+            "publisher": imagery["provider_id"],
+            "source_type": "processed_observation",
+            "updated_at": imagery["acquired_at"],
+            "why_used": "Selected for this field question",
+            "known_limitations": [IMAGERY_BOUNDARY],
+            "imagery_observation": imagery,
+        })
     return cards
 
 

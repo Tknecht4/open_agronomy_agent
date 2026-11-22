@@ -25,7 +25,7 @@ const readScope = () => {
 export default function FarmWorkspace({ mode, allowNetwork, refreshKey, onAddField, onEditField, onAsk, onGeneralQuestion, onFieldsImported }: {
   mode: 'farms' | 'fields' | 'records'; allowNetwork: boolean; refreshKey: string
   onAddField: (farmId: string | null) => void; onEditField: (fieldId: string) => void
-  onAsk: (fieldId: string, question?: string, season?: number) => void; onGeneralQuestion: () => void; onFieldsImported: () => void
+  onAsk: (fieldId: string, question?: string, season?: number, imageryJobId?: string) => void; onGeneralQuestion: () => void; onFieldsImported: () => void
 }) {
   const [scope, setScope] = useState(readScope)
   const [farms, setFarms] = useState<Farm[]>([])
@@ -121,7 +121,7 @@ export default function FarmWorkspace({ mode, allowNetwork, refreshKey, onAddFie
     {error ? <div role="alert" className="farm-error">{error}<button type="button" onClick={() => setRefresh(v => v + 1)}>Retry</button></div> : null}
     {loading ? <p role="status">Loading farms…</p> : null}
     {!overview ? null : scope.field ? <Suspense fallback={<p role="status">Opening field…</p>}><FieldDossier key={scope.field} fieldId={scope.field} season={scope.season} tab={scope.tab} farms={farms} allowNetwork={allowNetwork} unit={unit}
-      onTab={tab => updateScope({ tab })} onChanged={() => setRefresh(v => v + 1)} onEdit={() => onEditField(scope.field)} onAsk={question => onAsk(scope.field, question, scope.season)} /></Suspense>
+      onTab={tab => updateScope({ tab })} onChanged={() => setRefresh(v => v + 1)} onEdit={() => onEditField(scope.field)} onAsk={(question, imageryJobId) => onAsk(scope.field, question, scope.season, imageryJobId)} /></Suspense>
     : mode === 'records' ? <Suspense fallback={<p>Loading records…</p>}><FarmRecords key={`${scope.farm}:${scope.season}`} fields={scopedFields} farmId={scope.farm} season={scope.season} onOpenField={id => openField(id, 'records')} /></Suspense>
     : directory ? <>
       <FarmDirectory farms={farms} overview={overview} season={scope.season} unit={unit} onOpen={openFarm} />

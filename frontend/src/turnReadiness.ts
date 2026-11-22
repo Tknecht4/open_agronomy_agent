@@ -2,6 +2,7 @@ export type TurnReadinessPayload = {
   message: string
   mode: string
   model_id?: string
+  imagery_job_id?: string
   session_context?: { field_context_id?: string; [key: string]: unknown }
   [key: string]: unknown
 }
@@ -13,7 +14,7 @@ export type TurnReadiness = {
   status: 'ready' | 'clarification_required' | 'model_required' | 'unknown'
   reason?: string
   readiness_binding: string
-  binding: { message: string; mode: string; session_id: string | null; field_context_id?: string | null }
+  binding: { message: string; mode: string; session_id: string | null; field_context_id?: string | null; imagery_job_id?: string }
   calculator: { operation: string; missing_inputs: string[]; clarification?: string | null; requirements: Record<string, unknown> } | null
   boundary: string
 }
@@ -37,6 +38,7 @@ export function isBoundTurnReadiness(value: unknown, requestId: string, sessionI
     && result.binding?.message === turn.message && result.binding?.mode === turn.mode
     && result.binding?.session_id === (sessionId || null)
     && (result.binding?.field_context_id || '') === (turn.session_context?.field_context_id || '')
+    && result.binding?.imagery_job_id === turn.imagery_job_id
     && (result.requires_model === null ? result.status === 'unknown' : result.requires_model ? result.status === 'model_required'
       : Boolean(result.calculator && ['ready', 'clarification_required'].includes(result.status || '')))
 }

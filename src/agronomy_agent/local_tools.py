@@ -1190,6 +1190,12 @@ def aafc_crop_inventory_catalog(*, cache_dir: str = "outputs/tool_cache/aafc_ann
     return result
 
 
+def _crop_sample_status(requested: int, classified: int, errors: list[dict[str, Any]]) -> str:
+    if classified:
+        return "available" if classified == requested else "partial_available"
+    return "unavailable" if errors else "no_data"
+
+
 def aafc_annual_crop_inventory(
     latitude: float | None = None,
     longitude: float | None = None,
@@ -1240,9 +1246,7 @@ def aafc_annual_crop_inventory(
         except Exception as exc:  # noqa: BLE001 - retain partial field evidence when one sample fails.
             errors.append({"sample_index": index, "error_type": exc.__class__.__name__, "error": str(exc)[:220]})
     classified = [sample for sample in samples if sample.get("aci_code") is not None]
-    status = "available" if classified else "no_data"
-    if classified and errors:
-        status = "partial_available"
+    status = _crop_sample_status(len(points), len(classified), errors)
     sample_summary = _summarize_aafc_aci_samples(classified)
     source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.format(year=int(year))
     return {
@@ -2399,8 +2403,9 @@ def cropland_data_layer_geometry(
                 )
             except Exception as exc:  # noqa: BLE001 - one point should not sink the field summary.
                 errors.append({"sample_index": idx, "year": year, "error_type": exc.__class__.__name__, "error": str(exc)[:220]})
-    year_summary = _summarize_cdl_samples(sample_payloads)
-    status = "available" if sample_payloads else "unavailable"
+    classified = [sample for sample in sample_payloads if sample["cdl_code"] not in (None, 0)]
+    year_summary = _summarize_cdl_samples(classified)
+    status = _crop_sample_status(len(points) * len(clean_years), len(classified), errors)
     return {
         "tool": "cropland_data_layer_geometry",
         "status": status,

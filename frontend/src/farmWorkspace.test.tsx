@@ -40,8 +40,38 @@ describe('farm cockpit workflows',()=>{
     await waitFor(()=>expect(crop).toBe('Canola + Pea'))
     expect(await screen.findByText(/An older entry says/)).toHaveTextContent('Wheat')
     fireEvent.click(screen.getByRole('button',{name:'Ask about this field'}))
-    expect(props.onAsk).toHaveBeenCalledWith('west',undefined,2026)
+    expect(props.onAsk).toHaveBeenCalledWith('west', undefined, 2026, undefined)
   })
+  it('starts a field question with an explicit analysis ID without writing a note', async () => {
+    window.history.replaceState(null, '', '#fields?season=2026&field=west&tab=imagery')
+    const jobId = '550e8400-e29b-41d4-a716-446655440001'
+    const onAsk = vi.fn()
+    const request = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      let result: unknown = {}
+      if (url === '/api/farms') result = { farms }
+      else if (url.startsWith('/api/farms/overview')) result = { fields, coverage: {} }
+      else if (url.startsWith('/api/fields/west/summary')) result = {
+        ...fields[0], seasons: [], geometry_revisions: [], public_context: {}, source_status: {},
+      }
+      else if (url === '/api/imagery/providers') result = { providers: [] }
+      else if (url === '/api/fields/west/imagery-jobs') result = { jobs: [{
+        id: jobId, status: 'completed', current_geometry: true, geometry_revision_id: 'revision',
+        geometry: { type: 'Point', coordinates: [-113, 53] },
+        request: { provider_id: 'hls-s30-planetary-computer', scene_id: 'synthetic',
+                   start_date: '2026-07-01', end_date: '2026-07-31' },
+        result: { source: { acquired_at: '2026-07-03T00:00:00Z' } },
+      }] }
+      return { ok: true, status: 200, json: async () => result } as Response
+    })
+    vi.stubGlobal('fetch', request)
+    render(<FarmWorkspace {...props} mode="fields" onAsk={onAsk} />)
+    fireEvent.click(await screen.findByRole('button', { name: /Ready · Current boundary/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ask about this analysis' }))
+    expect(onAsk).toHaveBeenCalledWith('west', 'For this field, what are the NDVI and NDMI averages in the selected satellite image, and what area do those averages describe?', 2026, jobId)
+    expect(request.mock.calls.some(([url]) => String(url).endsWith('/record'))).toBe(false)
+  })
+
   it('opens one farm at a time and returns from field detail with the farm and season intact', async () => {
     window.history.replaceState(null, '', '#farms?season=2025')
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {

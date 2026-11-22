@@ -292,3 +292,31 @@ expected-version checks, rather than the separate sync client's actor partitions
 and native Web Locks. `FarmRecords` offers recovery on a superseded original
 when that correction slot remains unconfirmed. Neither client may interpret an
 unknown observation date as a measured date or erase the immutable original.
+
+## Selected satellite analysis in a question
+
+The agronomic turn request accepts one optional `imagery_job_id` UUID. The
+composer sends it separately from the question text, and the selection is
+local to that draft. Asking reads an existing result. Saving an analysis
+reference to field records remains an explicit action.
+
+Readiness and submission authorize the saved field before resolving the ID.
+A missing or other-field job returns 404. An incomplete or unverifiable job
+returns 409. The server checks the job result against the verified private
+chip, including the original geometry and request identity. Resolution uses
+only local reads and does not launch a worker. A historical boundary remains
+eligible by explicit selection and is labelled historical. The field season
+identifies the conversation, while acquisition time identifies the image.
+
+The field context compiler carries the result hash, source and acquisition,
+grid resolution, original geometry status, support area, QA-clear area and
+per-index valid area and mean. Zero valid index area has an absent mean.
+The draft, verifier and evidence card use the same bounded projection.
+Its authority is a processed spectral observation of eligible pixels.
+It supplies no comparison baseline, diagnosis or action authority.
+
+The readiness binding covers the selected result and the current field
+snapshot. Submission revalidates both under the session guard. Completed
+operation retries return the persisted turn. Full and answer-only agronomic
+replay reauthorize and resolve the same result identity. Selections do not
+become defaults for later questions in the conversation.

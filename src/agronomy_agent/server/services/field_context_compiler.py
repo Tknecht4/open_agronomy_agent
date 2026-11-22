@@ -19,6 +19,10 @@ from agronomy_agent.geospatial.context_support import (
 
 SCHEMA_VERSION = "open_agronomy_agent.field_context_compiler.v1"
 AVAILABLE_STATUSES = {"available", "partial_available", "available_offline_snapshot"}
+IMAGERY_BOUNDARY = (
+    "The indices describe eligible pixels from one capture. It does not establish a change over time, "
+    "representative crop conditions, a diagnosis, or a management recommendation."
+)
 
 
 def compile_field_context(
@@ -38,7 +42,8 @@ def compile_field_context(
     live_context = _live_context(public_adapter_records)
     retained_context = _live_context(safe_field.get("retained_public_context") or [])
     imported_data = safe_field.get("field_data") if isinstance(safe_field.get("field_data"), dict) else None
-    status = "available" if map_context or live_context or retained_context or imported_data else "limited"
+    imagery = (field_context or {}).get("imagery_observation")
+    status = "available" if map_context or live_context or retained_context or imported_data or imagery else "limited"
     receipt = {
         "schema_version": SCHEMA_VERSION,
         "status": status,
@@ -55,6 +60,8 @@ def compile_field_context(
             "public data are priors, not field truth, a soil test, a field sensor, or management-rate authority."
         ),
     }
+    if imagery:
+        receipt["imagery_observation"] = imagery
     if imported_data:
         receipt["imported_data"] = imported_data
     return {"receipt": receipt, "prompt": render_field_context_prompt(receipt)}
@@ -64,6 +71,9 @@ def render_field_context_prompt(receipt: dict[str, Any]) -> str:
     """Render the same bounded receipt for the model, without hidden values."""
 
     lines = ["Compiled field context (source-bound):"]
+    imagery = receipt.get("imagery_observation")
+    if imagery:
+        lines.append(render_imagery_observation(imagery))
     field = receipt.get("field") if isinstance(receipt.get("field"), dict) else {}
     if field:
         bits = [f"{label}: {field[key]}" for key, label in (("crop", "Crop"), ("region", "Region"), ("jurisdiction", "Jurisdiction"), ("concern", "Concern"), ("geometry_summary", "Geometry")) if field.get(key)]
@@ -99,6 +109,23 @@ def render_field_context_prompt(receipt: dict[str, Any]) -> str:
     lines.append(f"- Boundary: {receipt['boundary']}")
     lines.append("- Preserve source identity and uncertainty. Do not turn these priors into a field measurement or a prescription.")
     return "\n".join(lines)
+
+
+def render_imagery_observation(imagery: dict[str, Any]) -> str:
+    boundary = "original historical boundary" if imagery["geometry_status"] == "historical" else "current boundary"
+    indices = []
+    for name, index in imagery["indices"].items():
+        mean = index["mean"]
+        detail = f"mean {mean}" if mean is not None else "mean unavailable"
+        indices.append(f"{name} {detail} from {index['valid_area_m2']} m² of valid index area")
+    return (
+        f"- Selected satellite analysis (processed observation): scene {imagery['scene_id']}, "
+        f"acquired {imagery['acquired_at']}, {imagery['resolution_m']} m grid, "
+        f"{imagery['support_kind'].replace('_', ' ')} on the {boundary} "
+        f"(revision {imagery['geometry_revision_id']}). "
+        f"QA-clear {imagery['qa_clear_area_m2']} m² of {imagery['support_area_m2']} m² total support. "
+        f"{'; '.join(indices)}. {IMAGERY_BOUNDARY}"
+    )
 
 
 def _map_context(value: Any) -> list[dict[str, Any]]:

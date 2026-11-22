@@ -40,7 +40,7 @@ import { recoverableLazy as lazy, WorkspaceSectionBoundary } from './WorkspaceSe
 import './FieldRecords.css'
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, csrfHeaders } from './api'
 import { submitFieldEvent, FIELD_EVENT_OPERATION_CHANGED, canonicalFieldEvent, watchFieldEventConfirmation, type PendingFieldEvent } from './fieldEventSave'
-import { clearPhase6ChatDraft, loadPhase6ChatDraft, savePhase6ChatDraft } from './offlineDrafts'
+import { clearPhase6ChatDraft, loadPhase6ChatDraft, savePhase6ChatDraft, type Phase6ChatDraft } from './offlineDrafts'
 import { clearPhase6Scratchpad, loadPhase6Scratchpad, savePhase6Scratchpad } from './offlineScratchpad'
 import {
   PHASE6_OFFLINE_STORAGE_REPAIRED_EVENT,
@@ -1620,7 +1620,7 @@ export function OpenAgronomyApp() {
   const agroclimateRequestRef = useRef(0)
   const nasaPowerRequestRef = useRef(0)
   const [newFieldFarmId, setNewFieldFarmId] = useState<string | null>(null)
-  const [questionSeason, setQuestionSeason] = useState<number | null>(null)
+  const [chosenQuestionSeason, setQuestionSeason] = useState<number | null>(null)
   const [page, setPage] = useState<Page>(() => currentHashPage())
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [sessionId, setSessionId] = useState('')
@@ -1690,6 +1690,10 @@ export function OpenAgronomyApp() {
   const [networkMode, setNetworkMode] = useState<'online' | 'offline' | 'unknown'>('unknown')
   const [runtimeAccess, setRuntimeAccess] = useState<RuntimeAccess>('checking')
   const [draftHydratedFor, setDraftHydratedFor] = useState('')
+  const [draftImagery, setDraftImagery] = useState<Phase6ChatDraft['imagery']>()
+  const selectedImagery = activeFieldContextId && draftHydratedFor === activeFieldConversationKey
+    ? draftImagery : undefined
+  const questionSeason = chosenQuestionSeason ?? selectedImagery?.season ?? null
   const [scratchpadHydratedFor, setScratchpadHydratedFor] = useState('')
   const [scratchpadNotes, setScratchpadNotes] = useState('')
   const [offlineStorageRepair, setOfflineStorageRepair] =
@@ -1970,6 +1974,7 @@ export function OpenAgronomyApp() {
   useEffect(() => {
     const saved = loadPhase6ChatDraft(activeFieldConversationKey)
     setMessage(saved?.message || '')
+    setDraftImagery(typeof saved?.imagery?.jobId === 'string' ? saved.imagery : undefined)
     setDraftHydratedFor(activeFieldConversationKey)
   }, [activeFieldConversationKey])
 
@@ -1977,8 +1982,8 @@ export function OpenAgronomyApp() {
     if (draftHydratedFor !== activeFieldConversationKey) {
       return
     }
-    savePhase6ChatDraft(activeFieldConversationKey, message)
-  }, [activeFieldConversationKey, draftHydratedFor, message])
+    savePhase6ChatDraft(activeFieldConversationKey, message, { imagery: draftImagery })
+  }, [activeFieldConversationKey, draftHydratedFor, message, draftImagery])
 
   useEffect(() => {
     const saved = loadPhase6Scratchpad(activeFieldConversationKey)
@@ -2187,6 +2192,7 @@ export function OpenAgronomyApp() {
   const questionPayload = {
     message,
     mode,
+    imagery_job_id: selectedImagery?.jobId,
     model_id: mode === 'mock' || modelId === 'mock' ? undefined : modelId,
     rag_config: mode === 'baseline' ? undefined : ragConfig,
     max_tokens: selectedModelProfile?.max_tokens || 240,
@@ -2377,13 +2383,13 @@ export function OpenAgronomyApp() {
       return
     }
     if (!answerCapability.canGenerateAnswer) {
-      savePhase6ChatDraft(activeFieldConversationKey, message)
+      savePhase6ChatDraft(activeFieldConversationKey, message, { imagery: draftImagery })
       setStatus('Notes only')
       setError('The local agronomy runtime is unavailable. Your question draft remains on this device; reconnect to the prepared runtime before asking.')
       return
     }
     if (!questionModelReady) {
-      savePhase6ChatDraft(activeFieldConversationKey, message)
+      savePhase6ChatDraft(activeFieldConversationKey, message, { imagery: draftImagery })
       setStatus('Model setup required')
       setError('This question needs the selected model, or a current server calculation-readiness check. Your draft remains on this device.')
       return
@@ -2458,12 +2464,14 @@ export function OpenAgronomyApp() {
       }
       if (!completedTurn) {
         let readinessBinding: string | undefined
-        if (!selectedModelReady || currentReadiness?.requires_model === false) {
+        if (selectedImagery || !selectedModelReady || currentReadiness?.requires_model === false) {
           const requestId = globalThis.crypto.randomUUID()
           const finalReadiness = await apiPost<unknown>('/api/turn-readiness', { request_id: requestId, session_id: id, turn: payload })
           if (!stillCurrent()) return
           if (!isBoundTurnReadiness(finalReadiness, requestId, id, payload)) {
-            throw new Error('Could not verify current calculation readiness. Your question draft remains on this device.')
+            throw new Error(selectedImagery
+              ? 'Could not verify the selected analysis. Your question draft remains on this device.'
+              : 'Could not verify current calculation readiness. Your question draft remains on this device.')
           }
           if (!selectedModelReady && finalReadiness.requires_model !== false) {
             throw new Error('This question now needs the selected model. Complete model setup or provide a complete calculation request.')
@@ -2544,6 +2552,7 @@ export function OpenAgronomyApp() {
       }
       setRuntimeAccess('available')
       clearPhase6ChatDraft(submissionConversationKey)
+      setDraftImagery(undefined)
       setMessage('')
       setStatus('Answer ready')
       navigateToPage('analyze')
@@ -3479,7 +3488,24 @@ export function OpenAgronomyApp() {
         onAddField={farmId => { setNewFieldFarmId(farmId); setNewFieldOpen(true) }}
         onGeneralQuestion={() => { startNewField(); setQuestionSeason(null); navigateToPage('analyze') }}
         onEditField={id => { const selected = storedFields.find(item => (item.field_context_id || item.id) === id); if (selected) { loadStoredField(selected); setFieldTab('details'); navigateToPage('field-editor') } else setError('Reload the workspace to load this field before editing.') }}
-        onAsk={(id, question, season) => { const selected = storedFields.find(item => (item.field_context_id || item.id) === id); if (!selected) { setError('Reload the workspace to load this field before asking.'); return } loadStoredField(selected); setQuestionSeason(season || null); const key = freshConversationKey(storedFieldConversationKey(id)); rememberConversation(storedFieldConversationKey(id), key); setActiveFieldConversationKey(key); setSessionId(''); setTurns([]); if (question) setMessage(question); navigateToPage('analyze'); setWorkspaceView('chat') }}
+        onAsk={(id, question, season, imageryJobId) => {
+          const selected = storedFields.find(item => (item.field_context_id || item.id) === id)
+          if (!selected) {
+            setError('Reload the workspace to load this field before asking.')
+            return
+          }
+          loadStoredField(selected)
+          setQuestionSeason(season ?? null)
+          const fieldKey = storedFieldConversationKey(id)
+          const key = freshConversationKey(fieldKey)
+          if (question) savePhase6ChatDraft(key, question, { imagery: imageryJobId ? { jobId: imageryJobId, season } : undefined })
+          rememberConversation(fieldKey, key)
+          setActiveFieldConversationKey(key)
+          setSessionId('')
+          setTurns([])
+          navigateToPage('analyze')
+          setWorkspaceView('chat')
+        }}
       /></Suspense> : null}
 
       {page === 'analyze' || page === 'field-editor' ? (
@@ -4467,6 +4493,10 @@ export function OpenAgronomyApp() {
                   : 'What would you like to understand?'}
                 rows={2}
               />
+              {selectedImagery ? <div className="composer-actions">
+                <span>Satellite analysis attached</span>
+                <button type="button" className="composer-reference" disabled={isAnalyzing} onClick={() => setDraftImagery(undefined)}>Remove analysis</button>
+              </div> : null}
               <div className="composer-actions">
                 <button type="button" className="composer-reference" onClick={() => navigateToPage('sources')}><Upload size={16} /> Add reference{privateKnowledge.length ? ` (${privateKnowledge.length})` : ''}</button>
                 {sessionId ? <button type="button" className="icon-button" aria-label="Refresh conversation" disabled={isAnalyzing} onClick={() => void refreshConversation()}><RefreshCw size={15} /></button> : null}
@@ -4605,6 +4635,8 @@ function EvidenceDisclosure({
 function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknown> | undefined }) {
   const mapContext = Array.isArray(receipt?.map_context) ? receipt.map_context : []
   const liveContext = Array.isArray(receipt?.live_context) ? receipt.live_context : []
+  const imagery = receipt?.imagery_observation as Record<string, unknown> | undefined
+  const indices = imagery?.indices as Record<string, { mean: number | null; valid_area_m2: number }> | undefined
   const field = receipt?.field && typeof receipt.field === 'object' ? receipt.field as Record<string, unknown> : {}
   const fieldLabel = ['crop', 'region', 'jurisdiction', 'concern']
     .map((key) => typeof field[key] === 'string' ? field[key] : '')
@@ -4613,6 +4645,16 @@ function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknow
   return (
     <section className="compiled-field-context" data-testid="compiled-field-context">
       <p>{fieldLabel || 'No bounded field details were supplied for this turn.'}</p>
+      {imagery ? <article>
+        <strong>Selected satellite analysis</strong>
+        <p>{String(imagery.scene_id)} · {String(imagery.acquired_at).slice(0, 10)} · {String(imagery.resolution_m)} m grid</p>
+        <p>{String(imagery.support_kind).replace(/_/g, ' ')} · {imagery.geometry_status === 'historical' ? 'Historical boundary' : 'Current boundary at answer time'}</p>
+        <p>{Number(imagery.qa_clear_area_m2).toLocaleString()} of {Number(imagery.support_area_m2).toLocaleString()} m² QA-clear</p>
+        <ul>{Object.entries(indices || {}).map(([name, index]) => <li key={name}>
+          {name} · {index.mean == null ? 'No valid index support' : `Mean ${index.mean} on ${index.valid_area_m2.toLocaleString()} m²`}
+        </li>)}</ul>
+        <a href={`/api/imagery-jobs/${encodeURIComponent(String(imagery.job_id))}/preview.png`} target="_blank" rel="noreferrer">Open verified preview</a>
+      </article> : null}
       {mapContext.map((value, index) => {
         const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}
         const components = Array.isArray(item.dominant_components) ? item.dominant_components : []
