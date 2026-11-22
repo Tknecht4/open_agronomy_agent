@@ -3442,7 +3442,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         # Confirming a historical crop class against planting records is not diagnosis.
         diagnosis_text = re.sub(
             r"\bconfirm\s+(?:the\s+)?(?:actual\s+)?"
-            r"(?:planted crops?|(?:which |what )?crops? (?:were )?(?:planted|grown))\b",
+            r"(?:planted crops?|(?:which |what )?crops? (?:were )?(?:planted|grown))\b(?=\s*[?.!]?\s*$)",
             "",
             q,
         )
