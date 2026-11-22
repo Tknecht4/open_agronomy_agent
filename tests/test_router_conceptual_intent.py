@@ -215,3 +215,28 @@ def test_stale_field_data_route_never_replaces_study_question_with_prescription(
 def test_mixed_non_pesticide_actions_are_not_interpretation(question):
     from agronomy_agent.router import evidence_interpretation_kind
     assert evidence_interpretation_kind(question) is None
+
+
+@pytest.mark.parametrize("source", ["saved crop-cover map", "AAFC Annual Crop Inventory"])
+def test_crop_cover_confirmation_does_not_trigger_plant_diagnosis(source: str) -> None:
+    question = (
+        f"Using the 2025 {source} for this field, give the two largest mapped crop classes "
+        "and their percentages of the entire boundary. Was cover mixed or dominant? "
+        "What would confirm the actual planted crops?"
+    )
+    route = refine_query_route(question, classify_query(question))
+
+    assert route.question_type in {"field_data", "regional_context"}
+    assert route.risk_level == "low"
+    assert "plant_health" not in route.namespaces
+
+
+def test_crop_cover_confirmation_preserves_separate_plant_diagnosis() -> None:
+    question = (
+        "Use the crop-cover map to confirm the actual planted crops. "
+        "Can you confirm whether the current crop has clubroot and say if I should treat it?"
+    )
+    route = refine_query_route(question, classify_query(question))
+
+    assert route.question_type == "plant_health"
+    assert route.risk_level == "regulated"
