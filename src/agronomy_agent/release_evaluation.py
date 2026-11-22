@@ -31,6 +31,7 @@ from agronomy_agent.final_evaluation import (
     CASE_FORMATS,
     FINAL_SUITE_ID,
     final_registry,
+    validate_historical_numeric_diagnostics,
 )
 
 REGISTRY_SCHEMA = "open_agronomy_agent.release_evaluation_registry.v1"
@@ -808,6 +809,9 @@ def build_plan(
                 "selected_cases": len(selected),
             }
         )
+    diagnostics = registry.get("historical_numeric_diagnostics", [])
+    if final_inventory is not None:
+        validate_historical_numeric_diagnostics(diagnostics, cases)
     model_bytes = checked_path(root, registry["model_config"]).read_bytes()
     model = yaml.safe_load(model_bytes)
     external_backend = registry["profiles"][profile]["backend"] == "codex_app_server"
@@ -841,6 +845,10 @@ def build_plan(
                         "lane": case["lane"],
                     }
                 )
+    final_bindings = {
+        "final_inventory": final_inventory,
+        "historical_numeric_diagnostics": diagnostics,
+    } if final_inventory is not None else {}
     cohort = {
         "suites": suites,
         "cases": [
@@ -858,7 +866,7 @@ def build_plan(
         ],
         "arms": registry["arms"],
         "trials": profile_config["trials"],
-        **({"final_inventory": final_inventory} if final_inventory is not None else {}),
+        **final_bindings,
     }
     auxiliary_inputs = controlled_inputs(registry, root)
     scorer_files = (*SCORER_FILES, FINAL_SCORER_FILE) if final_inventory is not None else SCORER_FILES
@@ -906,7 +914,7 @@ def build_plan(
         "comparison_policy": registry["comparison_policy"],
         "backend_performance_policy": registry["backend_performance_policy"],
         "domain_policy": registry["domain_policy"],
-        **({"final_inventory": final_inventory} if final_inventory is not None else {}),
+        **final_bindings,
     }
     return bind_controller_inputs(plan, controller_inputs or {}, comparison_cohort)
 

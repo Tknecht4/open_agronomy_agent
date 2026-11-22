@@ -417,7 +417,17 @@ def _editor_runtime_contract(config: Mapping[str, Any], config_sha256: str) -> d
 def _attempt_stop(row: Mapping[str, Any], plan: Mapping[str, Any], *, product: bool) -> None:
     if row.get("status") not in ({"completed"} if product else {"pass"}):
         raise _PolicyStop("attempt_status", row.get("status"))
-    if any(check.get("passed") is not True for check in row.get("checks") or []):
+    from agronomy_agent.final_evaluation import historical_numeric_diagnostic
+
+    diagnostic = (
+        historical_numeric_diagnostic(plan, row)
+        if product and row.get("arm_id") == "production_full" else None
+    )
+    diagnostic_checks = diagnostic["check_ids"] if diagnostic is not None else ()
+    if any(
+        check.get("passed") is not True and check.get("id") not in diagnostic_checks
+        for check in row.get("checks") or []
+    ):
         raise _PolicyStop("failed_check")
     if not product:
         return

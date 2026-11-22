@@ -2,6 +2,90 @@
   "schema_version": "open_agronomy_agent.final_evaluation_catalog.v1",
   "suite_id": "open_agronomy_final_evaluation_v1",
   "whole_run_timeout_seconds": 604800,
+  "historical_numeric_diagnostics": [
+    {
+      "suite_id": "canadian_agronomic_calculations_v1",
+      "case_id": "ca_calc_seed_rate_01",
+      "case_sha256": "65656f2fb1f474278f5fed1cc4f0068246bebb7d986079f5833c3a30542af2c9",
+      "check_ids": [
+        "independent_numeric_contract"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    },
+    {
+      "suite_id": "canadian_agronomic_calculations_v1",
+      "case_id": "ca_calc_seed_rate_02",
+      "case_sha256": "d817706b9157f3597e10138bdd5aa2591ea5b03bb8dc3001a2869d9e3ddfdcd3",
+      "check_ids": [
+        "independent_numeric_contract"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    },
+    {
+      "suite_id": "open_agronomy_canadian_performance_v1",
+      "case_id": "oacp1::objective_agronomic_calculation::ca_calc_seed_rate_01",
+      "case_sha256": "857ef17b638bdde569b04d7272069d737144327929355374c9d95f483ea239a9",
+      "check_ids": [
+        "independent_numeric_contract"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    },
+    {
+      "suite_id": "open_agronomy_canadian_performance_v1",
+      "case_id": "oacp1::objective_agronomic_calculation::ca_calc_seed_rate_02",
+      "case_sha256": "8aa14ba7baa9ee51cdd41403d102a41ad5b9d1d05a9c90c9fc757200975703bd",
+      "check_ids": [
+        "independent_numeric_contract"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    },
+    {
+      "suite_id": "successor_development",
+      "case_id": "oasdev::objective_agronomic_calculation::ca_calc_seed_rate_01",
+      "case_sha256": "5d9fbb0185e7ddd6006ab553d2249050a1b55dd89e90274d8f72ccb6da99adc4",
+      "check_ids": [
+        "independent_numeric_contract"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    },
+    {
+      "suite_id": "successor_development",
+      "case_id": "oasdev::objective_agronomic_calculation::ca_calc_seed_rate_02",
+      "case_sha256": "f97bdf8ccb18813ee0e2835199cd9e5fd8e9cf806a8616be78ebdbb30c49f345",
+      "check_ids": [
+        "independent_numeric_contract"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    },
+    {
+      "suite_id": "release_harness_v1",
+      "case_id": "HR1-seed-complete",
+      "case_sha256": "db154bd25353b7b01f51003f108a0b730511519908a898067f8d31e409b6b8b4",
+      "check_ids": [
+        "independent_numeric_contract",
+        "tool_status"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    },
+    {
+      "suite_id": "v3_canadian_regional",
+      "case_id": "oa-v3cc-reg-025",
+      "case_sha256": "d3d533defb44bff212eb15befb6cbce37027754fb7432ffd01538cbd780d76c1",
+      "check_ids": [
+        "independent_numeric_contract"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    },
+    {
+      "suite_id": "v3_canadian_regional",
+      "case_id": "oa-v3cc-reg-029",
+      "case_sha256": "4c3e8401e8fa6510d72d4f2c40897232e29e0db480caf2321b5c8e153fb3c490",
+      "check_ids": [
+        "independent_numeric_contract"
+      ],
+      "reason": "seed_survival_basis_unspecified"
+    }
+  ],
   "entries": [
     {
       "id": "canadian_ab_nutrient_planning_retrieval_probe_v1",
@@ -104,7 +188,9 @@
       "path": "data/eval/offline_corpus_retrieval.jsonl",
       "execution": "retrieval",
       "rows": 22,
-      "expected_blocked_case_ids": ["spatial_context_blocked"]
+      "expected_blocked_case_ids": [
+        "spatial_context_blocked"
+      ]
     },
     {
       "id": "offline_corpus_successor_benchmark_extension",

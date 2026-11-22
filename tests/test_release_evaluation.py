@@ -60,6 +60,27 @@ def test_final_scorer_identity_binds_coverage_implementation(monkeypatch):
     assert before["scorer_sha256"] != after["scorer_sha256"]
 
 
+def test_historical_numeric_diagnostic_refuses_different_case_or_check():
+    from agronomy_agent.final_evaluation import validate_historical_numeric_diagnostics
+
+    case = {"suite_id": "fixture", "case_id": "seed", "case_sha256": digest("seed"),
+            "scoring_method": "numeric_tolerance"}
+    binding = {
+        **case,
+        "check_ids": ["independent_numeric_contract"],
+        "reason": "seed_survival_basis_unspecified",
+    }
+    validate_historical_numeric_diagnostics([binding], [case])
+    with pytest.raises(ValueError, match="invalid historical final-suite numeric diagnostic"):
+        validate_historical_numeric_diagnostics(
+            [dict(binding, case_sha256=digest("changed question"))], [case]
+        )
+    with pytest.raises(ValueError, match="invalid historical final-suite numeric diagnostic"):
+        validate_historical_numeric_diagnostics(
+            [dict(binding, check_ids=["independent_numeric_contract", "turn_1.persisted_answer"])], [case]
+        )
+
+
 def test_copied_or_narrowed_catalog_cannot_impersonate_the_final_suite(tmp_path):
     copy = tmp_path / "alternate.json"
     copy.write_bytes(FINAL_REGISTRY.read_bytes())

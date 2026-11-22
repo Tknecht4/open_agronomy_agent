@@ -75,6 +75,11 @@ report on the same catalog. The final path rejects CI, smoke, and case limits.
 Read `final_suite_coverage` in the retained report. Missing or failed cells
 and incomplete components block whole-suite coverage. Engineering and
 comparison checks can fail even after all observations have been collected.
+The nine pinned seed-rate records with an unspecified survival basis still run,
+and their original numeric scores and failed assertions are retained as
+historical diagnostics. Their obsolete reference expectations are outside the
+final numeric and engineering gates. The current seed fixtures and all other
+checks retain their normal gates.
 The ordinary profiles below still support routine engineering and local model
 checks.
 

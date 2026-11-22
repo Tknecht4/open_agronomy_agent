@@ -100,7 +100,46 @@ def final_registry(catalog: Mapping[str, Any], *, root: Path) -> dict[str, Any]:
         "arms": ["raw_model", "production_full"],
         "whole_run_timeout_seconds": catalog["whole_run_timeout_seconds"],
         "final_inventory": inventory,
+        "historical_numeric_diagnostics": catalog.get("historical_numeric_diagnostics", []),
     }
+
+
+def validate_historical_numeric_diagnostics(
+    bindings: Sequence[Mapping[str, Any]], cases: Sequence[Mapping[str, Any]]
+) -> None:
+    cases_by_id = {(case["suite_id"], case["case_id"]): case for case in cases}
+    seen = set()
+    for binding in bindings:
+        key = binding["suite_id"], binding["case_id"]
+        case = cases_by_id.get(key)
+        checks = binding["check_ids"]
+        if (
+            key in seen
+            or case is None
+            or case["case_sha256"] != binding["case_sha256"]
+            or "numeric_tolerance" not in {
+                case.get("scoring_method"), (case.get("scoring") or {}).get("method")
+            }
+            or not isinstance(checks, list)
+            or len(checks) != len(set(checks))
+            or set(checks) - {"independent_numeric_contract", "tool_status"}
+            or "independent_numeric_contract" not in checks
+            or ("tool_status" in checks and "tool_status" not in case.get("assertions", {}))
+            or binding.get("reason") != "seed_survival_basis_unspecified"
+        ):
+            raise ValueError(f"invalid historical final-suite numeric diagnostic: {key}")
+        seen.add(key)
+
+
+def historical_numeric_diagnostic(
+    plan: Mapping[str, Any], cell: Mapping[str, Any]
+) -> Mapping[str, Any] | None:
+    if "final_inventory" not in plan:
+        return None
+    return next((
+        binding for binding in plan.get("historical_numeric_diagnostics", [])
+        if all(cell.get(key) == binding[key] for key in ("suite_id", "case_id", "case_sha256"))
+    ), None)
 
 
 def final_coverage(
