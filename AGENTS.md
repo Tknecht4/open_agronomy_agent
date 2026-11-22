@@ -19,6 +19,10 @@
 - Historical/frozen benchmark artifacts are evidence. Do not rewrite, move, or
   activate them because a filename looks newer.
 - Evaluation cases and answers must never enter runtime retrieval or training.
+- A requested final evaluation after a significant harness change uses
+  `scripts/run_release_evaluation.py --final-suite` and the complete prepared
+  question catalog. Verify the retained per-suite coverage before reporting
+  completion. A missing input or incomplete run leaves the final evaluation open.
 
 ## Change rules
 

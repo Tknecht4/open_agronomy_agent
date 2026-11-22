@@ -554,6 +554,11 @@ def summarize(
         for key, repeats in sorted(by_case.items())
     ]
     numeric = [row for row in production if row["numeric_required"]]
+    coverage = None
+    if "final_inventory" in plan:
+        from agronomy_agent.final_evaluation import final_coverage
+
+        coverage = final_coverage(plan["final_inventory"], observations, components)
     blocked = bool(
         missing
         or failed
@@ -564,6 +569,7 @@ def summarize(
         or numeric_failures
         or model_evidence_missing
         or semantic["coverage"] < coverage_required
+        or (coverage is not None and coverage["status"] != "complete")
     )
     domain_status = (
         "required_review_missing"
@@ -576,6 +582,7 @@ def summarize(
         "run_id": plan["run_id"],
         "profile": plan["profile"],
         "claim_eligible": False,
+        **({"final_suite_coverage": coverage} if coverage is not None else {}),
         "status": "blocked" if blocked else "engineering_pass",
         "domain_status": domain_status,
         "domain_review_coverage": semantic["coverage"],

@@ -773,6 +773,7 @@
     "docs/reviews/system-reliability-audit-20260929.md",
     ".github/workflows/release-evaluation.yml",
     "configs/release_evaluation_v1.json",
+    "configs/final_evaluation_suite_v1.json",
     "data/eval/release_harness_v1.jsonl",
     "data/eval/release_harness_v2.jsonl",
     "scripts/run_release_evaluation.py",

@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 from agronomy_agent.release_evaluation import (
     DEFAULT_REGISTRY,
+    FINAL_REGISTRY,
     build_plan,
     bind_controller_inputs,
     read_controller_inputs,
@@ -27,9 +28,14 @@ from agronomy_agent.release_eval_runner import execute_worker, run_suite  # noqa
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--registry", type=Path)
+    scope.add_argument(
+        "--final-suite", action="store_true",
+        help="require the complete prepared question catalog after significant harness changes",
+    )
     parser.add_argument(
-        "--profile", choices=("ci", "smoke", "baseline", "release"), default="ci"
+        "--profile", choices=("ci", "smoke", "baseline", "release")
     )
     parser.add_argument("--run-id", default="evaluation")
     parser.add_argument("--output-dir", type=Path)
@@ -45,6 +51,10 @@ def main() -> int:
     parser.add_argument("--worker-spec", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--worker-output", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
+    registry_path = FINAL_REGISTRY if args.final_suite else args.registry or DEFAULT_REGISTRY
+    profile = args.profile or ("baseline" if args.final_suite else "ci")
+    if args.final_suite and (profile not in {"baseline", "release"} or args.limit is not None):
+        parser.error("--final-suite requires baseline or release and accepts no case limit")
     # Public/synthetic suite execution never inherits a private local overlay.
     # Canonical external envelopes require the explicit off sentinel too.
     os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "0"
@@ -65,10 +75,10 @@ def main() -> int:
             write_new_json(args.worker_output, result)
             return 1 if result.get("status") in {"failed", "blocked"} else 0
         if args.dry_run:
-            registry = load_registry(args.registry)
+            registry = load_registry(registry_path)
             plan = build_plan(
                 registry,
-                profile=args.profile,
+                profile=profile,
                 limit=args.limit,
                 run_id=args.run_id,
             )
@@ -92,6 +102,7 @@ def main() -> int:
                             "model",
                             *(["external_admission"] if "external_admission" in plan else []),
                             *(["bounded_stop_policy"] if "bounded_stop_policy" in plan else []),
+                            *(["final_inventory", "suites"] if "final_inventory" in plan else []),
                         )
                     },
                     indent=2,
@@ -101,8 +112,8 @@ def main() -> int:
         if not args.output_dir:
             parser.error("--output-dir is required for retained execution")
         result = run_suite(
-            registry_path=args.registry,
-            profile=args.profile,
+            registry_path=registry_path,
+            profile=profile,
             output_dir=args.output_dir,
             run_id=args.run_id,
             resume=args.resume,
@@ -121,6 +132,8 @@ def main() -> int:
                     "domain_status": result["domain_status"],
                     "counts": result["counts"],
                     "report": str(args.output_dir / "report.json"),
+                    **({"final_suite_coverage": result["final_suite_coverage"]}
+                       if "final_suite_coverage" in result else {}),
                 }
             )
         )

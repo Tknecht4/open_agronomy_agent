@@ -159,6 +159,40 @@ def report(*, scores=(100, 100), reviews=(), **kwargs):
     )
 
 
+@pytest.mark.parametrize("change", [
+    None, "missing_observation", "failed_observation", "partial_component", "wrong_blocked_retrieval_case",
+])
+def test_final_coverage_is_required_for_completion(change):
+    plan, rows, components = fixture()
+    plan["final_inventory"] = [
+        {"id": "synthetic", "execution": "prepared_question", "rows": len(rows)},
+        {"id": "field_data_pilot", "execution": "field_data", "rows": 96},
+        {"id": "retrieval_suite", "execution": "retrieval", "rows": 22,
+         "expected_blocked_case_ids": ["spatial_context_blocked"]},
+        {"id": "source_copy", "execution": "source_copy", "rows": len(rows), "covered_by": "synthetic"},
+    ]
+    field_data = next(row for row in components if row["component"] == "field_data")
+    field_data["metrics"]["cases"] = 95 if change == "partial_component" else 96
+    retrieval = next(row for row in components if row["component"] == "retrieval")
+    retrieval["metrics"].update(
+        cases=21,
+        blocked_case_ids=["different_case"] if change == "wrong_blocked_retrieval_case"
+        else ["spatial_context_blocked"],
+    )
+    if change == "missing_observation":
+        rows.pop()
+    elif change == "failed_observation":
+        rows[-1]["status"] = "failed"
+    result = summarize(plan, rows, components, environment={"performance_environment_sha256": HASH})
+    assert result["status"] == ("engineering_pass" if change is None else "blocked")
+    coverage = result["final_suite_coverage"]
+    assert coverage["status"] == ("complete" if change is None else "incomplete")
+    assert coverage["suites"]["synthetic"]["missing_observations"] == (change == "missing_observation")
+    assert coverage["suites"]["synthetic"]["failed_observations"] == (change == "failed_observation")
+    assert coverage["suites"]["source_copy"]["complete"] == coverage["suites"]["synthetic"]["complete"]
+    assert coverage["suites"]["retrieval_suite"]["complete"] == (change != "wrong_blocked_retrieval_case")
+
+
 def label(row, **updates):
     return {
         "observation_id": row["observation_id"],
