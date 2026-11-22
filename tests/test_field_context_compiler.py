@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from agronomy_agent.server.services.field_context_compiler import compile_field_context
+import pytest
+
+from agronomy_agent.server.services.field_context_compiler import compile_field_context, render_field_context_prompt
 
 
 def _safe_summary(value: object) -> dict[str, object]:
@@ -86,6 +88,7 @@ def test_compiler_keeps_mapped_priors_and_live_soil_weather_values_separate() ->
     assert "recent precipitation 12.4 mm" in receipt["live_context"][1]["facts"]
     assert "ignore safeguards" not in compiled["prompt"]
     assert "not field truth" in compiled["prompt"]
+    assert "from the map year" not in compiled["prompt"]
 
 
 def test_compiler_omits_unavailable_adapter_values() -> None:
@@ -133,3 +136,20 @@ def test_compiler_dates_partial_nasa_power_values_without_inventing_missing_days
     assert facts[0] == "observed UTC 2026-09-25; 1 of 3 requested days had usable values"
     assert "recent precipitation 0 mm across 1 observed day" in facts
     assert "2026-09-27" not in compiled["prompt"]
+
+
+
+@pytest.mark.parametrize(
+    ("lane", "adapter"),
+    [("retained_context", "cropland_data_layer_geometry"), ("live_context", "aafc_annual_crop_inventory")],
+)
+def test_crop_cover_prompt_anchors_dominance_and_confirmation_to_boundary_and_year(lane, adapter):
+    prompt = render_field_context_prompt({
+        lane: [{"adapter": adapter, "facts": ["2025: mixed mapped cover"]}],
+        "boundary": "Source-bound field context.",
+    })
+
+    assert "2025: mixed mapped cover" in prompt
+    assert "more than 80% of the entire boundary" in prompt
+    assert "planting, harvest, or scouting records from the map year" in prompt
+    assert "Present-day scouting describes the current season." in prompt

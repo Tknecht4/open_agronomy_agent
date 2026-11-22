@@ -70,12 +70,11 @@ def _read_macos_aafc(url: str, *, timeout: int, limit: int, user_agent: str) -> 
         "--max-filesize", str(limit), "--user-agent", user_agent,
         "--write-out", "%{http_code}", "--", url,
     ]
-    environment = {
-        key: value for key, value in os.environ.items()
-        if key.lower() in {
-            "https_proxy", "all_proxy", "no_proxy", "ssl_cert_file", "ssl_cert_dir",
-        }
-    }
+    environment = {key: os.environ[key] for key in ("SSL_CERT_FILE", "SSL_CERT_DIR") if key in os.environ}
+    host = urllib.parse.urlsplit(url).netloc
+    proxy = urllib.request.getproxies().get("https")
+    if proxy and not urllib.request.proxy_bypass(host):
+        environment["https_proxy"] = proxy
     try:
         process = subprocess.run(
             command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,

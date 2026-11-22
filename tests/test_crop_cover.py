@@ -204,10 +204,19 @@ def test_catalog_failure_reports_sanitized_tls_diagnostics(monkeypatch, tmp_path
 
 
 
-def test_frozen_macos_routes_only_aafc_crop_cover_through_system_https(monkeypatch):
+@pytest.mark.parametrize("bypass", [False, True])
+def test_frozen_macos_routes_only_aafc_crop_cover_through_system_https(monkeypatch, bypass):
     inputs = []
     monkeypatch.setattr(crop_cover, "sys", SimpleNamespace(platform="darwin", frozen=True))
-    monkeypatch.setenv("HTTPS_PROXY", "http://trusted-proxy.example")
+    proxy = "http://configured-proxy.example:8080"
+    monkeypatch.setattr(crop_cover.urllib.request, "getproxies", lambda: {"https": proxy})
+
+    def proxy_bypass(host):
+        assert host == "agriculture.canada.ca"
+        return bypass
+
+    monkeypatch.setattr(crop_cover.urllib.request, "proxy_bypass", proxy_bypass)
+    monkeypatch.setenv("SSL_CERT_DIR", "/custom/certs")
     monkeypatch.setenv("UNRELATED_LOCAL_SECRET", "ignored")
 
     def system_fetch(command, **options):
@@ -219,7 +228,8 @@ def test_frozen_macos_routes_only_aafc_crop_cover_through_system_https(monkeypat
         assert "--http2" in command
         assert "--insecure" not in command and "--location" not in command
         assert options["timeout"] == 4
-        assert options["env"]["HTTPS_PROXY"] == "http://trusted-proxy.example"
+        assert options["env"].get("https_proxy") == (None if bypass else proxy)
+        assert options["env"]["SSL_CERT_DIR"] == "/custom/certs"
         assert "UNRELATED_LOCAL_SECRET" not in options["env"]
         return subprocess.CompletedProcess(command, 0, b"proof200", None)
 

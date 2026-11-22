@@ -16,11 +16,12 @@ from agronomy_agent.geospatial.context_support import (
     validated_fraction,
 )
 
-from agronomy_agent.geospatial.crop_cover import coverage_facts
+from agronomy_agent.geospatial.crop_cover import DOMINANT_FRACTION, coverage_facts
 
 
 SCHEMA_VERSION = "open_agronomy_agent.field_context_compiler.v1"
 AVAILABLE_STATUSES = {"available", "partial_available", "available_offline_snapshot"}
+_CROP_COVER_ADAPTERS = {"cropland_data_layer_geometry", "cropland_data_layer_point", "aafc_annual_crop_inventory"}
 IMAGERY_BOUNDARY = (
     "The indices describe eligible pixels from one capture. It does not establish a change over time, "
     "representative crop conditions, a diagnosis, or a management recommendation."
@@ -91,7 +92,9 @@ def render_field_context_prompt(receipt: dict[str, Any]) -> str:
         if component_text:
             facts.append(f"components: {component_text}")
         lines.append(f"- Mapped prior — {label}: {'; '.join(str(value) for value in facts if value)}")
-    for item in receipt.get("live_context") or []:
+    live = receipt.get("live_context") or []
+    retained = receipt.get("retained_context") or []
+    for item in live:
         label = item.get("label") or item.get("adapter") or "Public source"
         facts = item.get("facts") or []
         lines.append(f"- Public check — {label}: {'; '.join(str(value) for value in facts if value)}")
@@ -100,8 +103,15 @@ def render_field_context_prompt(receipt: dict[str, Any]) -> str:
         lineage = field.get("field_season_lineage") or {}
         if lineage.get("crops"):
             lines.append(f"- Saved crop system: {lineage.get('crop_system', 'unknown')}; crop entries: {lineage['crops']}. No per-crop acreage, dates or spatial allocation is established by this season record.")
-    for record in receipt.get("retained_context") or []:
+    for record in retained:
         lines.append(f"- Retained public check — {record.get('label', record.get('adapter'))} (fetched {record.get('fetched_at') or 'unknown'}): {'; '.join(record.get('facts') or [])}")
+    if any(item.get("adapter") in _CROP_COVER_ADAPTERS for item in (*live, *retained)):
+        lines.append(
+            "- Crop-cover interpretation: For a mapped field boundary, a class is dominant only if it covers "
+            f"more than {DOMINANT_FRACTION:.0%} of the entire boundary. Confirm the planted crop with "
+            "field-specific planting, harvest, or scouting records from the map year. Present-day scouting "
+            "describes the current season."
+        )
     imported = receipt.get("imported_data")
     if isinstance(imported, dict):
         lines.append(
@@ -189,7 +199,7 @@ def _live_context(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _adapter_facts(name: str, summary: dict[str, Any]) -> list[str]:
-    if name in {"cropland_data_layer_geometry", "cropland_data_layer_point", "aafc_annual_crop_inventory"}:
+    if name in _CROP_COVER_ADAPTERS:
         return coverage_facts(summary.get("coverage_by_year") or {})
     if name == "cansis_soil_landscapes_canada":
         landscapes = summary.get("landscapes") if isinstance(summary.get("landscapes"), list) else []
