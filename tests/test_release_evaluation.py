@@ -42,6 +42,24 @@ def test_final_catalog_accounts_for_prepared_and_retained_inputs():
     }
 
 
+def test_final_scorer_identity_binds_coverage_implementation(monkeypatch):
+    import agronomy_agent.release_evaluation as evaluation
+
+    registry = load_registry()
+    registry["final_inventory"] = [
+        {**suite, "sha256": evaluation.file_digest(ROOT / suite["path"])}
+        for suite in registry["suites"]
+    ]
+    before = build_plan(registry, profile="baseline")
+    original_digest = evaluation.file_digest
+    monkeypatch.setattr(evaluation, "file_digest", lambda path: (
+        "f" * 64 if path == ROOT / evaluation.FINAL_SCORER_FILE else original_digest(path)
+    ))
+    after = build_plan(registry, profile="baseline")
+    assert before["cohort_sha256"] == after["cohort_sha256"]
+    assert before["scorer_sha256"] != after["scorer_sha256"]
+
+
 def test_copied_or_narrowed_catalog_cannot_impersonate_the_final_suite(tmp_path):
     copy = tmp_path / "alternate.json"
     copy.write_bytes(FINAL_REGISTRY.read_bytes())

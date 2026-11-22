@@ -44,6 +44,7 @@ SCORER_FILES = (
     "scripts/evaluate_offline_corpus_retrieval.py",
     "src/agronomy_agent/field_data_benchmark.py",
 )
+FINAL_SCORER_FILE = "src/agronomy_agent/final_evaluation.py"
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REGISTRY = ROOT / "configs/release_evaluation_v1.json"
 FINAL_REGISTRY = ROOT / CATALOG_PATH
@@ -860,6 +861,7 @@ def build_plan(
         **({"final_inventory": final_inventory} if final_inventory is not None else {}),
     }
     auxiliary_inputs = controlled_inputs(registry, root)
+    scorer_files = (*SCORER_FILES, FINAL_SCORER_FILE) if final_inventory is not None else SCORER_FILES
     plan = {
         "schema_version": PLAN_SCHEMA,
         "suite_id": registry["suite_id"],
@@ -870,7 +872,7 @@ def build_plan(
         "cohort_sha256": digest(cohort),
         "scorer_version": SCORER_VERSION,
         "scorer_sha256": digest(
-            {name: file_digest(checked_path(root, name)) for name in SCORER_FILES}
+            {name: file_digest(checked_path(root, name)) for name in scorer_files}
         ),
         "source": source_identity(root),
         "model": {
