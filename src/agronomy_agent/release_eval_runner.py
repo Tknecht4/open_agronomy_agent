@@ -417,7 +417,17 @@ def _editor_runtime_contract(config: Mapping[str, Any], config_sha256: str) -> d
 def _attempt_stop(row: Mapping[str, Any], plan: Mapping[str, Any], *, product: bool) -> None:
     if row.get("status") not in ({"completed"} if product else {"pass"}):
         raise _PolicyStop("attempt_status", row.get("status"))
-    if any(check.get("passed") is not True for check in row.get("checks") or []):
+    from agronomy_agent.final_evaluation import historical_numeric_diagnostic
+
+    diagnostic = (
+        historical_numeric_diagnostic(plan, row)
+        if product and row.get("arm_id") == "production_full" else None
+    )
+    diagnostic_checks = diagnostic["check_ids"] if diagnostic is not None else ()
+    if any(
+        check.get("passed") is not True and check.get("id") not in diagnostic_checks
+        for check in row.get("checks") or []
+    ):
         raise _PolicyStop("failed_check")
     if not product:
         return
@@ -717,6 +727,14 @@ def execute_worker(spec: Mapping[str, Any]) -> dict[str, Any]:
                 "jurisdiction_authority_compliance_rate"
             ]["mean"],
         }
+        if "final_inventory" in spec["registry"]:
+            metrics.update(
+                cases=result["executed_case_count"],
+                blocked_case_ids=sorted(
+                    row["case_id"] for row in result["results"]
+                    if row["execution_status"] == "blocked"
+                ),
+            )
         return {
             "component": kind,
             "status": (
@@ -1161,6 +1179,12 @@ def run_suite(
         raise ValueError("review input must contain JSON objects")
     controller = read_controller_inputs(rubrics_path=model_rubrics_path, policy_path=model_policy_path)
     plan = bind_controller_inputs(build_plan(registry, profile=profile, run_id=run_id, limit=limit), controller, comparison_cohort)
+    if reference is not None and "final_inventory" in plan and (
+        reference.get("suite_id") != plan["suite_id"]
+        or reference.get("cohort_sha256") != plan["cohort_sha256"]
+        or (reference.get("final_suite_coverage") or {}).get("status") != "complete"
+    ):
+        raise ValueError("final evaluation reference must cover the same complete final catalog")
     if external_inputs:
         from agronomy_agent.release_eval_external import validate_external_plan
         plan["external_admission"] = validate_external_plan(external_inputs, plan)
@@ -1621,11 +1645,16 @@ def run_suite(
             plan, rows, components, environment=plan["environment"], reviews=reviews
         )
         report["plan_sha256"] = plan_sha256
-        report["source_stable"] = (
-            source_identity()["source_sha256"] == plan["source"]["source_sha256"]
-            and controlled_inputs(registry) == plan["auxiliary_inputs"]
-            and digest(load_registry(registry_path)) == plan["registry_sha256"]
-        )
+        try:
+            report["source_stable"] = (
+                source_identity()["source_sha256"] == plan["source"]["source_sha256"]
+                and controlled_inputs(registry) == plan["auxiliary_inputs"]
+                and digest(load_registry(registry_path)) == plan["registry_sha256"]
+            )
+        except (OSError, TypeError, ValueError, KeyError):
+            if "final_inventory" not in plan:
+                raise
+            report["source_stable"] = False
         if not report["source_stable"]:
             report["status"] = "blocked"
             report["failures"]["source_drift"] = True

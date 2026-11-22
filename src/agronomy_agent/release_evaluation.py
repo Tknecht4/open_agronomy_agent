@@ -25,6 +25,14 @@ from typing import Any, Mapping
 import yaml
 
 from agronomy_agent.benchmark_arms import ALL_ARM_IDS
+from agronomy_agent.final_evaluation import (
+    CATALOG_PATH,
+    CATALOG_SCHEMA,
+    CASE_FORMATS,
+    FINAL_SUITE_ID,
+    final_registry,
+    validate_historical_numeric_diagnostics,
+)
 
 REGISTRY_SCHEMA = "open_agronomy_agent.release_evaluation_registry.v1"
 EXTERNAL_REGISTRY_SCHEMA = "open_agronomy_agent.release_evaluation_registry.v3"
@@ -37,8 +45,10 @@ SCORER_FILES = (
     "scripts/evaluate_offline_corpus_retrieval.py",
     "src/agronomy_agent/field_data_benchmark.py",
 )
+FINAL_SCORER_FILE = "src/agronomy_agent/final_evaluation.py"
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REGISTRY = ROOT / "configs/release_evaluation_v1.json"
+FINAL_REGISTRY = ROOT / CATALOG_PATH
 COMPONENTS = {
     "instrument",
     "capability",
@@ -299,6 +309,13 @@ def load_registry(
     path: Path = DEFAULT_REGISTRY, *, root: Path = ROOT
 ) -> dict[str, Any]:
     registry = json.loads(path.read_text(encoding="utf-8"))
+    is_final = registry.get("schema_version") == CATALOG_SCHEMA
+    if is_final:
+        if path.resolve() != (root / CATALOG_PATH).resolve():
+            raise ValueError("final evaluation requires the canonical catalog path")
+        registry = final_registry(registry, root=root)
+    elif "final_inventory" in registry or registry.get("suite_id") == FINAL_SUITE_ID:
+        raise ValueError("final evaluation requires the versioned final catalog")
     if (
         registry.get("schema_version") not in {REGISTRY_SCHEMA, EXTERNAL_REGISTRY_SCHEMA}
         or registry.get("claim_eligible") is not False
@@ -352,7 +369,7 @@ def load_registry(
     for suite in registry.get("suites") or []:
         ids.append(suite.get("id"))
         checked_path(root, suite["path"])
-        if suite.get("format") not in {"scenario", "legacy_domain"} or suite.get(
+        if suite.get("format") not in (CASE_FORMATS if is_final else {"scenario", "legacy_domain"}) or suite.get(
             "exposure"
         ) not in {"exposed_development", "prospective_confirmation"}:
             raise ValueError("suite format and exposure must be explicit")
@@ -472,6 +489,11 @@ def normalize_case(row: Mapping[str, Any], suite: Mapping[str, Any]) -> dict[str
         case["lane"] = "agronomy"
         case["assertions"] = {}
         case["review_required"] = row.get("scoring_method") != "numeric_tolerance"
+    elif suite["format"] == "prepared_question":
+        case["case_id"] = row.get("case_id") or row.get("eval_id") or row.get("id")
+        case["scenario_family"] = row.get("scenario_family") or row.get("task_family") or suite["id"]
+        case["lane"] = "conversation" if "turns" in row else "agronomy"
+        case["review_required"] = True
     if (
         not str(case.get("case_id") or "").strip()
         or not str(case.get("scenario_family") or "").strip()
@@ -697,6 +719,8 @@ def controlled_inputs(registry: Mapping[str, Any], root: Path = ROOT) -> dict[st
     if (root / admission_queue).is_file():
         names.add(admission_queue)
     names.update(suite["path"] for suite in registry["suites"])
+    if "final_inventory" in registry:
+        names.update(entry["path"] for entry in registry["final_inventory"])
     pilot = json.loads(
         checked_path(root, "data/eval/field_data_pilot_v1/manifest.json").read_text()
     )
@@ -753,29 +777,41 @@ def build_plan(
         profile != "smoke" or isinstance(limit, bool) or limit < 1
     ):
         raise ValueError("case limits are allowed only for claim-ineligible smoke runs")
+    final_inventory = registry.get("final_inventory")
+    if final_inventory is not None and profile not in {"baseline", "release"}:
+        raise ValueError("final evaluation requires baseline or release profile")
+    final_by_id = {entry["id"]: entry for entry in final_inventory or []}
     suites, cases = [], []
     for suite in registry["suites"]:
         if profile not in suite["profiles"]:
             continue
         path = checked_path(root, suite["path"])
-        rows = [
-            json.loads(line) for line in path.read_text().splitlines() if line.strip()
-        ]
+        raw = path.read_bytes()
+        case_file_sha256 = hashlib.sha256(raw).hexdigest()
+        if final_inventory is not None and case_file_sha256 != final_by_id[suite["id"]]["sha256"]:
+            raise ValueError(f"final evaluation input changed during planning: {suite['id']}")
+        rows = [json.loads(line) for line in raw.decode("utf-8").splitlines() if line.strip()]
         normalized = [normalize_case(row, suite) for row in rows]
         if not normalized or len({case["case_id"] for case in normalized}) != len(
             normalized
         ):
             raise ValueError(f"empty suite or duplicate case IDs: {suite['id']}")
         selected = normalized[:limit] if limit else normalized
+        if final_inventory is not None:
+            for case in selected:
+                worker_case(case)
         cases.extend(selected)
         suites.append(
             {
                 **suite,
-                "sha256": file_digest(path),
+                "sha256": case_file_sha256,
                 "total_cases": len(rows),
                 "selected_cases": len(selected),
             }
         )
+    diagnostics = registry.get("historical_numeric_diagnostics", [])
+    if final_inventory is not None:
+        validate_historical_numeric_diagnostics(diagnostics, cases)
     model_bytes = checked_path(root, registry["model_config"]).read_bytes()
     model = yaml.safe_load(model_bytes)
     external_backend = registry["profiles"][profile]["backend"] == "codex_app_server"
@@ -787,7 +823,9 @@ def build_plan(
     matrix = []
     for trial in range(1, profile_config["trials"] + 1):
         for case in cases:
-            for arm in registry["arms"]:
+            # The raw-model control has no fallback/recovery contract to exercise.
+            arms = ["production_full"] if final_inventory is not None and case.get("synthetic_fault") else registry["arms"]
+            for arm in arms:
                 backend = (
                     "mock" if case.get("synthetic_fault") else profile_config["backend"]
                 )
@@ -807,6 +845,10 @@ def build_plan(
                         "lane": case["lane"],
                     }
                 )
+    final_bindings = {
+        "final_inventory": final_inventory,
+        "historical_numeric_diagnostics": diagnostics,
+    } if final_inventory is not None else {}
     cohort = {
         "suites": suites,
         "cases": [
@@ -824,8 +866,10 @@ def build_plan(
         ],
         "arms": registry["arms"],
         "trials": profile_config["trials"],
+        **final_bindings,
     }
     auxiliary_inputs = controlled_inputs(registry, root)
+    scorer_files = (*SCORER_FILES, FINAL_SCORER_FILE) if final_inventory is not None else SCORER_FILES
     plan = {
         "schema_version": PLAN_SCHEMA,
         "suite_id": registry["suite_id"],
@@ -836,7 +880,7 @@ def build_plan(
         "cohort_sha256": digest(cohort),
         "scorer_version": SCORER_VERSION,
         "scorer_sha256": digest(
-            {name: file_digest(checked_path(root, name)) for name in SCORER_FILES}
+            {name: file_digest(checked_path(root, name)) for name in scorer_files}
         ),
         "source": source_identity(root),
         "model": {
@@ -870,6 +914,7 @@ def build_plan(
         "comparison_policy": registry["comparison_policy"],
         "backend_performance_policy": registry["backend_performance_policy"],
         "domain_policy": registry["domain_policy"],
+        **final_bindings,
     }
     return bind_controller_inputs(plan, controller_inputs or {}, comparison_cohort)
 
@@ -938,6 +983,10 @@ def evaluation_entrypoints(*, root: Path = ROOT) -> dict[str, Any]:
          "scripts/run_release_evaluation.py", "src/agronomy_agent/release_eval_runner.py",
          "tests/test_release_eval_runner.py",
          "Model execution needs an authorized profile and provisioned backend; CI is synthetic engineering evidence."),
+        ("final_suite", "implemented_wired", "required_prepared_question_catalog",
+         "scripts/run_release_evaluation.py", "src/agronomy_agent/final_evaluation.py",
+         "tests/test_release_evaluation.py",
+         "The --final-suite path requires every catalog input and reports full per-suite coverage for the pinned native model."),
         ("release_analysis", "implemented_wired", "offline_retained_release",
          "scripts/analyze_release_evaluation.py", "src/agronomy_agent/release_eval_reanalysis.py",
          "tests/test_release_eval_reanalysis.py",
@@ -962,6 +1011,8 @@ def evaluation_entrypoints(*, root: Path = ROOT) -> dict[str, Any]:
     surfaces = []
     for identifier, classification, execution, entrypoint, module, test, boundary in specs:
         paths = (entrypoint, module, test)
+        if identifier == "final_suite":
+            paths += (CATALOG_PATH.as_posix(),)
         missing = [path for path in paths if not (root / path).is_file()]
         surfaces.append({
             "id": identifier,

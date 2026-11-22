@@ -404,18 +404,26 @@ def summarize(
         if review["reviewer_type"] != "automated_triage"
     }
     observations = []
+    from agronomy_agent.final_evaluation import historical_numeric_diagnostic
+
     numeric_failures = []
     planned = []
+    diagnostics = {}
     for key, cell in expected.items():
         case = cases[(cell["suite_id"], cell["case_id"])]
+        numeric_reference = _numeric_required(case)
+        diagnostic = historical_numeric_diagnostic(plan, cell)
+        if diagnostic is not None:
+            diagnostics[key] = diagnostic
         question_hash = digest(
             case.get("turns") if "turns" in case else case.get("question")
         )
         identity = {
             **{name: cell.get(name) for name in IDENTITY_FIELDS},
             "question_sha256": question_hash,
-            "numeric_required": _numeric_required(case),
+            "numeric_required": numeric_reference and diagnostic is None,
             "review_required": case.get("review_required") is True,
+            **({"numeric_reference_role": "historical_diagnostic"} if diagnostic is not None else {}),
         }
         planned.append(identity)
         row = actual.get(key, {})
@@ -433,7 +441,7 @@ def summarize(
             if name in {"draft", "post_verification", "final"}
             and isinstance(value, Mapping)
         }
-        if identity["numeric_required"]:
+        if numeric_reference:
             score = row.get("independent_score") or {}
             valid = (
                 score.get("rubric") == "numeric_tolerance"
@@ -443,15 +451,22 @@ def summarize(
             observation["numeric_score_status"] = (
                 "observed" if valid else "missing_or_invalid"
             )
-            if not valid:
+            if not valid and identity["numeric_required"]:
                 numeric_failures.append(key)
         observations.append(observation)
-    failed_checks = [
-        {"observation_id": row["observation_id"], **_clean_numbers(check)}
-        for row in rows
-        for check in row.get("checks") or []
-        if check.get("passed") is not True
-    ]
+    failed_checks = []
+    historical_failures = []
+    for row in rows:
+        key = row["observation_id"]
+        diagnostic = diagnostics.get(key) if expected[key]["arm_id"] == PRODUCTION_ARM else None
+        for check in row.get("checks") or []:
+            if check.get("passed") is True:
+                continue
+            record = {"observation_id": key, **_clean_numbers(check)}
+            if diagnostic is not None and check.get("id") in diagnostic["check_ids"]:
+                historical_failures.append({**record, "reason": diagnostic["reason"]})
+            else:
+                failed_checks.append(record)
     failed = [row["observation_id"] for row in rows if row.get("status") != "completed"]
     component_ids = [row["component"] for row in components]
     component_failures = [
@@ -554,6 +569,11 @@ def summarize(
         for key, repeats in sorted(by_case.items())
     ]
     numeric = [row for row in production if row["numeric_required"]]
+    coverage = None
+    if "final_inventory" in plan:
+        from agronomy_agent.final_evaluation import final_coverage
+
+        coverage = final_coverage(plan["final_inventory"], observations, components)
     blocked = bool(
         missing
         or failed
@@ -564,6 +584,7 @@ def summarize(
         or numeric_failures
         or model_evidence_missing
         or semantic["coverage"] < coverage_required
+        or (coverage is not None and coverage["status"] != "complete")
     )
     domain_status = (
         "required_review_missing"
@@ -576,6 +597,10 @@ def summarize(
         "run_id": plan["run_id"],
         "profile": plan["profile"],
         "claim_eligible": False,
+        **({
+            "final_suite_coverage": coverage,
+            "historical_diagnostic_failures": historical_failures,
+        } if coverage is not None else {}),
         "status": "blocked" if blocked else "engineering_pass",
         "domain_status": domain_status,
         "domain_review_coverage": semantic["coverage"],
@@ -921,6 +946,7 @@ def compare(
         *IDENTITY_FIELDS,
         "question_sha256",
         "numeric_required",
+        "numeric_reference_role",
         "review_required",
     )
     mismatches = [

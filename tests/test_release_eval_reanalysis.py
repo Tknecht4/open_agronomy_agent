@@ -195,7 +195,7 @@ from agronomy_agent.release_evaluation import (
 )
 
 
-def retained_run(tmp_path: Path, name: str = "raw") -> Path:
+def retained_run(tmp_path: Path, name: str = "raw", *, final: bool = False) -> Path:
     directory = tmp_path / name
     directory.mkdir()
     plan = build_plan(load_registry(), profile="baseline", run_id=name)
@@ -216,6 +216,8 @@ def retained_run(tmp_path: Path, name: str = "raw") -> Path:
         counts={"cases": 1, "observations": 1, "families": 1, "lanes": {"agronomy": 1}},
         environment={"performance_environment_sha256": "fixture"},
     )
+    if final:
+        plan["final_inventory"] = [{"id": case["suite_id"], "execution": "legacy_domain", "rows": 1}]
     identity = plan_identity(plan)
     stages = {
         key: {"text": text, "sha256": hashlib.sha256(text.encode()).hexdigest()}
@@ -256,6 +258,18 @@ def retained_run(tmp_path: Path, name: str = "raw") -> Path:
     write_new_json(directory / "report.json", report)
     write_new_json(directory / "retention.json", retention_manifest(directory))
     return directory
+
+
+def test_final_reanalysis_binds_the_coverage_implementation(tmp_path):
+    import agronomy_agent.final_evaluation as coverage
+
+    raw = retained_run(tmp_path, final=True)
+    out = tmp_path / "derived"
+    report = reanalyze(run_dir=raw, output_dir=out)
+    lineage = json.loads((out / "lineage.json").read_text())
+    assert lineage["analysis_source"]["final_evaluation.py"] == file_digest(Path(coverage.__file__))
+    assert report["final_suite_coverage"]["status"] == "complete"
+    assert report["reanalysis"]["inference_executed"] is False
 
 
 def review_for(raw: Path) -> dict:

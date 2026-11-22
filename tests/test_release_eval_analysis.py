@@ -159,6 +159,70 @@ def report(*, scores=(100, 100), reviews=(), **kwargs):
     )
 
 
+@pytest.mark.parametrize("change", [
+    None, "missing_observation", "failed_observation", "partial_component", "wrong_blocked_retrieval_case",
+])
+def test_final_coverage_is_required_for_completion(change):
+    plan, rows, components = fixture()
+    plan["final_inventory"] = [
+        {"id": "synthetic", "execution": "prepared_question", "rows": len(rows)},
+        {"id": "field_data_pilot", "execution": "field_data", "rows": 96},
+        {"id": "retrieval_suite", "execution": "retrieval", "rows": 22,
+         "expected_blocked_case_ids": ["spatial_context_blocked"]},
+        {"id": "source_copy", "execution": "source_copy", "rows": len(rows), "covered_by": "synthetic"},
+    ]
+    field_data = next(row for row in components if row["component"] == "field_data")
+    field_data["metrics"]["cases"] = 95 if change == "partial_component" else 96
+    retrieval = next(row for row in components if row["component"] == "retrieval")
+    retrieval["metrics"].update(
+        cases=21,
+        blocked_case_ids=["different_case"] if change == "wrong_blocked_retrieval_case"
+        else ["spatial_context_blocked"],
+    )
+    if change == "missing_observation":
+        rows.pop()
+    elif change == "failed_observation":
+        rows[-1]["status"] = "failed"
+    result = summarize(plan, rows, components, environment={"performance_environment_sha256": HASH})
+    assert result["status"] == ("engineering_pass" if change is None else "blocked")
+    coverage = result["final_suite_coverage"]
+    assert coverage["status"] == ("complete" if change is None else "incomplete")
+    assert coverage["suites"]["synthetic"]["missing_observations"] == (change == "missing_observation")
+    assert coverage["suites"]["synthetic"]["failed_observations"] == (change == "failed_observation")
+    assert coverage["suites"]["source_copy"]["complete"] == coverage["suites"]["synthetic"]["complete"]
+    assert coverage["suites"]["retrieval_suite"]["complete"] == (change != "wrong_blocked_retrieval_case")
+
+
+@pytest.mark.parametrize("change", [None, "different_hash", "other_check"])
+def test_final_historical_numeric_expectations_are_retained_without_waiving_current_checks(change):
+    plan, rows, components = fixture(scores=(0, 100))
+    plan["final_inventory"] = [{"id": "synthetic", "execution": "prepared_question", "rows": 2}]
+    row = rows[0]
+    plan["historical_numeric_diagnostics"] = [{
+        **{key: row[key] for key in ("suite_id", "case_id", "case_sha256")},
+        "check_ids": ["independent_numeric_contract"],
+        "reason": "seed_survival_basis_unspecified",
+    }]
+    row["checks"] = [{"id": "independent_numeric_contract", "passed": False}]
+    if change == "different_hash":
+        plan["historical_numeric_diagnostics"][0]["case_sha256"] = digest("different case")
+    elif change == "other_check":
+        row["checks"].append({"id": "turn_1.persisted_answer", "passed": False})
+    result = summarize(plan, rows, components, environment={"performance_environment_sha256": HASH})
+    assert result["final_suite_coverage"]["status"] == "complete"
+    assert result["status"] == ("engineering_pass" if change is None else "blocked")
+    observed = result["observations"][0]
+    assert observed["independent_score"]["score"] == 0
+    if change != "different_hash":
+        assert observed["numeric_reference_role"] == "historical_diagnostic"
+        assert observed["numeric_required"] is False
+        assert result["counts"]["numeric_required"] == 1
+        assert result["historical_diagnostic_failures"][0]["id"] == "independent_numeric_contract"
+    else:
+        assert observed["numeric_required"] is True
+        assert result["historical_diagnostic_failures"] == []
+
+
 def label(row, **updates):
     return {
         "observation_id": row["observation_id"],

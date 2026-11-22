@@ -465,6 +465,7 @@ def reanalyze(
                 "release_eval_analysis.py",
                 "release_evaluation.py",
                 "release_eval_runner.py",
+                *(("final_evaluation.py",) if "final_inventory" in run["plan"] else ()),
             )
         },
         "inference_executed": False,

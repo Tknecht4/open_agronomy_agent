@@ -1,10 +1,12 @@
 from copy import deepcopy
+import hashlib
 import json
 
 import pytest
 
 from agronomy_agent.release_evaluation import (
     DEFAULT_REGISTRY,
+    FINAL_REGISTRY,
     ROOT,
     build_plan,
     checked_path,
@@ -20,6 +22,128 @@ from agronomy_agent.release_evaluation import (
     read_stop_policy,
     bind_stop_policy,
 )
+
+
+def test_final_catalog_accounts_for_prepared_and_retained_inputs():
+    entries = json.loads(FINAL_REGISTRY.read_text())["entries"]
+    root = ROOT / "data/eval"
+    declared = {entry["path"] for entry in entries if entry["path"].startswith("data/eval/")}
+    assert declared == {path.relative_to(ROOT).as_posix() for path in root.rglob("*.jsonl")}
+    by_id = {entry["id"]: entry for entry in entries}
+    assert {key: by_id[key]["rows"] for key in (
+        "release_harness_v1", "successor_development", "scientific_reference",
+        "cca_repaired_reference", "refusal_crop_scope_regressions",
+        "open_agronomy_external_agroqa_v1", "agrillm_external", "v3_canadian_regional",
+    )} == {
+        "release_harness_v1": 36, "successor_development": 256, "scientific_reference": 240,
+        "cca_repaired_reference": 28, "refusal_crop_scope_regressions": 48,
+        "open_agronomy_external_agroqa_v1": 256, "agrillm_external": 800,
+        "v3_canadian_regional": 72,
+    }
+
+
+def test_final_scorer_identity_binds_coverage_implementation(monkeypatch):
+    import agronomy_agent.release_evaluation as evaluation
+
+    registry = load_registry()
+    registry["final_inventory"] = [
+        {**suite, "sha256": evaluation.file_digest(ROOT / suite["path"])}
+        for suite in registry["suites"]
+    ]
+    before = build_plan(registry, profile="baseline")
+    original_digest = evaluation.file_digest
+    monkeypatch.setattr(evaluation, "file_digest", lambda path: (
+        "f" * 64 if path == ROOT / evaluation.FINAL_SCORER_FILE else original_digest(path)
+    ))
+    after = build_plan(registry, profile="baseline")
+    assert before["cohort_sha256"] == after["cohort_sha256"]
+    assert before["scorer_sha256"] != after["scorer_sha256"]
+
+
+def test_historical_numeric_diagnostic_refuses_different_case_or_check():
+    from agronomy_agent.final_evaluation import validate_historical_numeric_diagnostics
+
+    case = {"suite_id": "fixture", "case_id": "seed", "case_sha256": digest("seed"),
+            "scoring_method": "numeric_tolerance"}
+    binding = {
+        **case,
+        "check_ids": ["independent_numeric_contract"],
+        "reason": "seed_survival_basis_unspecified",
+    }
+    validate_historical_numeric_diagnostics([binding], [case])
+    with pytest.raises(ValueError, match="invalid historical final-suite numeric diagnostic"):
+        validate_historical_numeric_diagnostics(
+            [dict(binding, case_sha256=digest("changed question"))], [case]
+        )
+    with pytest.raises(ValueError, match="invalid historical final-suite numeric diagnostic"):
+        validate_historical_numeric_diagnostics(
+            [dict(binding, check_ids=["independent_numeric_contract", "turn_1.persisted_answer"])], [case]
+        )
+
+
+def test_copied_or_narrowed_catalog_cannot_impersonate_the_final_suite(tmp_path):
+    copy = tmp_path / "alternate.json"
+    copy.write_bytes(FINAL_REGISTRY.read_bytes())
+    with pytest.raises(ValueError, match="canonical catalog path"):
+        load_registry(copy)
+
+
+@pytest.mark.parametrize("change, error", [
+    ("new_input", "lack a catalog entry"),
+    ("missing", "missing or escaped registry input"),
+    ("truncated", "row count changed"),
+    ("different_copy", "source copy differs"),
+    ("changed_retained_bytes", "input hash changed"),
+])
+def test_final_catalog_blocks_scope_or_identity_drift(tmp_path, change, error):
+    from agronomy_agent.final_evaluation import FINAL_SUITE_ID, final_registry
+
+    rows = [{"eval_id": "case", "question": "What is the record date?", "reference_answer": "Use the record."}]
+    content = json.dumps(rows[0]) + "\n"
+    paths = {
+        "inputs": "data/eval/prepared.jsonl",
+        "copy": "data/eval/prepared_source.jsonl",
+        "retained": "outputs/frozen.jsonl",
+    }
+    for name, path in paths.items():
+        file = tmp_path / path
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(content)
+    base_registry = tmp_path / DEFAULT_REGISTRY.relative_to(ROOT)
+    base_registry.parent.mkdir()
+    base_registry.write_bytes(DEFAULT_REGISTRY.read_bytes())
+    catalog = {
+        "suite_id": FINAL_SUITE_ID,
+        "whole_run_timeout_seconds": 1000,
+        "entries": [
+            {"id": "inputs", "path": paths["inputs"], "rows": 1, "execution": "prepared_question"},
+            {"id": "copy", "path": paths["copy"], "rows": 1, "execution": "source_copy", "covered_by": "inputs"},
+            {"id": "retained", "path": paths["retained"], "rows": 1, "execution": "prepared_question",
+             "sha256": hashlib.sha256(content.encode()).hexdigest()},
+        ],
+    }
+    registry = final_registry(catalog, root=tmp_path)
+    assert [suite["id"] for suite in registry["suites"]] == ["inputs", "retained"]
+    case = normalize_case(rows[0], registry["suites"][0])
+    assert case["case_sha256"] == digest(rows[0])
+    assert worker_case(case)["question"] == rows[0]["question"]
+    assert "reference_answer" not in worker_case(case)
+    with pytest.raises(ValueError, match="requires baseline or release"):
+        build_plan(registry, root=tmp_path, profile="smoke")
+    with pytest.raises(ValueError, match="case limits"):
+        build_plan(registry, root=tmp_path, profile="baseline", limit=1)
+    if change == "new_input":
+        (tmp_path / "data/eval/new.jsonl").write_text(content)
+    elif change == "missing":
+        (tmp_path / paths["retained"]).unlink()
+    elif change == "truncated":
+        (tmp_path / paths["inputs"]).write_text("")
+    elif change == "different_copy":
+        (tmp_path / paths["copy"]).write_text(content.replace("record date", "sample date"))
+    else:
+        (tmp_path / paths["retained"]).write_text(content + "\n")
+    with pytest.raises(ValueError, match=error):
+        final_registry(catalog, root=tmp_path)
 
 
 @pytest.mark.parametrize("override", [{"extra": True}, {"finalization_reserve_seconds": 10},

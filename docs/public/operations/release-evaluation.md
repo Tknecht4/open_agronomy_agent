@@ -31,6 +31,58 @@ constructs and are not renamed as production competence instruments.
 | `baseline` | MLX | 2 | 20 | Complete retained reference on a provisioned local model |
 | `release` | MLX | 2 | 20 | Complete candidate plus compatible retained reference comparison |
 
+### Final evaluation after a significant harness change
+
+Use the final-suite path for a requested **final evaluation**. Inspect the full
+plan before dispatch:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/run_release_evaluation.py \
+  --final-suite --dry-run
+```
+
+The catalog in `configs/final_evaluation_suite_v1.json` accounts for every
+JSONL input in `data/eval/` and the retained scientific, CCA,
+refusal/crop-scope, and V3 input bundles. Missing files, changed row counts,
+changed pinned hashes, and uncataloged inputs stop planning. Restore retained
+controller inputs at the catalog's paths using the exact pinned bytes. The V3
+inputs can be rebuilt using the pinned input preparation procedure in the
+[evaluation contract](../evaluation.md#public-v3-competence-candidate).
+
+The model scenario plan includes both external question sets, historical
+development variants, the regional V3 questions, and the current harness. It
+uses the revision-pinned native `configs/model.yaml` configuration, two trials,
+and raw and production arms. Declared synthetic fault cases exercise the
+production arm with a mock fault in both trials. The runner also executes the
+required engineering components, including the 96 field-data cases and the
+retrieval suite's 21 executable cases and one declared blocked spatial-source
+entry. The AgroQA source copy is bound to the matching question and
+reference pairs in the prepared AgroQA suite. The separately governed V3 causal
+matrix and hosted comparator retain their own execution contracts.
+
+When a final run is requested and the model is provisioned, use a fresh private
+output directory. Allow for the full matrix's runtime and retention, including
+private prompts, outputs, and traces:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/run_release_evaluation.py \
+  --final-suite --run-id final-harness-v1 --output-dir outputs/final-harness-v1
+```
+
+The final mode defaults to `baseline`. For a matched candidate comparison,
+use `--profile release --reference` with a retained complete final-suite
+report on the same catalog. The final path rejects CI, smoke, and case limits.
+Read `final_suite_coverage` in the retained report. Missing or failed cells
+and incomplete components block whole-suite coverage. Engineering and
+comparison checks can fail even after all observations have been collected.
+The nine pinned seed-rate records with an unspecified survival basis still run,
+and their original numeric scores and failed assertions are retained as
+historical diagnostics. Their obsolete reference expectations are outside the
+final numeric and engineering gates. The current seed fixtures and all other
+checks retain their normal gates.
+The ordinary profiles below still support routine engineering and local model
+checks.
+
 Run from the repository root in the supported Python environment. Inspect the
 plan without executing a model:
 
