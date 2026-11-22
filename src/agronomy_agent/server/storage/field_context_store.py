@@ -11,6 +11,7 @@ import json
 import uuid
 from typing import Any
 
+from agronomy_agent.geospatial.crop_cover import COVERAGE_VERSION
 from agronomy_agent.server.storage.farm_store import geometry_geojson, geometry_identity
 
 POLICY_VERSION = "field-dossier.v2"
@@ -126,6 +127,10 @@ def current_sources(store: Any, field: dict[str, Any]) -> dict[str, Any]:
                 continue
             snapshot = {**raw, "snapshot_id": row["id"], "fetched_at": row["fetched_at"],
                 "expires_at": row["expires_at"], "freshness": "stale" if row["expires_at"] < _now() else "current", "receipt_sha256": row["receipt_sha256"]}
+            values = raw.get("values")
+            if (source == "crop_cover" and row["availability"] in SUCCESS and isinstance(values, dict)
+                    and values.get("coverage_version") != COVERAGE_VERSION):
+                snapshot["freshness"] = "stale"
             if source not in seen:
                 result[source] = snapshot; seen.add(source)
             elif row["availability"] in SUCCESS and result[source]["availability"] not in SUCCESS and "last_success" not in result[source]:
@@ -153,7 +158,9 @@ def update_job(store: Any, job_id: str, status: str | None = None, results: dict
 
 def save_snapshot(store: Any, job: dict[str, Any], field: dict[str, Any], source: str, value: dict[str, Any]) -> str:
     now = _now()
-    expires = (datetime.now(timezone.utc) + timedelta(hours=6 if source in {"weather", "imagery"} else 24 * 30)).isoformat()
+    records = (value.get("values") or {}).get("coverage_by_year") or {}
+    retryable = source == "crop_cover" and any(row.get("status") == "unavailable" for row in records.values())
+    expires = (datetime.now(timezone.utc) + timedelta(hours=6 if source in {"weather", "imagery"} or retryable else 24 * 30)).isoformat()
     snapshot_id = str(uuid.uuid4())
     receipt = snapshot_digest(scope=job["scope_sha256"], source=source, result=value, fetched_at=now,
         expires_at=expires, geometry_revision_id=job["geometry_revision_id"])

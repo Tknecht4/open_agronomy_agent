@@ -16,6 +16,8 @@ from agronomy_agent.geospatial.context_support import (
     validated_fraction,
 )
 
+from agronomy_agent.geospatial.crop_cover import coverage_facts
+
 
 SCHEMA_VERSION = "open_agronomy_agent.field_context_compiler.v1"
 AVAILABLE_STATUSES = {"available", "partial_available", "available_offline_snapshot"}
@@ -187,6 +189,8 @@ def _live_context(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _adapter_facts(name: str, summary: dict[str, Any]) -> list[str]:
+    if name in {"cropland_data_layer_geometry", "cropland_data_layer_point", "aafc_annual_crop_inventory"}:
+        return coverage_facts(summary.get("coverage_by_year") or {})
     if name == "cansis_soil_landscapes_canada":
         landscapes = summary.get("landscapes") if isinstance(summary.get("landscapes"), list) else []
         facts: list[str] = []
@@ -272,6 +276,9 @@ def _adapter_label(name: str) -> str:
     return {
         "cansis_soil_landscapes_canada": "CanSIS Soil Landscapes of Canada",
         "nasa_power_daily": "NASA POWER daily weather",
+        "aafc_annual_crop_inventory": "AAFC Annual Crop Inventory",
+        "cropland_data_layer_geometry": "USDA NASS Cropland Data Layer",
+        "cropland_data_layer_point": "USDA NASS Cropland Data Layer",
     }.get(name, name.replace("_", " "))
 
 

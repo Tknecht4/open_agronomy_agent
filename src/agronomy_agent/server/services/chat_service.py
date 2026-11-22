@@ -16,6 +16,7 @@ from pathlib import Path
 from agronomy_agent.codex_app_server import validate_canonical_backend
 
 from agronomy_agent import local_tools
+from agronomy_agent.geospatial.crop_cover import DOMINANT_FRACTION, coverage_facts
 from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, calculation_request_is_complete
 from agronomy_agent.agent import (
     MockGenerator,
@@ -2971,17 +2972,15 @@ def _call_aafc_annual_crop_inventory(
         geometry=geometry,
         crop=crop,
         province=province,
+        year=None,
     )
-    summary = payload.get("class_summary") if isinstance(payload.get("class_summary"), dict) else {}
-    dominant = summary.get("dominant_class") if isinstance(summary.get("dominant_class"), dict) else {}
-    label = _clean_field_text(dominant.get("aci_label"))
-    count = dominant.get("count")
-    sample_count = payload.get("sample_point_count")
-    if label and count and sample_count:
-        text = f"AAFC Annual Crop Inventory sampled {sample_count} field-context point(s); the dominant class was {label} in {count}/{sample_count} samples."
-    else:
-        text = "AAFC Annual Crop Inventory crop-cover sampling was checked for the supplied Canadian field context."
-    return _public_tool_record("aafc_annual_crop_inventory", text, payload, status=str(payload.get("status")))
+    return _crop_cover_tool_record("aafc_annual_crop_inventory", "AAFC Annual Crop Inventory", payload)
+
+
+def _crop_cover_tool_record(name: str, source_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+    facts = coverage_facts(payload.get("coverage_by_year") or {})
+    detail = " / ".join(facts) or payload.get("message") or "No classified cover returned."
+    return _public_tool_record(name, f"{source_name}. {detail}", payload, status=str(payload.get("status") or "unavailable"))
 
 
 def _call_statcan_field_crop_statistics(
@@ -3344,12 +3343,7 @@ def _call_cropland_data_layer(latitude: float, longitude: float, field_context: 
             year=int(year) if year else None,
             timeout=timeout,
         )
-        label = payload.get("cdl_label") or "unknown class"
-        text = f"USDA NASS CDL {payload.get('year')} point class: {label}"
-        if payload.get("cdl_code") is not None:
-            text = f"{text} (code {payload.get('cdl_code')})."
-        status = "no_data" if payload.get("cdl_code") in local_tools.CDL_NO_CLASS_CODES else "available"
-        return _public_tool_record("cropland_data_layer_point", text, payload, status=status)
+        return _crop_cover_tool_record("cropland_data_layer_point", "USDA NASS CDL", payload)
     except Exception as exc:  # noqa: BLE001
         return _public_tool_error(
             "cropland_data_layer_point",
@@ -3375,37 +3369,12 @@ def _call_cropland_data_layer_geometry(geometry: dict[str, Any], field_context: 
             years = tuple(int(year) for year in years)
         elif years is not None:
             years = tuple(int(year) for year in years)
-        sample_points = int(field_context.get("cdl_sample_points") or local_tools.DEFAULT_CDL_SAMPLE_POINTS)
-        payload = local_tools.cropland_data_layer_geometry(
-            geometry=geometry,
-            years=years,
-            sample_points=sample_points,
-            timeout=timeout,
-        )
-        status = str(payload.get("status") or "available")
-        if status not in {"available", "partial_available"}:
-            return _public_tool_record(
-                "cropland_data_layer_geometry",
-                "USDA NASS CDL boundary sampling returned no crop-cover samples; treat crop-history context as missing.",
-                payload,
-                status=status,
-            )
-        snippets = []
-        for year, summary in (payload.get("year_summary") or {}).items():
-            dominant = summary.get("dominant_class") or {}
-            label = dominant.get("cdl_label") or "unknown class"
-            count = dominant.get("count")
-            total = summary.get("sample_count")
-            if count and total:
-                snippets.append(f"{year}: {label} in {count}/{total} samples")
-        text = "USDA NASS CDL boundary crop-cover sample"
-        if snippets:
-            text = f"{text}: {', '.join(snippets[:3])}."
-        return _public_tool_record("cropland_data_layer_geometry", text, payload, status=status)
+        payload = local_tools.cropland_data_layer_geometry(geometry=geometry, years=years, timeout=timeout)
+        return _crop_cover_tool_record("cropland_data_layer_geometry", "USDA NASS CDL", payload)
     except Exception as exc:  # noqa: BLE001
         return _public_tool_error(
             "cropland_data_layer_geometry",
-            "USDA NASS Cropland Data Layer boundary sampling was unavailable; do not infer crop history from the model alone.",
+            "USDA NASS Cropland Data Layer boundary coverage was unavailable; do not infer crop history from the model alone.",
             exc,
         )
 
@@ -3660,6 +3629,7 @@ def _public_adapter_transport(
         "not_configured",
         "registration_number_required",
         "source_lane_available",
+        "not_applicable",
     }:
         return "metadata_only"
     return "network"
@@ -3739,12 +3709,13 @@ def _adapter_summary(payload: dict[str, Any]) -> dict[str, Any]:
             "year": payload.get("year"),
             "cdl_code": payload.get("cdl_code"),
             "cdl_label": payload.get("cdl_label"),
-            "albers_x": payload.get("albers_x"),
-            "albers_y": payload.get("albers_y"),
+            "coverage_by_year": payload.get("coverage_by_year") or {},
         }
     if payload.get("tool") == "cropland_data_layer_geometry":
         return {
             "status": payload.get("status"),
+            "coverage_by_year": payload.get("coverage_by_year") or {},
+            "year_selection": payload.get("year_selection") or {},
             "geometry_type": payload.get("geometry_type"),
             "sample_point_count": payload.get("sample_point_count"),
             "years": payload.get("years") or [],
@@ -3754,6 +3725,8 @@ def _adapter_summary(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("tool") == "aafc_annual_crop_inventory":
         return {
             "status": payload.get("status"),
+            "coverage_by_year": payload.get("coverage_by_year") or {},
+            "year_selection": payload.get("year_selection") or {},
             "year": payload.get("year"),
             "geometry_type": payload.get("geometry_type"),
             "sample_point_count": payload.get("sample_point_count"),
@@ -3872,25 +3845,35 @@ def _detect_evidence_conflicts(
         *_field_record_correction_conflicts(field_context),
         *_field_measurement_conflicts(field_context),
     ]
-    declared_crop = _canonical_crop_label(
-        field_context.get("crop") or field_context.get("commodity")
-    )
     crop_year = _bounded_year(field_context.get("crop_year"))
-    if not declared_crop or crop_year is None:
+    if crop_year is None:
         return conflicts
+    lineage = field_context.get("field_season_lineage")
+    lineage = lineage if isinstance(lineage, dict) else {}
+    entries = lineage.get("crops")
+    saved_season = lineage.get("status") == "saved" and lineage.get("season") == crop_year and isinstance(entries, list) and bool(entries)
+    if saved_season:
+        labels = [_clean_field_text(entry.get("crop")) for entry in entries if isinstance(entry, dict)]
+        declared_source = "field_season_lineage.crops"
+    else:
+        labels = [_clean_field_text(field_context.get("crop") or field_context.get("commodity"))]
+        declared_source = "field_context.crop"
+    canonical_crops = {_canonical_crop_label(label) for label in labels}
+    if not canonical_crops or None in canonical_crops:
+        return conflicts
+    declared_label = ", ".join(dict.fromkeys(labels))
 
-    for claim in _mapped_crop_claims(public_adapter_records):
-        if claim["year"] != crop_year or claim["canonical_crop"] == declared_crop:
+    retained = field_context.get("retained_public_context")
+    records = [*public_adapter_records, *(retained if isinstance(retained, list) else [])]
+    for claim in _mapped_crop_claims(records):
+        if claim["year"] != crop_year or claim["canonical_crop"] in canonical_crops:
             continue
         source_name = str(claim["source_name"])
         mapped_label = str(claim["mapped_label"])
-        declared_label = _clean_field_text(
-            field_context.get("crop") or field_context.get("commodity")
-        )
         conflict_seed = {
             "type": "declared_crop_vs_mapped_crop_cover",
             "year": crop_year,
-            "declared_crop": declared_crop,
+            "declared_crops": sorted(canonical_crops),
             "mapped_crop": claim["canonical_crop"],
             "source_id": claim["source_id"],
         }
@@ -3905,15 +3888,15 @@ def _detect_evidence_conflicts(
                 "status": "unresolved",
                 "severity": "attention",
                 "claim_period": str(crop_year),
-                "declared_crop": declared_label or declared_crop,
+                "declared_crop": declared_label,
                 "mapped_crop": mapped_label,
                 "mapped_source_name": source_name,
                 "mapped_fraction": claim.get("mapped_fraction"),
                 "sources": [
                     {
                         "role": "user_declared_field_context",
-                        "source_id": "field_context.crop",
-                        "value": declared_label or declared_crop,
+                        "source_id": declared_source,
+                        "value": declared_label,
                     },
                     {
                         "role": "mapped_crop_cover_prior",
@@ -3927,7 +3910,7 @@ def _detect_evidence_conflicts(
                     "the declared field crop or be treated as a planting, insurance, or legal record."
                 ),
                 "resolution": (
-                    f"The field context declares {declared_label or declared_crop} for {crop_year}, while "
+                    f"The field context declares {declared_label} for {crop_year}, while "
                     f"{source_name} maps {mapped_label} for the same year. Do not choose between them from "
                     "the map alone."
                 ),
@@ -4091,99 +4074,39 @@ def _field_measurement_conflicts(field_context: dict[str, Any]) -> list[dict[str
 
 def _mapped_crop_claims(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     claims: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
     for record in records:
         if not isinstance(record, dict):
             continue
         name = _clean_field_text(record.get("name"))
         payload = record.get("payload") if isinstance(record.get("payload"), dict) else {}
-        if str(payload.get("status") or "") not in {"available", "partial_available"}:
+        if str(payload.get("status") or "") not in {"available", "partial_available", "no_data"}:
             continue
         summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
-        if name == "aafc_annual_crop_inventory":
-            class_summary = (
-                summary.get("class_summary")
-                if isinstance(summary.get("class_summary"), dict)
-                else {}
-            )
-            dominant = (
-                class_summary.get("dominant_class")
-                if isinstance(class_summary.get("dominant_class"), dict)
-                else {}
-            )
-            _append_mapped_crop_claim(
-                claims,
-                source_id=name,
-                source_name=str(summary.get("source_name") or "AAFC Annual Crop Inventory"),
-                year=summary.get("year"),
-                mapped_label=dominant.get("aci_label"),
-                count=dominant.get("count"),
-                sample_count=class_summary.get("sample_count") or summary.get("sample_point_count"),
-            )
-        elif name == "cropland_data_layer_point":
-            _append_mapped_crop_claim(
-                claims,
-                source_id=name,
-                source_name="USDA NASS Cropland Data Layer",
-                year=summary.get("year"),
-                mapped_label=summary.get("cdl_label"),
-                count=1,
-                sample_count=1,
-            )
-        elif name == "cropland_data_layer_geometry":
-            year_summary = (
-                summary.get("year_summary")
-                if isinstance(summary.get("year_summary"), dict)
-                else {}
-            )
-            for year, year_record in year_summary.items():
-                if not isinstance(year_record, dict):
-                    continue
-                dominant = (
-                    year_record.get("dominant_class")
-                    if isinstance(year_record.get("dominant_class"), dict)
-                    else {}
-                )
-                _append_mapped_crop_claim(
-                    claims,
-                    source_id=name,
-                    source_name="USDA NASS Cropland Data Layer",
-                    year=year,
-                    mapped_label=dominant.get("cdl_label"),
-                    count=dominant.get("count"),
-                    sample_count=year_record.get("sample_count"),
-                )
+        if name not in {"aafc_annual_crop_inventory", "cropland_data_layer_geometry"}:
+            continue
+        source_name = "AAFC Annual Crop Inventory" if name == "aafc_annual_crop_inventory" else "USDA NASS Cropland Data Layer"
+        for year, year_record in (summary.get("coverage_by_year") or {}).items():
+            key = (name, str(year))
+            if key in seen or year_record.get("status") in {"unavailable", "unsupported_geometry"}:
+                continue
+            seen.add(key)
+            if year_record.get("classification_status") != "dominant":
+                continue
+            dominant = year_record.get("dominant_class") or {}
+            label = _clean_field_text(dominant.get("label"))
+            fraction = dominant.get("field_fraction")
+            # Compound classes and "Other Hay/Non Alfalfa" identify no single crop.
+            if not label or label.startswith("Double Crop ") or (name == "cropland_data_layer_geometry" and dominant.get("code") == 37):
+                continue
+            if not _is_number(fraction) or not DOMINANT_FRACTION < fraction <= 1:
+                continue
+            canonical_crop, bounded_year = _canonical_crop_label(label), _bounded_year(year)
+            if canonical_crop is None or bounded_year is None:
+                continue
+            claims.append({"source_id": name, "source_name": source_name, "year": bounded_year,
+                           "mapped_label": label, "canonical_crop": canonical_crop, "mapped_fraction": round(fraction, 4)})
     return claims
-
-
-def _append_mapped_crop_claim(
-    claims: list[dict[str, Any]],
-    *,
-    source_id: str,
-    source_name: str,
-    year: Any,
-    mapped_label: Any,
-    count: Any,
-    sample_count: Any,
-) -> None:
-    canonical_crop = _canonical_crop_label(mapped_label)
-    bounded_year = _bounded_year(year)
-    if canonical_crop is None or bounded_year is None:
-        return
-    fraction = None
-    if _is_number(count) and _is_number(sample_count) and float(sample_count) > 0:
-        fraction = float(count) / float(sample_count)
-        if fraction < 0.5:
-            return
-    claims.append(
-        {
-            "source_id": source_id,
-            "source_name": source_name,
-            "year": bounded_year,
-            "mapped_label": _clean_field_text(mapped_label),
-            "canonical_crop": canonical_crop,
-            "mapped_fraction": round(fraction, 4) if fraction is not None else None,
-        }
-    )
 
 
 def _canonical_crop_label(value: Any) -> str | None:

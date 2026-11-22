@@ -26,18 +26,17 @@ def _validate_grid(transform: Any, width: int, height: int) -> float:
 
 
 def fractional_weights(geometry_in_raster_crs: Any, transform: Any,
-                       width: int, height: int) -> Any:
+                       width: int, height: int, *, use_all_cells: bool = False) -> Any:
     """Exact planar cell-intersection fractions, accumulated as float64.
 
     Shapely performs topology, including holes and multipolygons. Rasterio's
-    all-touched mask restricts intersections; vectorized Shapely handles affine
-    cell quadrilaterals in bounded batches, including rotation and shear.
+    all-touched mask restricts intersections by default. Bounded grids can
+    enumerate all cells without Rasterio. Both paths use vectorized Shapely for
+    the affine cell intersections, including rotation and shear.
     These fractions are planar support, not geodesic or surveyed field area.
     """
     import numpy as np
     import shapely
-    from rasterio.features import geometry_mask
-
     cell_area = _validate_grid(transform, width, height)
     geometry = (shapely.geometry.shape(geometry_in_raster_crs)
                 if isinstance(geometry_in_raster_crs, Mapping) else geometry_in_raster_crs)
@@ -46,9 +45,15 @@ def fractional_weights(geometry_in_raster_crs: Any, transform: Any,
     weights = np.zeros((height, width), dtype=np.float64)
     if geometry.is_empty:
         return weights
-    candidate = geometry_mask([geometry.__geo_interface__], out_shape=(height, width),
-                              transform=transform, all_touched=True, invert=True)
-    rows, cols = np.nonzero(candidate)
+    if use_all_cells:
+        shapely.prepare(geometry)
+        rows, cols = (indices.ravel() for indices in np.indices((height, width)))
+    else:
+        from rasterio.features import geometry_mask
+
+        candidate = geometry_mask([geometry.__geo_interface__], out_shape=(height, width),
+                                  transform=transform, all_touched=True, invert=True)
+        rows, cols = np.nonzero(candidate)
     offsets = np.array([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], dtype=np.float64)
     for start in range(0, len(rows), 65536):
         r, c = rows[start:start + 65536], cols[start:start + 65536]
@@ -63,6 +68,11 @@ def fractional_weights(geometry_in_raster_crs: Any, transform: Any,
                                 coordinates[..., 0].max(axis=1), coordinates[..., 1].max(axis=1))
         else:
             cells = shapely.polygons(coordinates)
+        if use_all_cells:
+            inside = shapely.covers(geometry, cells)
+            weights[r[inside], c[inside]] = 1.0
+            edge = ~inside & shapely.intersects(geometry, cells)
+            r, c, cells = r[edge], c[edge], cells[edge]
         fractions = shapely.area(shapely.intersection(cells, geometry)) / cell_area
         weights[r, c] = np.clip(fractions, 0.0, 1.0)
     return weights

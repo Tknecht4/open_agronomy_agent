@@ -125,10 +125,10 @@ def main(argv: list[str] | None = None) -> int:
     cdl.add_argument("--lon", type=float, required=True)
     cdl.add_argument("--year", type=int)
 
-    cdl_geometry = sub.add_parser("cropland-data-layer-geometry", help="Fetch/cache USDA NASS CDL sampled crop-cover prior for GeoJSON geometry.")
+    cdl_geometry = sub.add_parser("cropland-data-layer-geometry", help="Fetch/cache area-weighted USDA NASS CDL crop cover for GeoJSON geometry.")
     cdl_geometry.add_argument("--geometry-json", required=True, help="GeoJSON geometry object as JSON")
     cdl_geometry.add_argument("--years", help="Comma-separated CDL years; defaults to the latest three available years")
-    cdl_geometry.add_argument("--sample-points", type=int, default=DEFAULT_CDL_SAMPLE_POINTS)
+    cdl_geometry.add_argument("--sample-points", type=int, default=DEFAULT_CDL_SAMPLE_POINTS, help="Deprecated. Raster coverage uses the full boundary.")
 
     quickstats = sub.add_parser("nass-quickstats-crop-stats", help="Fetch/cache USDA NASS Quick Stats crop statistics.")
     quickstats.add_argument("--crop", required=True)

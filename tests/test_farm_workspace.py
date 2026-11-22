@@ -438,3 +438,45 @@ def test_record_type_filter_applies_before_pagination_and_keeps_correction_histo
         assert client.get(url, headers=OWNER).json()["total"] == 4
         assert client.get(url.replace("event_type=note", "event_type=correction"), headers=OWNER).json()["total"] == 2
         assert client.get(url.replace("event_type=note", "event_type=invalid"), headers=OWNER).status_code == 422
+
+
+def test_refresh_replaces_legacy_crop_samples_and_retains_mixed_cover_for_chat(settings, monkeypatch):
+    from agronomy_agent.geospatial.crop_cover import COVERAGE_VERSION
+    from agronomy_agent.server.services import field_enrichment
+    from agronomy_agent.server.services.chat_service import _mapped_crop_claims, _safe_field_context_summary, _with_stored_field_data
+    from agronomy_agent.server.services.field_context_compiler import compile_field_context
+
+    tool = "aafc_annual_crop_inventory"
+    legacy = {"availability": "available", "values": {"tool": tool, "sample_point_count": 3}}
+    mixed = {"availability": "available", "values": {
+        "tool": tool, "status": "available", "year": 2025, "coverage_version": COVERAGE_VERSION,
+        "coverage_by_year": {"2025": {
+            "status": "available", "classification_status": "mixed", "classified_fraction": 1.0,
+            "dominant_class": None, "classes": [
+                {"code": 147, "label": "Corn for grain", "field_fraction": 0.7},
+                {"code": 158, "label": "Soybeans", "field_fraction": 0.3},
+            ],
+        }},
+    }}
+    checks = iter([legacy, mixed])
+    monkeypatch.setattr(field_enrichment, "run_source", lambda *args: next(checks))
+    with TestClient(create_app(settings)) as client:
+        field = create_field(client, {"kind": "point", "point": {"lat": 45.62, "lon": -73.04}})
+        base = f"/api/fields/{field['id']}"
+        body = {"sources": ["crop_cover"]}
+        assert client.post(base + "/enrichment-jobs", headers=OWNER, json=body).status_code == 202
+        old = client.get(base + "/summary", headers=OWNER).json()["source_status"]["crop_cover"]
+        assert old["freshness"] == "stale"
+        store = client.app.state.trace_store
+        auth = {"field_context_id": field["id"], "field_access_authorized": True, "field_season": 2025}
+        assert "retained_public_context" not in _with_stored_field_data(store, session_context=auth, field_context={})
+
+        assert client.post(base + "/enrichment-jobs", headers=OWNER, json=body).status_code == 202
+        latest = client.get(base + "/summary", headers=OWNER).json()["source_status"]["crop_cover"]
+        assert latest["freshness"] == "current" and latest["snapshot_id"] != old["snapshot_id"]
+        projected = _with_stored_field_data(store, session_context=auth, field_context={"crop": "Injected crop"})
+        assert projected["crop"] is None
+        assert _mapped_crop_claims(projected["retained_public_context"]) == []
+        compiled = compile_field_context(projected, [], safe_field_summary=_safe_field_context_summary)
+        assert "Corn for grain 70.0%, Soybeans 30.0% of the boundary" in compiled["prompt"]
+        assert compiled["receipt"]["retained_context"][0]["snapshot_id"] == latest["snapshot_id"]

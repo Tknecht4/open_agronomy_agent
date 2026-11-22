@@ -16,7 +16,7 @@ def _normalize(source: str, value: dict[str, Any]) -> dict[str, Any]:
     status = str(value.get("status") or "unknown")
     aliases = {"ok": "available", "ready": "available", "partial_available": "partial", "blocked_offline": "offline", "no_data": "no_match", "empty": "no_match", "no_scene": "no_match", "error": "provider_error", "unavailable": "provider_error", "source_unavailable": "provider_error", "location_required": "invalid_geometry"}
     availability = aliases.get(status, status)
-    if availability not in SUCCESS | {"offline", "provider_error", "rate_limited", "invalid_geometry", "not_installed", "integrity_failed", "credentials_required", "jurisdiction_unknown"}:
+    if availability not in SUCCESS | {"offline", "provider_error", "rate_limited", "invalid_geometry", "unsupported_geometry", "not_installed", "integrity_failed", "credentials_required", "jurisdiction_unknown"}:
         availability = "provider_error"
     message = str(value.get("message") or value.get("boundary") or value.get("reason") or "")
     if source == "weather":
@@ -52,7 +52,7 @@ def run_source(source: str, field: dict[str, Any], network_mode: str) -> dict[st
             value = run_local_tool("nrcs-soil-survey-geometry", {"geometry": geometry}, network_mode=network_mode)
     else:
         tool = "aafc-annual-crop-inventory" if country == "Canada" else "cropland-data-layer-geometry"
-        value = run_local_tool(tool, {"geometry": geometry, "sample_points": 3, "province": province, **({"year": "latest"} if country == "Canada" else {})}, network_mode=network_mode)
+        value = run_local_tool(tool, {"geometry": geometry, "province": province, **({"year": "latest"} if country == "Canada" else {})}, network_mode=network_mode)
     return _normalize(source, value)
 
 

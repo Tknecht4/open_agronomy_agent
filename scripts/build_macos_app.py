@@ -259,6 +259,9 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
                 "--collect-submodules", "transformers",
                 # Pyogrio loads Cython siblings and GDAL data at runtime.
                 "--collect-submodules", "pyogrio", "--collect-data", "pyogrio",
+                # Rasterio is used by the separate imagery worker. Its private PROJ dylib
+                # conflicts with PyProj when both are bundled into one PyInstaller app.
+                "--exclude-module", "rasterio",
                 str(root / "macos_app/backend.py"),
             ],
             cwd=root,

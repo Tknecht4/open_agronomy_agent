@@ -385,7 +385,8 @@ const toolTitle = (name: string, summary: JsonRecord): string => {
   if (name === 'nrcs_soil_survey_point') return 'Point soil survey'
   if (name === 'cropland_data_layer_geometry') {
     const years = asArray(summary.years).slice(0, 3).map(String)
-    return years.length ? `CDL boundary crop-cover sample (${years.join(', ')})` : 'CDL boundary crop-cover sample'
+    const label = Object.keys(asRecord(summary.coverage_by_year)).length ? 'CDL boundary crop cover' : 'CDL boundary crop-cover sample'
+    return years.length ? `${label} (${years.join(', ')})` : label
   }
   if (name === 'cropland_data_layer_point') return 'CDL point crop-cover class'
   if (name === 'nasa_power_daily') return 'Daily gridded weather'
@@ -394,7 +395,7 @@ const toolTitle = (name: string, summary: JsonRecord): string => {
   if (name === 'nass_quickstats_crop_stats') return 'Regional crop statistics'
   if (name === 'epa_ppls_product_search') return 'Product metadata'
   if (name === 'cansis_soil_landscapes_canada') return 'Canadian soil source lane'
-  if (name === 'aafc_annual_crop_inventory') return 'Canadian crop-cover source lane'
+  if (name === 'aafc_annual_crop_inventory') return Object.keys(asRecord(summary.coverage_by_year)).length ? 'AAFC Annual Crop Inventory' : 'Canadian crop-cover source lane'
   if (name === 'statcan_field_crop_statistics') return 'Canadian crop-statistics source lane'
   if (name === 'health_canada_pmra_label_search') return 'Canadian label source lane'
   if (name === 'canada_et_or_water_use_source_needed') return 'Canadian ET source needed'
@@ -430,6 +431,10 @@ const toolProvider = (name: string, summary: JsonRecord = {}): string => {
 }
 
 const toolFacts = (name: string, summary: JsonRecord, status: string): string[] => {
+  if (['cropland_data_layer_geometry', 'cropland_data_layer_point', 'aafc_annual_crop_inventory'].includes(name)) {
+    const coverage = cropCoverFacts(summary)
+    if (coverage.length) return coverage
+  }
   if (isCanadaSourceLane(name)) return canadaSourceLaneFacts(summary)
   if (isPublicSourceCard(name)) return publicSourceCardFacts(summary)
   if (name === 'nasa_power_daily' && status === 'partial_available') return nasaPowerFacts(summary)
@@ -546,6 +551,35 @@ const nrcsPointFacts = (summary: JsonRecord): string[] => {
   const first = mapUnits[0]
   const name = asString(first?.muname)
   return name ? [name] : []
+}
+
+export const cropCoverFacts = (summary: JsonRecord): string[] => {
+  const percent = (value: number) => new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 }).format(value)
+  const states: Record<string, string> = {
+    dominant: 'Dominant mapped class',
+    mixed: 'Mixed mapped cover',
+    insufficient_coverage: 'Insufficient coverage to resolve dominance',
+    no_data: 'No classified cover',
+    unavailable: 'Source unavailable',
+    year_unavailable: 'Year unavailable for this region',
+    unsupported_geometry: 'Boundary exceeds raster query limits',
+  }
+  return Object.entries(asRecord(summary.coverage_by_year)).sort(([a], [b]) => b.localeCompare(a)).map(([year, value]) => {
+    const row = asRecord(value)
+    const point = asString(asRecord(row.point_class).label)
+    if (point) return `${year} · ${point} at the queried point`
+    const classes = asArray(row.classes).slice(0, 3).map(item => {
+      const { label, field_fraction } = asRecord(item)
+      return typeof label === 'string' && typeof field_fraction === 'number' ? `${label} ${percent(field_fraction)}` : ''
+    }).filter(Boolean)
+    const coverage = asNumber(row.classified_fraction)
+    return [
+      year,
+      states[asString(row.classification_status) || asString(row.status) || ""] || 'Crop cover unavailable',
+      classes.length ? `${classes.join(', ')} of field` : '',
+      coverage !== undefined ? `${percent(coverage)} classified` : '',
+    ].filter(Boolean).join(' · ')
+  })
 }
 
 const cdlGeometryFacts = (summary: JsonRecord): string[] => {

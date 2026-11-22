@@ -399,6 +399,7 @@
     "tests/test_phase5_sft.py",
     "tests/test_phase5_sft_api.py",
     "tests/test_public_tool_adapters.py",
+    "tests/test_crop_cover.py",
     "tests/test_public_adapter_planner.py",
     "tests/test_public_docs.py",
     "tests/test_rc3_checkpoint_analysis.py",
