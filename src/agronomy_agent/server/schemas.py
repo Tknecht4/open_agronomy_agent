@@ -278,6 +278,13 @@ class CreateTurnRequest(BaseModel):
     session_context: dict[str, Any] = Field(default_factory=dict)
     trace_options: TraceOptions = Field(default_factory=TraceOptions)
     readiness_binding: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    imagery_job_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _validate_imagery_mode(self) -> CreateTurnRequest:
+        if self.imagery_job_id is not None and self.mode != "agronomic_rag":
+            raise ValueError("Selected imagery requires agronomic mode")
+        return self
 
     @field_validator("message")
     def _validate_message(cls, value: str) -> str:

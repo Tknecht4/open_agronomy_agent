@@ -5,7 +5,9 @@ allowlisted provider, dates and a scene ID; geometry comes from saved state.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import hashlib
+import re
 import json
 import os
 from pathlib import Path
@@ -256,22 +258,100 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
         _WORKER_SLOT.release()
 
 
-def preview(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip_hash: str) -> bytes | None:
+def _verified_chip(
+    store: ImageryStore, geometry: dict[str, Any], chip_hash: str,
+) -> dict[str, Any] | None:
     from agronomy_agent.imagery_analytics import PREVIEW_VERSION
-    cache = field_cache(settings, field)
-    if cache is None or not cache.exists():
-        return None
+
     try:
-        store = ImageryStore(cache, read_only=True)
         result = store.get_by_chip_hash(chip_hash)
+        if (result is None or result.get("geometry_hash") != geometry_hash(geometry)
+                or result.get("preview_version") != PREVIEW_VERSION):
+            return None
+        validate_receipt(result, geometry=geometry)
+    except (OSError, RuntimeError, sqlite3.Error, ValueError, TypeError, KeyError):
+        return None
+    return result
+
+
+def _open_field_cache(settings: Any, field: dict[str, Any]) -> ImageryStore | None:
+    try:
+        cache = field_cache(settings, field)
+        return ImageryStore(cache, read_only=True) if cache is not None and cache.exists() else None
     except (OSError, RuntimeError, sqlite3.Error, ValueError):
         return None
-    if (result is None or result.get("geometry_hash") != geometry_hash(geometry)
-            or result.get("preview_version") != PREVIEW_VERSION):
+
+
+def verified_job_result(settings: Any, field: dict[str, Any], job: dict[str, Any]) -> dict[str, Any] | None:
+    """Bind a durable job to the same verified chip used by its preview."""
+    stored = job.get("result") or {}
+    if job["status"] not in {"completed", "superseded"} or not stored.get("chip_hash"):
+        return None
+    cache = _open_field_cache(settings, field)
+    if cache is None:
+        return None
+    result = _verified_chip(cache, job["geometry"], stored["chip_hash"])
+    if result is None:
+        return None
+    # Transport and display fields can vary independently between job and chip.
+    keys = ("chip_hash", "geometry_hash", "request_hash", "process_hash", "process_version",
+            "provider_id", "scene_id", "source", "status", "sampling", "grid", "qa", "zonal_stats")
+    if any(result.get(key) != stored.get(key) for key in keys):
         return None
     try:
-        validate_receipt(result, geometry=geometry)
-    except (ValueError, TypeError, KeyError):
+        if (result["geometry_hash"], result["request_hash"]) != request_identity(job["geometry"], job["request"]):
+            return None
+    except (ValueError, KeyError, TypeError):
+        return None
+    return result
+
+
+def selected_observation(
+    settings: Any, field: dict[str, Any], job: dict[str, Any], *, current_revision: str | None,
+) -> dict[str, Any] | None:
+    """Project only bounded facts from a field-authorized retained product."""
+    result = verified_job_result(settings, field, job)
+    if result is None:
+        return None
+    scene_id = result["scene_id"]
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,160}", scene_id):
+        return None
+    acquired = result["source"].get("acquired_at")
+    if not isinstance(acquired, str) or len(acquired) > 48:
+        return None
+    try:
+        acquired_at = datetime.fromisoformat(acquired)
+        if acquired_at.tzinfo is None:
+            return None
+        acquired_utc = acquired_at.astimezone(timezone.utc).isoformat()
+    except (ValueError, OverflowError):
+        return None
+    support = _support_assessment(result)
+    return {
+        "job_id": job["id"],
+        "result_sha256": job["result_sha256"],
+        "provider_id": result["provider_id"],
+        "scene_id": scene_id,
+        "acquired_at": acquired_utc,
+        "geometry_revision_id": job["geometry_revision_id"],
+        "geometry_status": "current" if current_revision == job["geometry_revision_id"] else "historical",
+        "resolution_m": result["grid"]["resolution_m"],
+        "process_version": result["process_version"],
+        "evidence_role": "processed_observation",
+        "field_action_authority": "not_authorized",
+        "support_kind": support["support_kind"],
+        "support_area_m2": support["support_area_m2"],
+        "qa_clear_area_m2": support["qa_clear_area_m2"],
+        "indices": {
+            name: {"valid_area_m2": info["valid_area_m2"], "mean": result["zonal_stats"][name]["mean"]}
+            for name, info in support["index_support"].items()
+        },
+    }
+
+
+def preview(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip_hash: str) -> bytes | None:
+    store = _open_field_cache(settings, field)
+    if store is None or _verified_chip(store, geometry, chip_hash) is None:
         return None
     return store.preview_bytes(chip_hash)
 

@@ -38,10 +38,9 @@ def execute_job(store: Any, settings: Any, job_id: str) -> None:
         jobs.set_status(store, job_id, "running")
         try:
             result = imagery_service.analyze(settings, field, job["geometry"], job["request"])
-            with store._cursor() as cursor:
-                current = cursor.execute("SELECT revision_id FROM field_geometry_current WHERE field_id=?", (field["id"],)).fetchone()
+            current = jobs.current_geometry_revision(store, field["id"])
             status = "completed" if result["status"] in {"available", "empty_valid_area"} else "failed"
-            if not current or current[0] != job["geometry_revision_id"]:
+            if current != job["geometry_revision_id"]:
                 status = "superseded"
             jobs.set_status(store, job_id, status, result)
         except Exception:
@@ -63,9 +62,8 @@ def register_imagery_job_routes(app: FastAPI, *, store: Any, settings: Any, auth
         return field, job
 
     def public(job: dict) -> dict:
-        with store._cursor() as cursor:
-            current = cursor.execute("SELECT revision_id FROM field_geometry_current WHERE field_id=?", (job["field_id"],)).fetchone()
-        result = {**job, "current_geometry": bool(current and current[0] == job["geometry_revision_id"])}
+        current = jobs.current_geometry_revision(store, job["field_id"])
+        result = {**job, "current_geometry": current == job["geometry_revision_id"]}
         if job["result"]:
             result["result"] = {**job["result"], "preview_url": f"/api/imagery-jobs/{job['id']}/preview.png" if job["result"].get("chip_hash") else None}
         return result

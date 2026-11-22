@@ -26,7 +26,7 @@ describe('Phase 6 offline chat drafts', () => {
   it('persists a session-scoped draft with timestamp metadata', () => {
     const storage = makeStorage()
 
-    const draft = savePhase6ChatDraft('sess_1', 'Can I plant after this rain?', storage, () => '2026-06-01T00:00:00.000Z')
+    const draft = savePhase6ChatDraft('sess_1', 'Can I plant after this rain?', { storage, timestamp: () => '2026-06-01T00:00:00.000Z' })
 
     expect(draft).toEqual({
       sessionId: 'sess_1',
@@ -37,12 +37,22 @@ describe('Phase 6 offline chat drafts', () => {
     expect(loadPhase6ChatDraft('sess_2', storage)).toBeNull()
   })
 
+  it('keeps the analysis only with its scoped question draft', () => {
+    const storage = makeStorage()
+    const imageryJobId = '550e8400-e29b-41d4-a716-446655440001'
+    savePhase6ChatDraft('field:west:chat:one', 'What does this scene show?', { storage, imagery: { jobId: imageryJobId, season: 2026 } })
+    expect(loadPhase6ChatDraft('field:west:chat:one', storage)?.imagery).toEqual({ jobId: imageryJobId, season: 2026 })
+    expect(loadPhase6ChatDraft('field:west:chat:two', storage)).toBeNull()
+    savePhase6ChatDraft('field:west:chat:one', 'What should I scout?', { storage })
+    expect(loadPhase6ChatDraft('field:west:chat:one', storage)?.imagery).toBeUndefined()
+  })
+
   it('clears blank and sent drafts without disturbing other sessions', () => {
     const storage = makeStorage()
 
-    savePhase6ChatDraft('sess_1', 'first draft', storage)
-    savePhase6ChatDraft('sess_2', 'second draft', storage)
-    savePhase6ChatDraft('sess_1', '   ', storage)
+    savePhase6ChatDraft('sess_1', 'first draft', { storage })
+    savePhase6ChatDraft('sess_2', 'second draft', { storage })
+    savePhase6ChatDraft('sess_1', '   ', { storage })
 
     expect(loadPhase6ChatDraft('sess_1', storage)).toBeNull()
     expect(loadPhase6ChatDraft('sess_2', storage)?.message).toBe('second draft')
@@ -85,13 +95,13 @@ describe('Phase 6 offline chat drafts', () => {
       window.removeEventListener(PHASE6_OFFLINE_STORAGE_REPAIRED_EVENT, onRepair)
     }
 
-    const saved = savePhase6ChatDraft('sess_1', 'x'.repeat(PHASE6_CHAT_DRAFT_MAX_CHARS + 20), storage)
+    const saved = savePhase6ChatDraft('sess_1', 'x'.repeat(PHASE6_CHAT_DRAFT_MAX_CHARS + 20), { storage })
     expect(saved?.message).toHaveLength(PHASE6_CHAT_DRAFT_MAX_CHARS)
   })
 
   it('fails loudly when saving without a session id', () => {
     const storage = makeStorage()
 
-    expect(() => savePhase6ChatDraft('', 'draft', storage)).toThrow('sessionId is required')
+    expect(() => savePhase6ChatDraft('', 'draft', { storage })).toThrow('sessionId is required')
   })
 })

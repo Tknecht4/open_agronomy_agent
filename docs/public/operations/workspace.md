@@ -34,7 +34,11 @@ Field Imagery connects scene discovery, exact-scene selection, durable processin
 
 Install the optional worker before processing. HLS uses `requirements-imagery.txt`; Sentinel-2 additionally requires the dependencies in `requirements-geospatial.txt`. Configure `AGRONOMY_AGENT_IMAGERY_PYTHON` and a private `AGRONOMY_AGENT_IMAGERY_CACHE_ROOT` outside the checkout. Setup checks distinguish dependency health from live pixel access. Jobs survive navigation; a server interruption is recorded and requires an explicit retry. Cancellation prevents publication of the pending result rather than terminating a running provider process instantly.
 
-Analyses retain provider, exact scene, boundary revision, masks and index support. The map display is a separate nearest-neighbor reprojection; numerical statistics stay on the processing grid. Historical results remain labeled for their original boundary. Positive pixel support does not establish representative crop conditions, diagnosis or action authority. Save an analysis reference into field records or use it to start a scoped question.
+Analyses retain provider, exact scene, boundary revision, masks and index support. The map display is a separate nearest-neighbor reprojection; numerical statistics stay on the processing grid. Historical results remain labeled for their original boundary. Positive pixel support does not establish representative crop conditions, diagnosis or action authority. **Save to records** keeps a dated reference. **Ask about this analysis** attaches
+the exact retained analysis to a field question. Under **Sources & checks** the
+answer shows the capture date, boundary status, quality-checked area and area
+behind each index value. The attachment can be removed from the draft. An
+offline question can use an intact local analysis.
 
 Field scouting can proceed while imagery is unavailable or its quality checks
 are incomplete. Those checks limit what you can infer from the imagery; they do

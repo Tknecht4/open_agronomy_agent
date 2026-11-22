@@ -37,9 +37,19 @@ def _decode(row: Any) -> dict[str, Any]:
     result = dict(row)
     for key in ("geometry", "request", "result"):
         raw = result.pop(key + "_json")
-        result[key] = json.loads(raw) if raw else None
-    if result["result"] is not None and hashlib.sha256(_json(result["result"]).encode()).hexdigest() != result["result_sha256"]:
-        result.update(status="integrity_failed", result=None)
+        try:
+            value = json.loads(raw) if raw is not None else None
+            if not isinstance(value, dict) and (key != "result" or raw is not None):
+                raise ValueError("invalid imagery job record")
+            if key == "result" and value is not None:
+                if hashlib.sha256(_json(value).encode()).hexdigest() != result["result_sha256"]:
+                    raise ValueError("imagery result hash mismatch")
+        except (ValueError, TypeError):
+            result["status"] = "integrity_failed"
+            value = None if key == "result" else {}
+        result[key] = value
+    if result["status"] == "integrity_failed":
+        result["result"] = None
     return result
 
 
@@ -48,10 +58,21 @@ def recover_interrupted(store: Any) -> None:
         cursor.execute("UPDATE field_imagery_jobs SET status='interrupted',updated_at=? WHERE status IN ('queued','running')", (_now(),))
 
 
-def get_job(store: Any, job_id: str) -> dict[str, Any] | None:
+def get_job(store: Any, job_id: str, *, field_id: str | None = None) -> dict[str, Any] | None:
     with store._cursor() as cursor:
-        row = cursor.execute("SELECT * FROM field_imagery_jobs WHERE id=?", (job_id,)).fetchone()
+        if field_id is None:
+            row = cursor.execute("SELECT * FROM field_imagery_jobs WHERE id=?", (job_id,)).fetchone()
+        else:
+            row = cursor.execute(
+                "SELECT * FROM field_imagery_jobs WHERE id=? AND field_id=?", (job_id, field_id),
+            ).fetchone()
         return _decode(row) if row else None
+
+
+def current_geometry_revision(store: Any, field_id: str) -> str | None:
+    with store._cursor() as cursor:
+        row = cursor.execute("SELECT revision_id FROM field_geometry_current WHERE field_id=?", (field_id,)).fetchone()
+        return row[0] if row else None
 
 
 def list_jobs(store: Any, field_id: str, limit: int = 30) -> list[dict[str, Any]]:

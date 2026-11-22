@@ -508,6 +508,14 @@ def _hash_payload(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode("utf-8")).hexdigest()
 
 
+def _turn_operation_hash(payload: CreateTurnRequest) -> str:
+    excluded = {"client_operation_id", "readiness_binding"}
+    if payload.imagery_job_id is None:
+        # Keep the identity of already persisted operations without a selection.
+        excluded.add("imagery_job_id")
+    return _hash_payload(payload.model_dump(mode="json", exclude=excluded))
+
+
 def _completed_hosted_reference_turn_ids(
     messages: list[dict[str, Any]], legacy_recent: list[dict[str, Any]],
 ) -> list[str]:
@@ -2788,6 +2796,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     def _authorize_demo_turn_field_context(
         request: Request,
         session_context: dict[str, Any] | None,
+        *,
+        imagery_job_id: uuid.UUID | str | None = None,
+        imagery_result_sha256: str | None = None,
     ) -> dict[str, Any] | None:
         def canonical_geometry(value: Any) -> Any:
             if not isinstance(value, dict):
@@ -2827,6 +2838,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         inner.pop("field_history", None)
         inner.pop("field_answer_history", None)
         inner.pop("field_data", None)
+        inner.pop("imagery_observation", None)
+        outer.pop("imagery_observation", None)
         outer_field_id = str(outer.get("field_context_id") or "").strip()
         inner_field_id = str(inner.get("field_context_id") or "").strip()
         if outer_field_id and inner_field_id and outer_field_id != inner_field_id:
@@ -2839,6 +2852,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
         field_context_id = outer_field_id or inner_field_id
         if not field_context_id:
+            if imagery_job_id is not None:
+                raise HTTPException(404, "Image analysis not found for this field")
             outer["field_context"] = inner
             return outer
 
@@ -2955,6 +2970,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         )
         if field_answer_history["records"]:
             inner["field_answer_history"] = field_answer_history
+        if imagery_job_id is not None:
+            inner["imagery_observation"] = _resolve_turn_imagery(record, str(imagery_job_id), imagery_result_sha256)
         outer.update(
             {
                 "field_context_id": field_context_id,
@@ -2970,6 +2987,25 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             }
         )
         return outer
+
+    def _resolve_turn_imagery(field: dict[str, Any], job_id: str, expected_sha256: str | None) -> dict[str, Any]:
+        from agronomy_agent.server.services.imagery_service import selected_observation
+        from agronomy_agent.server.storage import imagery_job_store as jobs
+
+        if not isinstance(store, TraceStore):
+            raise HTTPException(503, "Selected imagery requires the migrated local runtime")
+        job = jobs.get_job(store, job_id, field_id=field["id"])
+        if not job or job["workspace_id"] != field["workspace_id"]:
+            raise HTTPException(404, "Image analysis not found for this field")
+        result = selected_observation(
+            settings, field, job, current_revision=jobs.current_geometry_revision(store, field["id"]),
+        )
+        if result is None or (expected_sha256 is not None and result["result_sha256"] != expected_sha256):
+            raise HTTPException(409, detail={
+                "code": "imagery_evidence_unavailable",
+                "boundary": "The selected analysis could not be verified. Choose an available analysis or remove it from the question.",
+            })
+        return result
 
     def _bind_turn_context(session: dict[str, Any], incoming: dict[str, Any] | None) -> dict[str, Any]:
         try:
@@ -2990,7 +3026,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         persisted.pop("ephemeral_private_source_summary", None)
         if isinstance(persisted.get("field_context"), dict):
             persisted["field_context"] = dict(persisted["field_context"])
-            for name in ("field_history", "field_answer_history", "field_data"):
+            for name in ("field_history", "field_answer_history", "field_data", "imagery_observation"):
                 persisted["field_context"].pop(name, None)
         return persisted
 
@@ -7100,7 +7136,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     context = bind_conversation_context({}, turn.session_context, has_turns=False)
                 except ConversationScopeError as exc:
                     raise HTTPException(status_code=409, detail={"code": "conversation_scope_mismatch", "boundary": str(exc)}) from exc
-            context = _authorize_demo_turn_field_context(request, context)
+            context = _authorize_demo_turn_field_context(request, context, imagery_job_id=turn.imagery_job_id)
             result = _turn_readiness_for_context(
                 payload.session_id, context, message=turn.message, mode=turn.mode,
                 model_id=selected_model_id, rag_config=selected_rag_config,
@@ -7110,7 +7146,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     def _run_turn_with_persisted_context(
         *, session_id: str, incoming_context: dict[str, Any],
-        owner_id: str, request: Request, readiness_binding: str | None = None, **turn_kwargs: Any,
+        owner_id: str, request: Request, readiness_binding: str | None = None,
+        imagery_job_id: uuid.UUID | None = None, **turn_kwargs: Any,
     ) -> dict[str, Any]:
         # Core execution checks operation identity under this same reentrant
         # guard. Bind against the latest session after queued turns complete.
@@ -7125,7 +7162,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             if latest is None:
                 raise ValueError("session not found")
             authorized_context = _authorize_demo_turn_field_context(
-                request, _bind_turn_context(latest, incoming_context),
+                request, _bind_turn_context(latest, incoming_context), imagery_job_id=imagery_job_id,
             )
             if readiness_binding is not None:
                 _turn_readiness_for_context(session_id, authorized_context, expected_binding=readiness_binding, **turn_kwargs)
@@ -7157,13 +7194,14 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
         operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
-        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id", "readiness_binding"})) if operation_id else None
+        operation_hash = _turn_operation_hash(payload) if operation_id else None
         existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
         if existing_operation and existing_operation["request_sha256"] != operation_hash:
             raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
         if existing_operation is None:
-            authorized_context = _authorize_demo_turn_field_context(
-                request, _bind_turn_context(session, payload.session_context),
+            authorized_context = await asyncio.to_thread(
+                _authorize_demo_turn_field_context, request, _bind_turn_context(session, payload.session_context),
+                imagery_job_id=payload.imagery_job_id,
             )
             if payload.readiness_binding is not None:
                 _turn_readiness_for_context(
@@ -7182,6 +7220,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 owner_id=str(user["id"]),
                 request=request,
                 readiness_binding=payload.readiness_binding,
+                imagery_job_id=payload.imagery_job_id,
                 message=payload.message,
                 mode=payload.mode,
                 model_id=selected_model_id,
@@ -7249,15 +7288,16 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
         operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
-        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id", "readiness_binding"})) if operation_id else None
+        operation_hash = _turn_operation_hash(payload) if operation_id else None
         existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
         if existing_operation and existing_operation["request_sha256"] != operation_hash:
             raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
         # Preserve an HTTP error for a known-invalid request before SSE opens.
         # The worker repeats this check against fresh state after its queue wait.
         if existing_operation is None:
-            authorized_context = _authorize_demo_turn_field_context(
-                request, _bind_turn_context(session, payload.session_context),
+            authorized_context = await asyncio.to_thread(
+                _authorize_demo_turn_field_context, request, _bind_turn_context(session, payload.session_context),
+                imagery_job_id=payload.imagery_job_id,
             )
             if payload.readiness_binding is not None:
                 _turn_readiness_for_context(
@@ -7306,6 +7346,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     owner_id=str(user["id"]),
                     request=request,
                     readiness_binding=payload.readiness_binding,
+                    imagery_job_id=payload.imagery_job_id,
                     message=payload.message,
                     mode=payload.mode,
                     model_id=model_id,
@@ -7675,7 +7716,16 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 raise HTTPException(status_code=404, detail="field context not found")
             require_workspace_for_user(user, field_record["workspace_id"])
             if _demo_field_metadata(field_record).get("kind") == "map_field":
-                replay_context = _authorize_demo_turn_field_context(request, replay_context)
+                receipt = ((base_turn.get("trace") or {}).get("metadata") or {}).get("field_context_compiler") or {}
+                imagery = receipt.get("imagery_observation") if (
+                    payload.pipeline in {"full", "answer_only"}
+                    and (payload.mode or (base_turn.get("system_state") or {}).get("mode")) == "agronomic_rag"
+                ) else None
+                replay_context = await asyncio.to_thread(
+                    _authorize_demo_turn_field_context, request, replay_context,
+                    imagery_job_id=imagery["job_id"] if imagery else None,
+                    imagery_result_sha256=imagery["result_sha256"] if imagery else None,
+                )
             else:
                 if (payload.override_session_context or {}).get("field_context") is not None:
                     raise HTTPException(status_code=409, detail={

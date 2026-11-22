@@ -106,6 +106,7 @@ from agronomy_agent.server.services.answer_renderer import (
 from agronomy_agent.server.services.field_context_compiler import (
     compile_field_context,
     render_field_context_prompt,
+    render_imagery_observation,
 )
 from agronomy_agent.geospatial.context_support import (
     mapped_confidence_label,
@@ -521,6 +522,8 @@ def preview_turn_readiness(
         "capability_planner_version": capability_plan.planner_version,
         "registry_sha256": planner_input.capability_registry_sha256,
     }
+    if imagery := (field_context or {}).get("imagery_observation"):
+        binding["imagery_job_id"] = imagery["job_id"]
     fingerprint = execution_stable_sha256({
         "binding": binding, "context": context, "max_tokens": max_tokens, "trace_options": trace_options,
     })
@@ -882,6 +885,7 @@ def _run_turn_impl_inner(
             public_adapter_records,
             safe_field_summary=_safe_field_context_summary,
         )
+        imagery = compiled_field_context["receipt"].get("imagery_observation")
         structured_public_adapter_answer = _render_explicit_statcan_answer(
             message,
             public_adapter_records,
@@ -958,7 +962,7 @@ def _run_turn_impl_inner(
             elif source_grounded:
                 messages = [
                     {"role": "system", "content": SOURCE_GROUNDED_SYSTEM_PROMPT},
-                    {"role": "user", "content": message},
+                    {"role": "user", "content": f"{message}\n\n{render_imagery_observation(imagery)}" if imagery else message},
                 ]
             else:
                 messages = [
@@ -1253,8 +1257,9 @@ def _run_turn_impl_inner(
             if profiler
             else nullcontext()
         )
+        imagery = compiled_field_context["receipt"].get("imagery_observation")
         verification_evidence_text = (
-            message
+            (f"{render_imagery_observation(imagery)}\n\n{message}" if imagery else message)
             if source_grounded
             else _append_workspace_evidence(
                 _combined_verification_evidence(context, field_context, compiled_field_context),
@@ -3343,7 +3348,8 @@ def _call_cropland_data_layer(latitude: float, longitude: float, field_context: 
         text = f"USDA NASS CDL {payload.get('year')} point class: {label}"
         if payload.get("cdl_code") is not None:
             text = f"{text} (code {payload.get('cdl_code')})."
-        return _public_tool_record("cropland_data_layer_point", text, payload, status="available")
+        status = "no_data" if payload.get("cdl_code") in local_tools.CDL_NO_CLASS_CODES else "available"
+        return _public_tool_record("cropland_data_layer_point", text, payload, status=status)
     except Exception as exc:  # noqa: BLE001
         return _public_tool_error(
             "cropland_data_layer_point",
@@ -3377,7 +3383,7 @@ def _call_cropland_data_layer_geometry(geometry: dict[str, Any], field_context: 
             timeout=timeout,
         )
         status = str(payload.get("status") or "available")
-        if status != "available":
+        if status not in {"available", "partial_available"}:
             return _public_tool_record(
                 "cropland_data_layer_geometry",
                 "USDA NASS CDL boundary sampling returned no crop-cover samples; treat crop-history context as missing.",
@@ -3395,7 +3401,7 @@ def _call_cropland_data_layer_geometry(geometry: dict[str, Any], field_context: 
         text = "USDA NASS CDL boundary crop-cover sample"
         if snippets:
             text = f"{text}: {', '.join(snippets[:3])}."
-        return _public_tool_record("cropland_data_layer_geometry", text, payload, status="available")
+        return _public_tool_record("cropland_data_layer_geometry", text, payload, status=status)
     except Exception as exc:  # noqa: BLE001
         return _public_tool_error(
             "cropland_data_layer_geometry",
@@ -4452,6 +4458,9 @@ def _combined_verification_evidence(context: Any, field_context: Any, compiled_c
         # Raw browser context and table inventories are not numeric evidence.
         receipt = dict(compiled_context["receipt"])
         receipt.pop("imported_data", None)
+        if imagery := receipt.pop("imagery_observation", None):
+            # Keep the explicit selection visible inside the verifier's text budget.
+            parts.insert(0, render_imagery_observation(imagery))
         parts.append(render_field_context_prompt(receipt))
     return "\n\n".join(part for part in parts if part)
 
@@ -4613,9 +4622,11 @@ def _with_stored_field_data(
     outer = session_context if isinstance(session_context, dict) else {}
     field_id = outer.get("field_context_id") or trusted.get("field_context_id")
     if not field_id or outer.get("field_access_authorized") is not True:
+        trusted.pop("imagery_observation", None)
         return trusted
     field = store.get_phase4_field_context(str(field_id))
     if not field:
+        trusted.pop("imagery_observation", None)
         return trusted
     workspace_id = outer.get("field_access_workspace_id")
     if workspace_id and str(workspace_id) != str(field.get("workspace_id")):

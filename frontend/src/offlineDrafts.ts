@@ -6,6 +6,7 @@ export const PHASE6_CHAT_DRAFT_MAX_CHARS = 8000
 export type Phase6ChatDraft = {
   sessionId: string
   message: string
+  imagery?: { jobId: string; season?: number }
   updatedAt: string
 }
 
@@ -64,8 +65,11 @@ export function loadPhase6ChatDraft(
 export function savePhase6ChatDraft(
   sessionId: string,
   message: string,
-  storage: BrowserStorage = window.localStorage,
-  timestamp: () => string = nowIso,
+  {
+    storage = window.localStorage,
+    timestamp = nowIso,
+    imagery,
+  }: { storage?: BrowserStorage; timestamp?: () => string; imagery?: Phase6ChatDraft['imagery'] } = {},
 ): Phase6ChatDraft | null {
   const key = sessionId.trim()
   if (!key) {
@@ -79,6 +83,7 @@ export function savePhase6ChatDraft(
   const draft = {
     sessionId: key,
     message: message.slice(0, PHASE6_CHAT_DRAFT_MAX_CHARS),
+    ...(imagery ? { imagery } : {}),
     updatedAt: timestamp(),
   }
   const store = readDraftStore(storage)
