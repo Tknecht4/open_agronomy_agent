@@ -37,9 +37,19 @@ def _decode(row: Any) -> dict[str, Any]:
     result = dict(row)
     for key in ("geometry", "request", "result"):
         raw = result.pop(key + "_json")
-        result[key] = json.loads(raw) if raw else None
-    if result["result"] is not None and hashlib.sha256(_json(result["result"]).encode()).hexdigest() != result["result_sha256"]:
-        result.update(status="integrity_failed", result=None)
+        try:
+            value = json.loads(raw) if raw is not None else None
+            if not isinstance(value, dict) and (key != "result" or raw is not None):
+                raise ValueError("invalid imagery job record")
+            if key == "result" and value is not None:
+                if hashlib.sha256(_json(value).encode()).hexdigest() != result["result_sha256"]:
+                    raise ValueError("imagery result hash mismatch")
+        except (ValueError, TypeError):
+            result["status"] = "integrity_failed"
+            value = None if key == "result" else {}
+        result[key] = value
+    if result["status"] == "integrity_failed":
+        result["result"] = None
     return result
 
 

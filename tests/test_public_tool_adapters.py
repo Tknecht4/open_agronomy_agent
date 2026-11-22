@@ -891,7 +891,9 @@ def test_aci_discovery_failure_and_offline_do_not_guess_latest(monkeypatch, tmp_
     (("class", "class", "class"), "available"),
     (("class", "empty", "error"), "partial_available"),
     (("class", "empty", "empty"), "partial_available"),
+    (("class", "cloud", "cloud"), "partial_available"),
     (("empty", "empty", "empty"), "no_data"),
+    (("cloud", "cloud", "cloud"), "no_data"),
     (("empty", "error", "error"), "unavailable"),
 ])
 def test_crop_cover_distinguishes_missing_samples_from_provider_errors(country, dispositions, expected, monkeypatch):
@@ -906,8 +908,8 @@ def test_crop_cover_distinguishes_missing_samples_from_provider_errors(country, 
         if disposition == "error":
             raise OSError("synthetic provider failure")
         if country == "US":
-            return {"cdl_code": 1 if disposition == "class" else 0}
-        return {"aci_code": 147 if disposition == "class" else None}
+            return {"cdl_code": {"class": 1, "cloud": 81, "empty": 0}[disposition]}
+        return {"aci_code": {"class": 147, "cloud": 10, "empty": None}[disposition]}
 
     if country == "US":
         monkeypatch.setattr(local_tools, "cropland_data_layer_point", point)

@@ -3348,7 +3348,8 @@ def _call_cropland_data_layer(latitude: float, longitude: float, field_context: 
         text = f"USDA NASS CDL {payload.get('year')} point class: {label}"
         if payload.get("cdl_code") is not None:
             text = f"{text} (code {payload.get('cdl_code')})."
-        return _public_tool_record("cropland_data_layer_point", text, payload, status="available")
+        status = "no_data" if payload.get("cdl_code") in local_tools.CDL_NO_CLASS_CODES else "available"
+        return _public_tool_record("cropland_data_layer_point", text, payload, status=status)
     except Exception as exc:  # noqa: BLE001
         return _public_tool_error(
             "cropland_data_layer_point",

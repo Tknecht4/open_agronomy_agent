@@ -108,10 +108,9 @@ def test_selected_job_reaches_actual_turn_prompt_verifier_and_source_card_offlin
         assert replay_imagery["result_sha256"] == imagery["result_sha256"]
         assert "original historical boundary" in verifier_inputs[-1]
 
-        client.app.state.trace_store._conn.execute(
-            "UPDATE field_imagery_jobs SET result_json='{}' WHERE id=?", (job["id"],)
-        )
-        client.app.state.trace_store._conn.commit()
+        store = client.app.state.trace_store
+        with store._cursor() as cursor:
+            cursor.execute("UPDATE field_imagery_jobs SET result_json='{' WHERE id=?", (job["id"],))
         repeated = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=request)
         assert repeated.status_code == 200, repeated.text
         assert repeated.json()["turn_id"] == turn["turn_id"]

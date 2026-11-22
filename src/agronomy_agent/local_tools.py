@@ -772,6 +772,8 @@ MAX_CDL_GEOMETRY_VERTICES = 500
 MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES = 1.5
 DEFAULT_CDL_GEOMETRY_YEARS = 3
 DEFAULT_CDL_SAMPLE_POINTS = 9
+AAFC_ACI_NO_CLASS_CODES = frozenset({None, 0, 10})
+CDL_NO_CLASS_CODES = frozenset({None, 0, 81})
 AAFC_ACI_CODE_LABELS: dict[int, str] = {
     10: "Cloud", 20: "Water", 30: "Exposed land/barren", 34: "Urban/developed", 35: "Greenhouses",
     50: "Shrubland", 60: "Forest fire/burnt area", 80: "Wetland", 85: "Peatland", 110: "Grassland",
@@ -1245,7 +1247,7 @@ def aafc_annual_crop_inventory(
             samples.append({"sample_index": index, **result})
         except Exception as exc:  # noqa: BLE001 - retain partial field evidence when one sample fails.
             errors.append({"sample_index": index, "error_type": exc.__class__.__name__, "error": str(exc)[:220]})
-    classified = [sample for sample in samples if sample.get("aci_code") is not None]
+    classified = [sample for sample in samples if sample.get("aci_code") not in AAFC_ACI_NO_CLASS_CODES]
     status = _crop_sample_status(len(points), len(classified), errors)
     sample_summary = _summarize_aafc_aci_samples(classified)
     source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.format(year=int(year))
@@ -2336,6 +2338,7 @@ def cropland_data_layer_point(
     if cache_path.exists():
         payload = json.loads(cache_path.read_text(encoding="utf-8"))
         payload["cache_hit"] = True
+        payload["status"] = "no_data" if payload.get("cdl_code") in CDL_NO_CLASS_CODES else "available"
         return payload
     request = urllib.request.Request(url, headers={"User-Agent": "agronomy-agent-local-tools/0.1"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -2343,6 +2346,7 @@ def cropland_data_layer_point(
     cdl_value, cdl_label = _parse_cdl_value_response(raw)
     summary = {
         "tool": "cropland_data_layer_point",
+        "status": "no_data" if cdl_value in CDL_NO_CLASS_CODES else "available",
         "source": url,
         "cache_hit": False,
         "latitude": latitude,
@@ -2403,7 +2407,7 @@ def cropland_data_layer_geometry(
                 )
             except Exception as exc:  # noqa: BLE001 - one point should not sink the field summary.
                 errors.append({"sample_index": idx, "year": year, "error_type": exc.__class__.__name__, "error": str(exc)[:220]})
-    classified = [sample for sample in sample_payloads if sample["cdl_code"] not in (None, 0)]
+    classified = [sample for sample in sample_payloads if sample["cdl_code"] not in CDL_NO_CLASS_CODES]
     year_summary = _summarize_cdl_samples(classified)
     status = _crop_sample_status(len(points) * len(clean_years), len(classified), errors)
     return {
