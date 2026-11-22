@@ -10,6 +10,7 @@ from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, ap
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.server.services.leak_guard import detect_prompt_leaks
 from agronomy_agent.geospatial.context_support import mapped_coverage_label
+from agronomy_agent.geospatial.crop_cover import coverage_facts
 from agronomy_agent.server.services.field_context_compiler import IMAGERY_BOUNDARY
 
 
@@ -683,6 +684,8 @@ def _public_adapter_answer_fact(name: str, summary: dict[str, Any]) -> str | Non
         first = map_units[0] if map_units and isinstance(map_units[0], dict) else {}
         muname = first.get("muname")
         return f"NRCS point soil survey returned {muname}" if muname else "NRCS point soil survey was checked"
+    if name in {"cropland_data_layer_geometry", "cropland_data_layer_point", "aafc_annual_crop_inventory"} and summary.get("coverage_by_year"):
+        return " / ".join(coverage_facts(summary["coverage_by_year"]))
     if name == "cropland_data_layer_geometry":
         sample_count = summary.get("sample_point_count")
         years = summary.get("years") or []
@@ -828,9 +831,9 @@ def _public_adapter_answer_limitations(name: str, payload: dict[str, Any]) -> li
     if name.startswith("nrcs_"):
         limitations.append("NRCS soil survey is a map-unit prior, not lab or in-field truth")
     if name.startswith("cropland_data_layer"):
-        limitations.append("CDL is sampled crop-cover context, not a grower planting record or acreage proof")
+        limitations.append("CDL describes mapped cover. Use grower records to confirm planted crops and acreage")
     if name == "aafc_annual_crop_inventory":
-        limitations.append("AAFC Annual Crop Inventory is sampled crop-cover context, not a grower planting record or acreage proof")
+        limitations.append("AAFC Annual Crop Inventory describes mapped cover. Use grower records to confirm planted crops and acreage")
     if name == "statcan_field_crop_statistics":
         limitations.append("Statistics Canada is regional crop context, not field yield prediction or grower records")
     if name == "nasa_power_daily":
@@ -1193,11 +1196,13 @@ def _public_adapter_title(name: str, payload: dict[str, Any]) -> str:
     if name == "cropland_data_layer_geometry":
         years = summary.get("years") or []
         suffix = f" ({', '.join(str(year) for year in years[:3])})" if years else ""
-        return f"USDA NASS CDL boundary crop-cover sample{suffix}"
+        return f"USDA NASS CDL boundary crop cover{suffix}"
     if name == "cropland_data_layer_point":
         label = summary.get("cdl_label") or summary.get("label")
         return f"USDA NASS CDL point crop-cover class: {label}" if label else "USDA NASS CDL point crop-cover class"
     if name == "aafc_annual_crop_inventory":
+        if summary.get("coverage_by_year"):
+            return f"AAFC Annual Crop Inventory crop cover ({summary['year']})"
         class_summary = summary.get("class_summary") if isinstance(summary.get("class_summary"), dict) else {}
         dominant = class_summary.get("dominant_class") if isinstance(class_summary.get("dominant_class"), dict) else {}
         label = dominant.get("aci_label")

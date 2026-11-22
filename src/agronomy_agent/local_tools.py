@@ -8,6 +8,7 @@ import json
 import math
 import os
 import re
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -17,6 +18,7 @@ from typing import Any
 
 from agronomy_agent.agronomic_calculations import agronomic_calculator
 from agronomy_agent.agent import build_context, load_agent_resources
+from agronomy_agent.geospatial import crop_cover
 from agronomy_agent.paths import repo_path
 from agronomy_agent.router import classify_query
 
@@ -25,8 +27,6 @@ DEFAULT_POWER_PARAMETERS = ("T2M", "T2M_MIN", "T2M_MAX", "PRECTOTCORR", "WS2M", 
 NRCS_SDA_POST_REST_URL = "https://SDMDataAccess.sc.egov.usda.gov/Tabular/post.rest"
 EPA_PPLS_BASE_URL = "https://ordspub.epa.gov/ords/pesticides/cswu/ProductSearch"
 EPA_PPLS_CACHE_VERSION = "v3"
-CROPSCAPE_CDL_VALUE_URL = "https://nassgeodata.gmu.edu/axis2/services/CDLService/GetCDLValue"
-DEFAULT_CDL_YEAR = 2025
 NASS_QUICKSTATS_API_URL = "https://quickstats.nass.usda.gov/api/api_GET/"
 NASS_QUICKSTATS_BULK_DATA_URL = "https://www.nass.usda.gov/datasets/"
 NASS_QUICKSTATS_SNAPSHOT_PATH = "data/snapshots/nass_quickstats_state_crop_stats.jsonl"
@@ -50,9 +50,8 @@ PMRA_PPID_EXTRACT_BASE_URL = "https://pest-control.canada.ca/pesticide-registry-
 PMRA_PPID_OPEN_DATA_URL = "https://open.canada.ca/data/en/dataset/e10b0d6e-04ac-4014-a64a-666c3874bbe0"
 PMRA_PPID_CACHE_VERSION = "v2"
 PMRA_PPID_DEFAULT_CACHE_MAX_AGE_HOURS = 24
-AAFC_ACI_IMAGE_SERVER_TEMPLATE = "https://agriculture.canada.ca/imagery-images/rest/services/annual_crop_inventory/{year}/ImageServer"
-AAFC_ACI_CACHE_VERSION = "v1"
-DEFAULT_AAFC_ACI_YEAR = 2024
+AAFC_ACI_CATALOG_URL = "https://agriculture.canada.ca/imagery-images/rest/services/annual_crop_inventory"
+AAFC_ACI_IMAGE_SERVER_TEMPLATE = AAFC_ACI_CATALOG_URL + "/{year}/ImageServer"
 AAFC_NASDI_OPEN_DATA_URL = "https://open.canada.ca/data/en/dataset/2b72996a-2905-4cea-a565-8bfb85cd42ac"
 AAFC_NASDI_IMAGE_SERVER_TEMPLATE = "https://agriculture.canada.ca/imagery-images/rest/services/nasdi/{service}/ImageServer"
 AAFC_NASDI_CACHE_VERSION = "v2"
@@ -168,9 +167,9 @@ CANADA_SOURCE_LANE_DEFINITIONS: dict[str, dict[str, Any]] = {
         "source_lane_id": "aafc_annual_crop_inventory",
         "source_name": "AAFC Annual Crop Inventory",
         "provider": "Agriculture and Agri-Food Canada",
-        "source": AAFC_ACI_IMAGE_SERVER_TEMPLATE.format(year=DEFAULT_AAFC_ACI_YEAR),
+        "source": AAFC_ACI_CATALOG_URL,
         "status": "available",
-        "coverage": "Canadian annual crop-cover and land-cover classification samples from the AAFC Annual Crop Inventory.",
+        "coverage": "Canadian annual crop-cover and land-cover classification from the AAFC Annual Crop Inventory.",
         "decision_checks": [
             "use AAFC Annual Crop Inventory for Canadian crop-cover priors instead of USDA CDL",
             "check crop year, classification resolution, mixed pixels, and whether the field boundary covers multiple classes",
@@ -178,9 +177,8 @@ CANADA_SOURCE_LANE_DEFINITIONS: dict[str, dict[str, Any]] = {
             "ask for local records when crop history affects disease, herbicide carryover, nutrient credit, or seed-selection decisions",
         ],
         "boundary": (
-            "AAFC Annual Crop Inventory is a 30 m satellite-derived crop/land-cover classification. Point and boundary "
-            "samples are crop-cover priors, not grower planting records, acreage proof, crop-insurance evidence, "
-            "or verified field history."
+            "AAFC Annual Crop Inventory is a satellite-derived crop and land-cover classification. Use grower records "
+            "to confirm planting, acreage and crop history."
         ),
     },
     "statcan_field_crop_statistics": {
@@ -791,7 +789,33 @@ AAFC_ACI_CODE_LABELS: dict[int, str] = {
     197: "Hemp", 198: "Vetch", 199: "Other crops", 200: "Forest (undifferentiated)",
     210: "Coniferous forest", 220: "Broadleaf forest", 230: "Mixedwood forest",
 }
+# USDA's published CDL raster attribute table, including Hawaii-only classes.
 CDL_CODE_LABELS: dict[int, str] = {
+    30: "Spelt", 32: "Flaxseed", 33: "Safflower", 34: "Rapeseed", 35: "Mustard",
+    38: "Camelina", 39: "Buckwheat", 45: "Sugarcane", 46: "Sweet Potatoes",
+    47: "Misc Vegs & Fruits", 48: "Watermelons", 49: "Onions", 50: "Cucumbers",
+    51: "Chickpeas", 52: "Lentils", 53: "Peas", 55: "Caneberries", 56: "Hops",
+    57: "Herbs", 58: "Clover/Wildflowers", 60: "Switchgrass", 65: "Barren",
+    66: "Cherries", 67: "Peaches", 68: "Apples", 69: "Grapes", 70: "Christmas Trees",
+    71: "Other Tree Crops", 72: "Citrus", 74: "Pecans", 75: "Almonds", 76: "Walnuts",
+    77: "Pears", 92: "Aquaculture", 93: "Banana", 94: "Other Exotic Fruit", 95: "Coffee",
+    96: "Macadamia", 97: "Papaya", 98: "Pineapple", 99: "Commercial Forest",
+    100: "Taro", 101: "Sweet Basil", 102: "Coconut", 103: "Plumeria", 104: "Noni Fruit",
+    105: "Dracaena", 106: "Other Crops (Hawaii)", 204: "Pistachios", 205: "Triticale",
+    206: "Carrots", 207: "Asparagus", 208: "Garlic", 209: "Cantaloupes", 210: "Prunes",
+    211: "Olives", 212: "Oranges", 213: "Honeydew Melons", 214: "Broccoli", 215: "Avocados",
+    216: "Peppers", 217: "Pomegranates", 218: "Nectarines", 219: "Greens", 220: "Plums",
+    221: "Strawberries", 222: "Squash", 223: "Apricots", 224: "Vetch",
+    225: "Double Crop Winter Wheat/Corn", 226: "Double Crop Oats/Corn", 227: "Lettuce",
+    228: "Double Crop Triticale/Corn", 229: "Pumpkins", 230: "Double Crop Lettuce/Durum Wheat",
+    231: "Double Crop Lettuce/Cantaloupe", 232: "Double Crop Lettuce/Cotton",
+    233: "Double Crop Lettuce/Barley", 234: "Double Crop Durum Wheat/Sorghum",
+    235: "Double Crop Barley/Sorghum", 236: "Double Crop Winter Wheat/Sorghum",
+    237: "Double Crop Barley/Corn", 238: "Double Crop Winter Wheat/Cotton",
+    239: "Double Crop Soybeans/Cotton", 240: "Double Crop Soybeans/Oats",
+    241: "Double Crop Corn/Soybeans", 242: "Blueberries", 243: "Cabbage", 244: "Cauliflower",
+    245: "Celery", 246: "Radishes", 247: "Turnips", 248: "Eggplants", 249: "Gourds",
+    250: "Cranberries", 254: "Double Crop Barley/Soybeans",
     0: "Background",
     1: "Corn",
     2: "Cotton",
@@ -809,7 +833,7 @@ CDL_CODE_LABELS: dict[int, str] = {
     23: "Spring Wheat",
     24: "Winter Wheat",
     25: "Other Small Grains",
-    26: "Dbl Crop WinWht/Soybeans",
+    26: "Double Crop Winter Wheat/Soybeans",
     27: "Rye",
     28: "Oats",
     29: "Millet",
@@ -1159,7 +1183,7 @@ def cansis_soil_landscapes_canada(
 def aafc_crop_inventory_catalog(*, cache_dir: str = "outputs/tool_cache/aafc_annual_crop_inventory",
                                 timeout: int = 20, offline_only: bool = False) -> dict[str, Any]:
     """Discover advertised years; the receipt is not proof of pixel availability."""
-    source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.split("/{year}")[0]
+    source = AAFC_ACI_CATALOG_URL
     path = Path(cache_dir) / "catalog_v1.json"
     cached = _read_fresh_json_cache(path, max_age_seconds=6 * 60 * 60)
     if cached is not None:
@@ -1172,10 +1196,10 @@ def aafc_crop_inventory_catalog(*, cache_dir: str = "outputs/tool_cache/aafc_ann
     if len(raw) > 2_000_000:
         raise RuntimeError("ACI catalog exceeds response limit")
     data = json.loads(raw)
-    if not isinstance(data, dict) or data.get("error"):
+    if not isinstance(data, dict) or data.get("error") or not isinstance(data.get("services"), list):
         raise RuntimeError("ACI catalog unavailable")
     years = set()
-    for item in data.get("services", []):
+    for item in data["services"]:
         if not isinstance(item, dict) or item.get("type") != "ImageServer":
             continue
         match = re.fullmatch(r"annual_crop_inventory/([0-9]{4})", str(item.get("name", "")))
@@ -1192,10 +1216,42 @@ def aafc_crop_inventory_catalog(*, cache_dir: str = "outputs/tool_cache/aafc_ann
     return result
 
 
-def _crop_sample_status(requested: int, classified: int, errors: list[dict[str, Any]]) -> str:
-    if classified:
-        return "available" if classified == requested else "partial_available"
-    return "unavailable" if errors else "no_data"
+_CROP_COVER_BOUNDARY = (
+    "Satellite-derived mapped cover is historical context. Check the boundary and year, then compare mixed "
+    "classes with planting, harvest or scouting records. Edge pixels, noncrop cover and classification errors "
+    "can produce mixed results. Confirmed crop and acreage require grower records."
+)
+
+
+def _query_crop_cover(geometry: Any, *, cache_dir: str, service: str, crs: int, year: int, resolution: int,
+                      labels: dict[int, str], no_class_codes: frozenset, timeout: int,
+                      raster: dict[str, Any] | None = None) -> dict[str, Any]:
+    key = json.dumps([service, crs, year, resolution, raster, geometry.__geo_interface__], sort_keys=True)
+    path = repo_path(cache_dir) / f"{crop_cover.COVERAGE_VERSION}-{hashlib.sha256(key.encode()).hexdigest()}.json"
+    cached = _read_fresh_json_cache(path, max_age_seconds=24 * 60 * 60)
+    if cached is not None:
+        return {**cached, "cache_hit": True}
+    try:
+        result = crop_cover.query_crop_cover(
+            geometry, service=service, crs=crs, year=year, resolution=resolution, labels=labels,
+            no_class_codes=no_class_codes, timeout=timeout, raster=raster,
+        )
+    except crop_cover.WindowLimitError as exc:
+        return {"year": year, "source": service, "status": "unsupported_geometry", "message": str(exc), "cache_hit": False}
+    except (OSError, RuntimeError) as exc:
+        message = f"Crop-cover source query failed ({type(exc).__name__})." if isinstance(exc, OSError) else str(exc)
+        return {"year": year, "source": service, "status": "unavailable", "message": message, "cache_hit": False}
+    result["fetched_at"] = dt.datetime.now(dt.UTC).isoformat()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as file:
+        temp = Path(file.name)
+        try:
+            json.dump(result, file, allow_nan=False)
+            file.flush()
+            temp.replace(path)
+        finally:
+            temp.unlink(missing_ok=True)
+    return {**result, "cache_hit": False}
 
 
 def aafc_annual_crop_inventory(
@@ -1204,7 +1260,7 @@ def aafc_annual_crop_inventory(
     geometry: dict[str, Any] | None = None,
     crop: str | None = None,
     province: str | None = None,
-    year: int | None = DEFAULT_AAFC_ACI_YEAR,
+    year: int | None = None,
     sample_points: int = DEFAULT_CDL_SAMPLE_POINTS,
     cache_dir: str = "outputs/tool_cache/aafc_annual_crop_inventory",
     timeout: int = 20,
@@ -1224,58 +1280,37 @@ def aafc_annual_crop_inventory(
         return payload
     if geometry is None:
         geometry = {"type": "Point", "coordinates": [float(longitude), float(latitude)]}
-    geometry_type, bbox, vertex_count, points = _sample_geojson_geometry(geometry, max_points=sample_points)
-    west, south, east, north = bbox
-    if east - west > MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES or north - south > MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES:
-        raise ValueError("AAFC Annual Crop Inventory geometry query span is too large for local field-context lookup")
-    if vertex_count > MAX_CDL_GEOMETRY_VERTICES:
-        raise ValueError(f"AAFC Annual Crop Inventory geometry has too many vertices; max is {MAX_CDL_GEOMETRY_VERTICES}")
-    catalog = aafc_crop_inventory_catalog(cache_dir=cache_dir, timeout=timeout) if year is None else None
-    if catalog:
-        year = catalog["selected_year"]
-    samples: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
-    for index, (sample_lon, sample_lat) in enumerate(points, start=1):
-        try:
-            result = _aafc_annual_crop_inventory_point(
-                latitude=sample_lat,
-                longitude=sample_lon,
-                year=int(year),
-                cache_dir=cache_dir,
-                timeout=timeout,
-            )
-            samples.append({"sample_index": index, **result})
-        except Exception as exc:  # noqa: BLE001 - retain partial field evidence when one sample fails.
-            errors.append({"sample_index": index, "error_type": exc.__class__.__name__, "error": str(exc)[:220]})
-    classified = [sample for sample in samples if sample.get("aci_code") not in AAFC_ACI_NO_CLASS_CODES]
-    status = _crop_sample_status(len(points), len(classified), errors)
-    sample_summary = _summarize_aafc_aci_samples(classified)
-    source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.format(year=int(year))
+    field = crop_cover.prepare_geometry(geometry, MAX_CDL_GEOMETRY_VERTICES, MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES)
+    try:
+        catalog = aafc_crop_inventory_catalog(cache_dir=cache_dir, timeout=timeout) if year is None else None
+    except (OSError, RuntimeError, ValueError):
+        return {"tool": "aafc_annual_crop_inventory", "status": "unavailable",
+                "source": AAFC_ACI_CATALOG_URL,
+                "message": "AAFC Annual Crop Inventory year catalog was unavailable."}
+    selected_year = int(catalog["selected_year"] if catalog else year)
+    source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.format(year=selected_year)
+    result = _query_crop_cover(
+        field, service=source, crs=6933, year=selected_year, resolution=56 if selected_year < 2011 else 30, cache_dir=cache_dir,
+        labels=AAFC_ACI_CODE_LABELS, no_class_codes=AAFC_ACI_NO_CLASS_CODES, timeout=timeout,
+    )
     return {
         "tool": "aafc_annual_crop_inventory",
-        "status": status,
+        "status": result["status"],
+        "message": result.get("message"),
         "source": source,
-        "cache_hit": bool(samples) and all(bool(sample.get("cache_hit")) for sample in samples),
-        "year_selection": catalog or {"selection": "explicit_or_pinned_year", "selected_year": int(year)},
-        "year": int(year),
+        "cache_hit": result["cache_hit"],
+        "coverage_version": crop_cover.COVERAGE_VERSION,
+        "coverage_by_year": {str(selected_year): result},
+        "year_selection": catalog or {"selection": "explicit_or_pinned_year", "selected_year": selected_year},
+        "year": selected_year,
         "source_lane_id": "aafc_annual_crop_inventory",
         "source_name": "AAFC Annual Crop Inventory",
         "provider": "Agriculture and Agri-Food Canada",
-        "coverage": "Canadian 30 m annual crop-cover and land-cover classification samples.",
-        "geometry_type": geometry_type,
-        "bbox": [round(value, 7) for value in bbox],
-        "vertex_count": vertex_count,
-        "sample_point_count": len(points),
-        "samples": samples[:80],
-        "sample_errors": errors[:20],
-        "class_summary": sample_summary,
+        "coverage": "Canadian annual crop-cover and land-cover classification at 56 m in 2009–10 and 30 m since 2011.",
+        "geometry_type": field.geom_type,
         "context": {key: value for key, value in {"crop": crop, "province": province}.items() if value},
         "decision_checks": list(CANADA_SOURCE_LANE_DEFINITIONS["aafc_annual_crop_inventory"]["decision_checks"]),
-        "boundary": (
-            "AAFC Annual Crop Inventory is a 30 m satellite-derived classification sampled across the supplied point "
-            "or geometry. Use it as crop-cover/rotation context only; it is not a grower planting record, acreage "
-            "accounting, crop-insurance evidence, field-boundary proof, or verified field history."
-        ),
+        "boundary": _CROP_COVER_BOUNDARY,
         "provenance": "aafc_annual_crop_inventory_public_image_service",
     }
 
@@ -2320,51 +2355,12 @@ def cropland_data_layer_point(
     cache_dir: str = "outputs/tool_cache/cdl",
     timeout: int = 20,
 ) -> dict[str, Any]:
-    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-        raise ValueError("latitude/longitude out of range")
-    cdl_year = int(year or _default_cdl_year())
-    if cdl_year < 2008 or cdl_year > dt.datetime.now(dt.UTC).year:
-        raise ValueError("CDL year must be between 2008 and the current year")
-    x_albers, y_albers = _lonlat_to_usgs_conus_albers(longitude=longitude, latitude=latitude)
-    query = urllib.parse.urlencode(
-        {
-            "year": cdl_year,
-            "x": f"{x_albers:.3f}",
-            "y": f"{y_albers:.3f}",
-        }
-    )
-    url = f"{CROPSCAPE_CDL_VALUE_URL}?{query}"
-    cache_path = repo_path(cache_dir) / (_safe_name(f"{cdl_year}_{latitude}_{longitude}") + ".json")
-    if cache_path.exists():
-        payload = json.loads(cache_path.read_text(encoding="utf-8"))
-        payload["cache_hit"] = True
-        payload["status"] = "no_data" if payload.get("cdl_code") in CDL_NO_CLASS_CODES else "available"
-        return payload
-    request = urllib.request.Request(url, headers={"User-Agent": "agronomy-agent-local-tools/0.1"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        raw = response.read().decode("utf-8", errors="replace")
-    cdl_value, cdl_label = _parse_cdl_value_response(raw)
-    summary = {
-        "tool": "cropland_data_layer_point",
-        "status": "no_data" if cdl_value in CDL_NO_CLASS_CODES else "available",
-        "source": url,
-        "cache_hit": False,
-        "latitude": latitude,
-        "longitude": longitude,
-        "year": cdl_year,
-        "albers_x": round(x_albers, 3),
-        "albers_y": round(y_albers, 3),
-        "cdl_code": cdl_value,
-        "cdl_label": cdl_label,
-        "raw_response": raw[:500],
-        "boundary": (
-            "USDA NASS Cropland Data Layer is a public land-cover classification prior at the queried point. "
-            "It is not a grower planting record, field boundary proof, crop-insurance record, or substitute for field history."
-        ),
-    }
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    return summary
+    geometry = {"type": "Point", "coordinates": [longitude, latitude]}
+    payload = _cdl_lookup(geometry, None if year is None else (year,), 1, cache_dir, timeout)
+    point = next(iter(payload["coverage_by_year"].values()), {})
+    mapped_class = point.get("point_class") or {}
+    return {**payload, "tool": "cropland_data_layer_point", "latitude": latitude, "longitude": longitude,
+            "year": point.get("year", year), "cdl_code": mapped_class.get("code"), "cdl_label": mapped_class.get("label")}
 
 
 def cropland_data_layer_geometry(
@@ -2374,60 +2370,65 @@ def cropland_data_layer_geometry(
     cache_dir: str = "outputs/tool_cache/cdl",
     timeout: int = 20,
 ) -> dict[str, Any]:
-    geometry_type, bbox, vertex_count, points = _sample_geojson_geometry(geometry, max_points=sample_points)
-    west, south, east, north = bbox
-    if east - west > MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES or north - south > MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES:
-        raise ValueError("CDL geometry query span is too large for local field-context lookup")
-    if vertex_count > MAX_CDL_GEOMETRY_VERTICES:
-        raise ValueError(f"CDL geometry query has too many vertices; max is {MAX_CDL_GEOMETRY_VERTICES}")
-    clean_years = _cdl_geometry_years(years)
-    sample_payloads: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
-    for year in clean_years:
-        for idx, (longitude, latitude) in enumerate(points, start=1):
-            try:
-                payload = cropland_data_layer_point(
-                    latitude=latitude,
-                    longitude=longitude,
-                    year=year,
-                    cache_dir=cache_dir,
-                    timeout=timeout,
-                )
-                sample_payloads.append(
-                    {
-                        "sample_index": idx,
-                        "latitude": round(latitude, 7),
-                        "longitude": round(longitude, 7),
-                        "year": year,
-                        "cdl_code": payload.get("cdl_code"),
-                        "cdl_label": payload.get("cdl_label"),
-                        "source": payload.get("source"),
-                        "cache_hit": payload.get("cache_hit"),
-                    }
-                )
-            except Exception as exc:  # noqa: BLE001 - one point should not sink the field summary.
-                errors.append({"sample_index": idx, "year": year, "error_type": exc.__class__.__name__, "error": str(exc)[:220]})
-    classified = [sample for sample in sample_payloads if sample["cdl_code"] not in CDL_NO_CLASS_CODES]
-    year_summary = _summarize_cdl_samples(classified)
-    status = _crop_sample_status(len(points) * len(clean_years), len(classified), errors)
+    return _cdl_lookup(geometry, years, DEFAULT_CDL_GEOMETRY_YEARS, cache_dir, timeout)
+
+
+def _cdl_lookup(geometry: dict[str, Any], years: tuple[int, ...] | None, default_count: int,
+                cache_dir: str, timeout: int) -> dict[str, Any]:
+    field = crop_cover.prepare_geometry(geometry, MAX_CDL_GEOMETRY_VERTICES, MAX_CDL_GEOMETRY_BBOX_SPAN_DEGREES)
+    requested = sorted({int(year) for year in years}, reverse=True) if years else []
+    if len(requested) > 5:
+        raise ValueError("CDL coverage supports at most five years per call")
+    if any(not 2008 <= year <= dt.datetime.now(dt.UTC).year for year in requested):
+        raise ValueError("CDL years must be between 2008 and the current year")
+    payload: dict[str, Any] = {
+        "tool": "cropland_data_layer_geometry", "geometry_type": field.geom_type, "years": requested,
+        "coverage_version": crop_cover.COVERAGE_VERSION, "coverage_by_year": {},
+        "source_name": "USDA NASS Cropland Data Layer", "provider": "USDA NASS",
+        "cache_hit": False, "boundary": _CROP_COVER_BOUNDARY,
+    }
+    service_scope = crop_cover.cdl_service(field)
+    if service_scope is None:
+        return {**payload, "status": "not_applicable",
+                "message": "USDA CDL covers the contiguous United States and Hawaii. This location is outside those service regions."}
+    source, crs = service_scope
+    payload["source"] = source
+    try:
+        catalog, digest = crop_cover.cdl_catalog(source, timeout=timeout)
+    except (OSError, RuntimeError, ValueError):
+        return {**payload, "status": "unavailable", "message": "USDA CDL annual raster catalog was unavailable."}
+    selected = requested or sorted(catalog, reverse=True)[:default_count]
+    records: dict[str, Any] = {}
+    for year in selected:
+        if year not in catalog:
+            records[str(year)] = {"year": year, "status": "year_unavailable",
+                                  "message": "The source catalog has no raster for this region and year."}
+            continue
+        records[str(year)] = _query_crop_cover(
+            field, service=source, crs=crs, year=year, resolution=catalog[year]["resolution_m"], cache_dir=cache_dir,
+            labels=CDL_CODE_LABELS, no_class_codes=CDL_NO_CLASS_CODES, timeout=timeout, raster=catalog[year],
+        )
+    statuses = {record["status"] for record in records.values()}
+    if statuses == {"available"}:
+        status = "available"
+    elif statuses & {"available", "partial_available"}:
+        status = "partial_available"
+    elif "unavailable" in statuses:
+        status = "unavailable"
+    elif "unsupported_geometry" in statuses:
+        status = "unsupported_geometry"
+    else:
+        status = "no_data"
+    message = {
+        "unavailable": "USDA CDL did not return a usable raster for any requested year.",
+        "unsupported_geometry": "The boundary exceeds the raster query limits at the requested years’ published resolution.",
+    }.get(status)
     return {
-        "tool": "cropland_data_layer_geometry",
-        "status": status,
-        "source": CROPSCAPE_CDL_VALUE_URL,
-        "cache_hit": all(bool(sample.get("cache_hit")) for sample in sample_payloads) if sample_payloads else False,
-        "geometry_type": geometry_type,
-        "bbox": [round(value, 7) for value in bbox],
-        "vertex_count": vertex_count,
-        "sample_point_count": len(points),
-        "years": list(clean_years),
-        "samples": sample_payloads[:80],
-        "sample_errors": errors[:20],
-        "year_summary": year_summary,
-        "boundary": (
-            "USDA NASS Cropland Data Layer boundary sampling is a small public crop-cover sample across the drawn "
-            "or uploaded geometry. Use it as crop-history/rotation context only; it is not acreage accounting, a "
-            "grower planting record, crop-insurance evidence, field boundary proof, or a substitute for local field history."
-        ),
+        **payload, "years": selected, "status": status, "coverage_by_year": records,
+        "message": message,
+        "cache_hit": all(record.get("cache_hit") for record in records.values()), "transport": "network",
+        "year_selection": {"selection": "explicit_years" if requested else "latest_advertised_years",
+                           "available_years": sorted(catalog), "response_sha256": digest, "fetched_at": dt.datetime.now(dt.UTC).isoformat()},
     }
 
 
@@ -3648,30 +3649,6 @@ def _is_missing_power_value(value: Any) -> bool:
     return not math.isfinite(numeric) or math.isclose(numeric, -999.0) or math.isclose(numeric, -9999.0)
 
 
-def _default_cdl_year(today: dt.date | None = None) -> int:
-    current = today or dt.datetime.now(dt.UTC).date()
-    if current.month >= 3:
-        return min(DEFAULT_CDL_YEAR, current.year - 1)
-    return min(DEFAULT_CDL_YEAR, current.year - 2)
-
-
-def _cdl_geometry_years(years: tuple[int, ...] | None = None) -> tuple[int, ...]:
-    if years:
-        clean = sorted({int(year) for year in years}, reverse=True)
-    else:
-        latest = _default_cdl_year()
-        clean = [latest - offset for offset in range(DEFAULT_CDL_GEOMETRY_YEARS)]
-    if not clean:
-        raise ValueError("at least one CDL year is required")
-    if len(clean) > 5:
-        raise ValueError("CDL geometry sampling supports at most five years per call")
-    current_year = dt.datetime.now(dt.UTC).year
-    for year in clean:
-        if year < 2008 or year > current_year:
-            raise ValueError("CDL years must be between 2008 and the current year")
-    return tuple(clean)
-
-
 def _sample_geojson_geometry(geometry: dict[str, Any], max_points: int = DEFAULT_CDL_SAMPLE_POINTS) -> tuple[str, tuple[float, float, float, float], int, list[tuple[float, float]]]:
     if not isinstance(geometry, dict):
         raise ValueError("geometry must be a GeoJSON geometry object")
@@ -3727,86 +3704,6 @@ def _sample_polygon_points(rings: list[list[tuple[float, float]]], max_points: i
     if not out:
         raise ValueError("polygon has no sampling point at supported coordinate precision")
     return out
-
-
-def _summarize_cdl_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:
-    by_year: dict[int, dict[str, Any]] = {}
-    for sample in samples:
-        year = int(sample.get("year") or 0)
-        if not year:
-            continue
-        summary = by_year.setdefault(year, {"sample_count": 0, "classes": {}})
-        summary["sample_count"] += 1
-        code = sample.get("cdl_code")
-        label = sample.get("cdl_label") or (CDL_CODE_LABELS.get(int(code)) if isinstance(code, int) else None) or "Unknown"
-        key = str(code if code is not None else "unknown")
-        item = summary["classes"].setdefault(key, {"cdl_code": code, "cdl_label": label, "count": 0})
-        item["count"] += 1
-    out: dict[str, Any] = {}
-    for year, summary in sorted(by_year.items(), reverse=True):
-        classes = sorted(summary["classes"].values(), key=lambda item: item["count"], reverse=True)
-        dominant = classes[0] if classes else None
-        out[str(year)] = {
-            "sample_count": summary["sample_count"],
-            "dominant_class": dominant,
-            "classes": classes,
-        }
-    return out
-
-
-def _aafc_annual_crop_inventory_point(
-    *,
-    latitude: float,
-    longitude: float,
-    year: int,
-    cache_dir: str,
-    timeout: int,
-) -> dict[str, Any]:
-    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-        raise ValueError("latitude/longitude out of range")
-    cache_path = repo_path(cache_dir) / _safe_name(
-        f"aafc_aci_{AAFC_ACI_CACHE_VERSION}_{year}_{latitude:.7f}_{longitude:.7f}"
-    )
-    cache_path = cache_path.with_suffix(".json")
-    if cache_path.exists():
-        payload = json.loads(cache_path.read_text(encoding="utf-8"))
-        payload["cache_hit"] = True
-        return payload
-    source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.format(year=year)
-    geometry = {"x": longitude, "y": latitude, "spatialReference": {"wkid": 4326}}
-    query = urllib.parse.urlencode(
-        {
-            "geometry": json.dumps(geometry, separators=(",", ":")),
-            "geometryType": "esriGeometryPoint",
-            "returnGeometry": "false",
-            "returnCatalogItems": "false",
-            "returnPixelValues": "true",
-            "f": "json",
-        }
-    )
-    url = f"{source}/identify?{query}"
-    request = urllib.request.Request(url, headers={"User-Agent": "agronomy-agent-local-tools/0.1"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        data = json.loads(response.read().decode("utf-8", errors="replace"))
-    if data.get("error"):
-        raise RuntimeError(f"AAFC Annual Crop Inventory identify error: {data['error'].get('message') or data['error']}")
-    raw_value = data.get("value")
-    try:
-        code = int(str(raw_value)) if str(raw_value).strip().isdigit() else None
-    except (TypeError, ValueError):
-        code = None
-    summary = {
-        "latitude": round(latitude, 7),
-        "longitude": round(longitude, 7),
-        "aci_code": code,
-        "aci_label": AAFC_ACI_CODE_LABELS.get(code) if code is not None else None,
-        "raw_value": str(raw_value)[:80] if raw_value is not None else None,
-        "source": source,
-        "cache_hit": False,
-    }
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    return summary
 
 
 def _validate_canadian_nasdi_point(*, latitude: float, longitude: float) -> None:
@@ -4022,70 +3919,6 @@ def _aafc_nasdi_value_direction(indicator: str, value: float | None) -> str | No
     if abs(value) < 0.05:
         return "near_zero_standardized_anomaly"
     return "positive_standardized_anomaly" if value > 0 else "negative_standardized_anomaly"
-
-
-def _summarize_aafc_aci_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:
-    classes: dict[str, dict[str, Any]] = {}
-    for sample in samples:
-        code = sample.get("aci_code")
-        label = sample.get("aci_label") or (AAFC_ACI_CODE_LABELS.get(int(code)) if isinstance(code, int) else None) or "Unknown"
-        key = str(code if code is not None else "unknown")
-        item = classes.setdefault(key, {"aci_code": code, "aci_label": label, "count": 0})
-        item["count"] += 1
-    ordered = sorted(classes.values(), key=lambda item: item["count"], reverse=True)
-    return {"sample_count": len(samples), "dominant_class": ordered[0] if ordered else None, "classes": ordered}
-
-
-def _parse_cdl_value_response(raw: str) -> tuple[int | None, str | None]:
-    text = re.sub(r"<[^>]+>", " ", raw).strip()
-    match = re.search(r"\b(\d{1,3})\b(?:\s*[:,-]\s*([A-Za-z0-9][A-Za-z0-9/ &._-]+))?", text)
-    if not match:
-        return None, None
-    code = int(match.group(1))
-    label = (match.group(2) or "").strip() or CDL_CODE_LABELS.get(code)
-    return code, label
-
-
-def _lonlat_to_usgs_conus_albers(*, longitude: float, latitude: float) -> tuple[float, float]:
-    # CropScape expects the USA Contiguous Albers Equal Area Conic projection
-    # documented by NASS. Parameters match the USGS/NAD83 Albers definition.
-    semi_major = 6_378_137.0
-    inverse_flattening = 298.257222101
-    flattening = 1 / inverse_flattening
-    eccentricity = math.sqrt(2 * flattening - flattening * flattening)
-    lat_1 = math.radians(29.5)
-    lat_2 = math.radians(45.5)
-    lat_0 = math.radians(23.0)
-    lon_0 = math.radians(-96.0)
-    phi = math.radians(latitude)
-    lam = math.radians(longitude)
-
-    def m(angle: float) -> float:
-        sin_phi = math.sin(angle)
-        return math.cos(angle) / math.sqrt(1 - eccentricity * eccentricity * sin_phi * sin_phi)
-
-    def q(angle: float) -> float:
-        sin_phi = math.sin(angle)
-        e_sin = eccentricity * sin_phi
-        return (1 - eccentricity * eccentricity) * (
-            sin_phi / (1 - e_sin * e_sin)
-            - (1 / (2 * eccentricity)) * math.log((1 - e_sin) / (1 + e_sin))
-        )
-
-    m1 = m(lat_1)
-    m2 = m(lat_2)
-    q1 = q(lat_1)
-    q2 = q(lat_2)
-    q0 = q(lat_0)
-    q_phi = q(phi)
-    n = (m1 * m1 - m2 * m2) / (q2 - q1)
-    c_value = m1 * m1 + n * q1
-    rho = semi_major * math.sqrt(c_value - n * q_phi) / n
-    rho0 = semi_major * math.sqrt(c_value - n * q0) / n
-    theta = n * (lam - lon_0)
-    x = rho * math.sin(theta)
-    y = rho0 - rho * math.cos(theta)
-    return x, y
 
 
 def _quickstats_api_key(explicit_key: str | None = None) -> str | None:

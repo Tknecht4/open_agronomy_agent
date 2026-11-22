@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import shutil
@@ -286,7 +287,7 @@ def _call_adapter(context: dict[str, Any], adapter_id: str, *, timeout: int, cac
             geometry=_field_polygon(longitude, latitude),
             crop=str(context["crop"]),
             province=str(context.get("province") or ""),
-            sample_points=2,
+            year=2024,
             cache_dir=cache_dir,
             timeout=timeout,
         )
@@ -346,13 +347,9 @@ def _case_failures(case_id: str, adapter_id: str, payload: dict[str, Any], *, li
     elif adapter_id == "cropland_data_layer_point":
         if not payload.get("cdl_label"):
             failures.append(f"{case_id}: CDL point label missing")
-        if "not a grower planting record" not in str(payload.get("boundary") or ""):
-            failures.append(f"{case_id}: missing CDL point boundary")
     elif adapter_id == "cropland_data_layer_geometry":
-        if payload.get("status") != "available" or not payload.get("year_summary"):
-            failures.append(f"{case_id}: CDL boundary year summary missing")
-        if "not acreage accounting" not in str(payload.get("boundary") or ""):
-            failures.append(f"{case_id}: missing CDL boundary limitation")
+        if not any(row.get("classified_fraction") for row in (payload.get("coverage_by_year") or {}).values()):
+            failures.append(f"{case_id}: CDL boundary coverage missing")
     elif adapter_id == "nass_quickstats_crop_stats":
         if payload.get("status") == "not_configured" and live:
             failures.append(f"{case_id}: live Quick Stats credential is not configured")
@@ -391,12 +388,8 @@ def _case_failures(case_id: str, adapter_id: str, payload: dict[str, Any], *, li
         if "not legal label interpretation" not in str(payload.get("boundary") or ""):
             failures.append(f"{case_id}: missing PMRA label boundary")
     elif adapter_id == "aafc_annual_crop_inventory":
-        summary = payload.get("class_summary") or {}
-        dominant = summary.get("dominant_class") or {}
-        if payload.get("status") not in {"available", "partial_available"} or not dominant.get("aci_label"):
-            failures.append(f"{case_id}: AAFC Annual Crop Inventory class sample missing")
-        if "not a grower planting record" not in str(payload.get("boundary") or ""):
-            failures.append(f"{case_id}: missing AAFC crop-cover boundary")
+        if not any(row.get("classified_fraction") for row in (payload.get("coverage_by_year") or {}).values()):
+            failures.append(f"{case_id}: AAFC Annual Crop Inventory boundary coverage missing")
     elif adapter_id == "statcan_field_crop_statistics":
         production = ((payload.get("statistics") or {}).get("production_metric_tonnes") or {}).get("latest") or {}
         if payload.get("status") != "available" or production.get("value") is None:
@@ -452,7 +445,7 @@ def _case_key_facts(adapter_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if adapter_id == "cropland_data_layer_point":
         return {"year": payload.get("year"), "cdl_code": payload.get("cdl_code"), "cdl_label": payload.get("cdl_label")}
     if adapter_id == "cropland_data_layer_geometry":
-        return {"year_summary": payload.get("year_summary") or {}, "sample_point_count": payload.get("sample_point_count")}
+        return {"coverage_by_year": payload.get("coverage_by_year") or {}}
     if adapter_id == "nass_quickstats_crop_stats":
         return {
             "crop": payload.get("crop"),
@@ -480,8 +473,7 @@ def _case_key_facts(adapter_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     if adapter_id == "aafc_annual_crop_inventory":
         return {
             "year": payload.get("year"),
-            "sample_point_count": payload.get("sample_point_count"),
-            "class_summary": payload.get("class_summary") or {},
+            "coverage_by_year": payload.get("coverage_by_year") or {},
         }
     if adapter_id == "statcan_field_crop_statistics":
         return {
@@ -610,10 +602,14 @@ class _FakeResponse:
     def __exit__(self, *_: object) -> None:
         return None
 
-    def read(self) -> bytes:
-        if isinstance(self.payload, str):
-            return self.payload.encode("utf-8")
-        return json.dumps(self.payload).encode("utf-8")
+    def read(self, size: int = -1) -> bytes:
+        if isinstance(self.payload, bytes):
+            raw = self.payload
+        elif isinstance(self.payload, str):
+            raw = self.payload.encode("utf-8")
+        else:
+            raw = json.dumps(self.payload).encode("utf-8")
+        return raw if size < 0 else raw[:size]
 
 
 def _offline_urlopen(request: Any, timeout: int = 12) -> _FakeResponse:  # noqa: ARG001
@@ -628,8 +624,14 @@ def _offline_urlopen(request: Any, timeout: int = 12) -> _FakeResponse:  # noqa:
         return _FakeResponse(_nasa_power_fixture())
     if local_tools.DAYMET_SINGLE_PIXEL_API_URL in url:
         return _FakeResponse(_daymet_csv_fixture())
-    if local_tools.CROPSCAPE_CDL_VALUE_URL in url:
-        return _FakeResponse(_cdl_fixture(decoded_url))
+    if url.startswith(local_tools.crop_cover.CDL_IMAGE_SERVER):
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+        if "/query?" in url:
+            features = [{"attributes": {"Year": year, "OBJECTID": year, "Name": f"{year}_{resolution}m_cdls"}}
+                        for year, resolution in ((2023, 30), (2024, 10))]
+            return _FakeResponse({"features": features})
+        year = json.loads(query["mosaicRule"][0])["lockRasterIds"][0]
+        return _FakeResponse(_crop_cover_export_fixture(query, 5 if year == 2023 else 1))
     if url.startswith(local_tools.NASS_QUICKSTATS_API_URL):
         parsed = urllib.parse.urlparse(url)
         query = urllib.parse.parse_qs(parsed.query)
@@ -640,8 +642,9 @@ def _offline_urlopen(request: Any, timeout: int = 12) -> _FakeResponse:  # noqa:
         return _FakeResponse(_ppls_fixture(decoded_url))
     if url.startswith(local_tools.PMRA_PPID_EXTRACT_BASE_URL):
         return _FakeResponse(_pmra_fixture(url))
-    if "/annual_crop_inventory/" in url and "/ImageServer/identify" in url:
-        return _FakeResponse(_aafc_aci_fixture(decoded_url))
+    if "/annual_crop_inventory/" in url and "/ImageServer/exportImage" in url:
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+        return _FakeResponse(_crop_cover_export_fixture(query, 153))
     if "/rest/services/nasdi/" in url and "/ImageServer/query" in url:
         return _FakeResponse(_aafc_nasdi_catalog_fixture(url))
     if "/rest/services/nasdi/" in url and "/ImageServer/identify" in url:
@@ -704,18 +707,31 @@ def _daymet_csv_fixture() -> str:
     )
 
 
-def _cdl_fixture(decoded_url: str) -> str:
-    if "year=2023" in decoded_url:
-        return "5: Soybeans"
-    return "1: Corn"
+def _crop_cover_export_fixture(query: dict[str, list[str]], code: int, codes: Any = None, *,
+                               epsg: int | None = None, sparse: bool = False) -> bytes:
+    import numpy as np
+    from tifffile import TiffFile, imwrite
 
-
-def _aafc_aci_fixture(decoded_url: str) -> dict[str, Any]:
-    if "-106.0" in decoded_url or "-106%2E" in decoded_url:
-        value = "153"
-    else:
-        value = "158"
-    return {"objectId": 0, "name": "Pixel", "value": value, "properties": None}
+    width, height = map(int, query["size"][0].split(","))
+    west, south, east, north = map(float, query["bbox"][0].split(","))
+    crs = epsg if epsg is not None else int(query["imageSR"][0])
+    tags = [
+        (33550, "d", 3, ((east - west) / width, (north - south) / height, 0), False),
+        (33922, "d", 6, (0, 0, 0, west, north, 0), False),
+        (34735, "H", 16, (1, 1, 0, 3, 1024, 0, 1, 1, 1025, 0, 1, 1, 3072, 0, 1, crs), False),
+        (42113, "s", 2, "0", False),
+    ]
+    with io.BytesIO() as output:
+        values = np.full((height, width), code, dtype=np.uint8) if codes is None else np.asarray(codes, dtype=np.uint8).reshape(height, width)
+        imwrite(output, values, extratags=tags, tile=(16, 16) if sparse else None, metadata=None)
+        if sparse:
+            output.seek(0)
+            with TiffFile(output, mode="r+b") as image:
+                page = image.pages[0]
+                zeros = (0,) * len(page.dataoffsets)
+                page.tags[324].overwrite(zeros)
+                page.tags[325].overwrite(zeros)
+        return output.getvalue()
 
 
 def _aafc_nasdi_catalog_fixture(url: str) -> dict[str, Any]:

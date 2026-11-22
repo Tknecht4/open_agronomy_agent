@@ -862,10 +862,10 @@ def test_aci_latest_catalog_receipt_does_not_change_pinned_year(monkeypatch, tmp
     calls = []
     monkeypatch.setattr(local_tools.urllib.request, 'urlopen', lambda request, timeout: calls.append(request.full_url) or io.BytesIO(raw))
     sampled = []
-    def point(**kwargs):
+    def point(geometry, **kwargs):
         sampled.append(kwargs['year'])
-        return {'aci_code': 133, 'aci_label': 'Barley', 'cache_hit': False}
-    monkeypatch.setattr(local_tools, '_aafc_annual_crop_inventory_point', point)
+        return {'point_class': {'code': 133, 'label': 'Barley'}, 'status': 'available', 'cache_hit': False}
+    monkeypatch.setattr(local_tools, '_query_crop_cover', point)
     result = local_tools.aafc_annual_crop_inventory(latitude=53.3, longitude=-113.6, year=None, cache_dir=str(tmp_path))
     assert sampled == [2025]
     assert result['year_selection']['available_years'] == [2024, 2025]
@@ -884,40 +884,3 @@ def test_aci_discovery_failure_and_offline_do_not_guess_latest(monkeypatch, tmp_
     with pytest.raises(RuntimeError, match='no supported'):
         local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path))
     assert not list(tmp_path.glob('*.json'))
-
-
-@pytest.mark.parametrize("country", ["US", "CA"])
-@pytest.mark.parametrize("dispositions,expected", [
-    (("class", "class", "class"), "available"),
-    (("class", "empty", "error"), "partial_available"),
-    (("class", "empty", "empty"), "partial_available"),
-    (("class", "cloud", "cloud"), "partial_available"),
-    (("empty", "empty", "empty"), "no_data"),
-    (("cloud", "cloud", "cloud"), "no_data"),
-    (("empty", "error", "error"), "unavailable"),
-])
-def test_crop_cover_distinguishes_missing_samples_from_provider_errors(country, dispositions, expected, monkeypatch):
-    from agronomy_agent import local_tools
-
-    geometry = {"type": "Polygon", "coordinates": [[
-        [-105, 49], [-104.996, 49], [-104.996, 49.003], [-105, 49.003], [-105, 49],
-    ]]}
-    responses = iter(dispositions)
-    def point(**kwargs):
-        disposition = next(responses)
-        if disposition == "error":
-            raise OSError("synthetic provider failure")
-        if country == "US":
-            return {"cdl_code": {"class": 1, "cloud": 81, "empty": 0}[disposition]}
-        return {"aci_code": {"class": 147, "cloud": 10, "empty": None}[disposition]}
-
-    if country == "US":
-        monkeypatch.setattr(local_tools, "cropland_data_layer_point", point)
-        result = local_tools.cropland_data_layer_geometry(geometry, years=(2025,), sample_points=3)
-        assert sum(entry["sample_count"] for entry in result["year_summary"].values()) == dispositions.count("class")
-    else:
-        monkeypatch.setattr(local_tools, "_aafc_annual_crop_inventory_point", point)
-        result = local_tools.aafc_annual_crop_inventory(geometry=geometry, year=2025, sample_points=3)
-        assert (result["class_summary"] or {}).get("sample_count", 0) == dispositions.count("class")
-    assert result["status"] == expected
-    assert len(result["sample_errors"]) == dispositions.count("error")

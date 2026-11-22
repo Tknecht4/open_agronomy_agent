@@ -80,6 +80,27 @@ describe('source card normalization', () => {
     expect(card.limitation).toContain('not a planting record')
   })
 
+  it('reports mixed cover and the unclassified share on both country cards', () => {
+    for (const name of ['cropland_data_layer_geometry', 'aafc_annual_crop_inventory']) {
+      const card = buildPublicToolCard({
+        name,
+        payload: {
+          kind: 'public_adapter',
+          status: 'partial_available',
+          summary: {
+            coverage_by_year: {
+              '2025': {
+                classification_status: 'mixed', classified_fraction: 0.95,
+                classes: [{ label: 'Corn', field_fraction: 0.68 }, { label: 'Soybeans', field_fraction: 0.27 }],
+              },
+            },
+          },
+        },
+      })
+      expect(card.facts).toEqual(['2025 · Mixed mapped cover · Corn 68%, Soybeans 27% of field · 95% classified'])
+    }
+  })
+
   it('marks missing Quick Stats credentials as attention instead of available evidence', () => {
     const card = buildPublicToolCard({
       name: 'nass_quickstats_crop_stats',
