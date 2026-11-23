@@ -268,6 +268,13 @@ class TraceOptions(BaseModel):
     redaction_mode: RedactionMode = "none"
 
 
+class ImageryComparisonSelection(BaseModel):
+    model_config = {"extra": "forbid"}
+    first_job_id: UUID
+    second_job_id: UUID
+    geometry_revision_id: str = Field(min_length=1, max_length=80)
+
+
 class CreateTurnRequest(BaseModel):
     message: str
     mode: Mode
@@ -279,11 +286,18 @@ class CreateTurnRequest(BaseModel):
     trace_options: TraceOptions = Field(default_factory=TraceOptions)
     readiness_binding: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     imagery_job_id: UUID | None = None
+    imagery_comparison: ImageryComparisonSelection | None = None
 
     @model_validator(mode="after")
     def _validate_imagery_mode(self) -> CreateTurnRequest:
-        if self.imagery_job_id is not None and self.mode != "agronomic_rag":
+        if self.imagery_job_id is not None and self.imagery_comparison is not None:
+            raise ValueError("Attach either one analysis or a comparison")
+        if (self.imagery_job_id is not None or self.imagery_comparison is not None) and self.mode != "agronomic_rag":
             raise ValueError("Selected imagery requires agronomic mode")
+        if self.imagery_comparison is not None:
+            from agronomy_agent.imagery_comparison_presentation import COMPARISON_QUESTION
+            if self.message.strip() != COMPARISON_QUESTION:
+                raise ValueError("Remove the comparison attachment to ask a different question")
         return self
 
     @field_validator("message")
@@ -889,6 +903,15 @@ class FieldEventCreate(BaseModel):
             raise ValueError("correction events require corrects_event_id")
         if self.event_type != "correction" and self.corrects_event_id is not None:
             raise ValueError("corrects_event_id is only valid for correction events")
+        if "scouting_location" in self.payload:
+            location = self.payload["scouting_location"]
+            if (self.event_type not in {"observation", "correction"} or not isinstance(location, str)
+                    or not 0 < len(location.strip()) <= 120 or not location.strip().isprintable()):
+                raise ValueError("scouting_location must be a short location on a field observation")
+            if self.provenance.get("observation_time_status") == "user_supplied" and (
+                self.occurred_at is None or self.occurred_at.tzinfo is None
+            ):
+                raise ValueError("A dated scouting location requires an explicit observation time with timezone")
         return self
 
 

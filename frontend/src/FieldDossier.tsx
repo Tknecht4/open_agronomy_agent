@@ -1,3 +1,4 @@
+import type { ImageryComparisonSelection } from './turnReadiness'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { apiGet, apiPatch, apiPost, apiPut } from './api'
 import { recoverableLazy as lazy } from './WorkspaceSectionBoundary'
@@ -17,7 +18,7 @@ type LocationSuggestions = { status: string; message: string; boundary: string; 
 
 export default function FieldDossier({ fieldId, season, tab, farms, allowNetwork, unit, onTab, onChanged, onEdit, onAsk }: {
   fieldId: string; season: number; tab: string; farms: Farm[]; allowNetwork: boolean; unit: 'ac' | 'ha'
-  onTab: (tab: string) => void; onChanged: () => void; onEdit: () => void; onAsk: (question?: string, imageryJobId?: string) => void
+  onTab: (tab: string) => void; onChanged: () => void; onEdit: () => void; onAsk: (question?: string, imageryJobId?: string, comparison?: ImageryComparisonSelection) => void
 }) {
   const [field, setField] = useState<FieldSummary | null>(null)
   const [error, setError] = useState('')

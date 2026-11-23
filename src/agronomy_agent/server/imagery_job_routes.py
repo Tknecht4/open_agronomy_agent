@@ -11,7 +11,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agronomy_agent.server.field_data_routes import FieldImageryAnalyzeRequest
 from agronomy_agent.server.storage import imagery_job_store as jobs
+from agronomy_agent.server.schemas import ImageryComparisonSelection
 from agronomy_agent.server.services import imagery_service
+from agronomy_agent.server.services.imagery_comparison_service import ComparisonConflict, bind_selection, compare_selection
+from agronomy_agent.imagery_comparison_presentation import COMPARISON_QUESTION
 
 _SLOT = threading.BoundedSemaphore(1)
 
@@ -91,6 +94,20 @@ def register_imagery_job_routes(app: FastAPI, *, store: Any, settings: Any, auth
         authorize(request, field_id, False)
         local()
         return {"jobs": [public(job) for job in jobs.list_jobs(store, field_id)], "limit": 30}
+
+    @app.post("/api/fields/{field_id}/imagery-comparison")
+    def comparison(field_id: str, payload: ImageryComparisonSelection, request: Request, response: Response) -> dict:
+        field, _ = authorize(request, field_id, False)
+        local()
+        try:
+            pair = bind_selection(store, field, payload)
+            result = compare_selection(store, settings, field, pair, maps=True)
+        except LookupError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except ComparisonConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
+        response.headers["Cache-Control"] = "private, no-store"
+        return {**result, "question": COMPARISON_QUESTION}
 
     @app.get("/api/imagery-jobs/{job_id}")
     def status(job_id: str, request: Request) -> dict:

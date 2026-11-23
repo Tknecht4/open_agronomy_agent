@@ -6,13 +6,14 @@ import { measurementLabel, soilMeasurements } from './fieldLabels'
 import { recordLabel, type SavedRecord } from './RecordDetails'
 
 type Analyte = { custom?: boolean; metric: string; value: string; unit: string; method: string }
-type Draft = { kind: string; summary: string; occurred: string; sample: string; lab: string; depthTop: string; depthBottom: string; depthUnit: string; scope: string; analytes: Analyte[]; correction: string; operation: string; group: string; signature: string }
+type Draft = { scoutingLocation?: string; kind: string; summary: string; occurred: string; sample: string; lab: string; depthTop: string; depthBottom: string; depthUnit: string; scope: string; analytes: Analyte[]; correction: string; operation: string; group: string; signature: string }
 const blank = (): Draft => ({ kind: 'observation', summary: '', occurred: '', sample: '', lab: '', depthTop: '', depthBottom: '', depthUnit: 'cm', scope: 'composite', analytes: [{ metric: '', value: '', unit: '', method: '' }], correction: '', operation: crypto.randomUUID(), group: crypto.randomUUID(), signature: '' })
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function validDraft(value: unknown, correction: string): value is Draft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Draft
   return ['kind', 'summary', 'occurred', 'sample', 'lab', 'depthTop', 'depthBottom', 'depthUnit', 'scope', 'correction', 'operation', 'group', 'signature'].every(key => typeof draft[key as keyof Draft] === 'string')
+    && (draft.scoutingLocation === undefined || typeof draft.scoutingLocation === 'string')
     && draft.correction === correction && uuid.test(draft.operation)
     && Array.isArray(draft.analytes) && draft.analytes.length > 0 && draft.analytes.length <= 50
     && draft.analytes.every(row => row && ['metric', 'value', 'unit', 'method'].every(key => typeof row[key as keyof Analyte] === 'string'))
@@ -28,9 +29,16 @@ export function hasUnconfirmedRecordDraft(fieldId: string, season: number, corre
   } catch { return false }
 }
 
+function recordTimeInput(event: SavedRecord): string {
+  if (event.provenance.sampling_time_status === 'unknown' || event.provenance.observation_time_status === 'unknown') return ''
+  const occurred = new Date(event.occurred_at)
+  return new Date(occurred.getTime() - occurred.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
 function correctionDraft(event: SavedRecord): Draft {
     const measurement = event.payload.measurement as Record<string, unknown> | undefined
-    const next = { ...blank(), summary: recordLabel(event), correction: event.id, occurred: (event.provenance.sampling_time_status === 'unknown' || event.provenance.observation_time_status === 'unknown') ? '' : new Date(new Date(event.occurred_at).getTime() - new Date(event.occurred_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16), kind: measurement ? 'sample' : event.event_type === 'correction' ? 'observation' : event.event_type }
+    const next = { ...blank(), summary: recordLabel(event), correction: event.id, occurred: recordTimeInput(event), kind: measurement ? 'sample' : event.event_type === 'correction' ? 'observation' : event.event_type }
+    if (typeof event.payload.scouting_location === 'string') next.scoutingLocation = event.payload.scouting_location
     if (measurement) {
       const depth = measurement.sample_depth as { top: number; bottom: number; unit: string }
       Object.assign(next, { sample: String(measurement.sample_id), lab: String(measurement.lab_name || ''), depthTop: String(depth.top), depthBottom: String(depth.bottom), depthUnit: depth.unit, scope: String(measurement.spatial_scope), analytes: [{ metric: String(measurement.metric), value: String(measurement.value), unit: String(measurement.unit), method: String(measurement.method) }] })
@@ -38,15 +46,32 @@ function correctionDraft(event: SavedRecord): Draft {
     return next
   }
 
-function draftEvents(draft: Draft, season: number) {
+function draftEvents(draft: Draft, season: number, original?: SavedRecord, retainObservationOffset = true) {
       if (draft.kind !== 'sample' && !draft.summary.trim()) throw new Error('Enter a record before saving.')
-      const common = { ...(draft.occurred ? { occurred_at: new Date(draft.occurred).toISOString() } : {}), provenance: { capture_method: draft.kind === 'sample' ? 'user_transcribed_lab_report' : 'grower_entry', original_report_retained: false, ...(draft.kind === 'sample' ? { sampling_time_status: draft.occurred ? 'user_supplied' : 'unknown' } : { observation_time_status: draft.occurred ? 'user_supplied' : 'unknown' }), ...(draft.kind === 'sample' && draft.occurred ? { sampled_at: new Date(draft.occurred).toISOString() } : {}) } }
+      const retainedTime = original && draft.occurred === recordTimeInput(original) ? original : undefined
+      const retainedOffset = retainedTime?.provenance.observation_utc_offset_minutes
+      const occurred = draft.occurred
+        ? new Date(retainedTime && typeof retainedOffset === 'number' ? retainedTime.occurred_at : draft.occurred)
+        : null
+      const occurredAt = occurred?.toISOString()
+      const timeStatus = occurred ? 'user_supplied' : 'unknown'
+      const recordedOffset = retainedTime ? retainedOffset : occurred && -occurred.getTimezoneOffset()
+      const common = {
+        ...(occurredAt ? { occurred_at: occurredAt } : {}),
+        provenance: {
+          capture_method: draft.kind === 'sample' ? 'user_transcribed_lab_report' : 'grower_entry',
+          original_report_retained: false,
+          ...(draft.kind === 'sample' ? { sampling_time_status: timeStatus, ...(occurredAt ? { sampled_at: occurredAt } : {}) } : { observation_time_status: timeStatus }),
+          ...(retainObservationOffset && occurred && draft.kind === 'observation' && typeof recordedOffset === 'number'
+            ? { observation_utc_offset_minutes: recordedOffset } : {}),
+        },
+      }
       return draft.kind === 'sample' ? draft.analytes.map(analyte => {
         if (!analyte.value.trim() || !Number.isFinite(Number(analyte.value))) throw new Error('Enter a numeric value for every measurement; blank is not zero.')
         if (!draft.depthTop.trim() || !draft.depthBottom.trim()) throw new Error('Enter the sample depth; unknown depth cannot become zero.')
         if (Number(draft.depthBottom) <= Number(draft.depthTop)) throw new Error('The bottom of the sample must be deeper than the top.')
         return { ...common, event_type: draft.correction ? 'correction' : 'sample', ...(draft.correction ? { corrects_event_id: draft.correction } : {}), payload: { season, report_group: draft.group || draft.operation, summary: draft.summary || `${draft.sample}: ${analyte.metric} ${analyte.value} ${analyte.unit}`, measurement: { schema_version: 'open_agronomy_agent.field_measurement.v1', kind: 'soil_test', sample_id: draft.sample, metric: analyte.metric.trim().toLowerCase(), value: Number(analyte.value), unit: analyte.unit, method: analyte.method, sample_depth: { top: Number(draft.depthTop), bottom: Number(draft.depthBottom), unit: draft.depthUnit }, spatial_scope: draft.scope, source_quality: 'user_transcribed_lab_report', ...(draft.lab.trim() ? { lab_name: draft.lab } : {}) } } }
-      }) : [{ ...common, event_type: draft.correction ? 'correction' : draft.kind, ...(draft.correction ? { corrects_event_id: draft.correction } : {}), payload: { season, summary: draft.summary.trim() } }]
+      }) : [{ ...common, event_type: draft.correction ? 'correction' : draft.kind, ...(draft.correction ? { corrects_event_id: draft.correction } : {}), payload: { season, summary: draft.summary.trim(), ...(draft.kind === 'observation' && draft.scoutingLocation?.trim() ? { scouting_location: draft.scoutingLocation.trim() } : {}) } }]
 }
 
 // JSON objects may arrive in a different key order. Array order remains meaningful.
@@ -118,7 +143,7 @@ export default function RecordEntryDialog({ fieldId, fieldName, season, initialR
     const wasUncertain = Boolean(draft.signature)
     let dispatched = false
     try {
-      const events: ReturnType<typeof draftEvents> = draft.signature ? JSON.parse(draft.signature) : draftEvents(draft, season)
+      const events: ReturnType<typeof draftEvents> = draft.signature ? JSON.parse(draft.signature) : draftEvents(draft, season, initialRecord)
       if (!Array.isArray(events) || events.length < 1 || events.length > 50) throw new Error('The saved request is unreadable. Keep this draft and review the field timeline before continuing.')
       const attempt = { ...draft, signature: draft.signature || JSON.stringify(events) }
       // Capture exact JSON and UUID before dispatch. Reopening never rebuilds an uncertain payload.
@@ -128,7 +153,9 @@ export default function RecordEntryDialog({ fieldId, fieldName, season, initialR
       const saved = confirmedEvents(reply, events, fieldId)
       if (!mounted.current) return
       let newer = false
-      try { newer = !sameJSON(draftEvents(draft, season), events) } catch { newer = true }
+      // A captured request from an earlier version may predate observation offsets.
+      const retainObservationOffset = events.some(event => 'observation_utc_offset_minutes' in event.provenance)
+      try { newer = !sameJSON(draftEvents(draft, season, initialRecord, retainObservationOffset), events) } catch { newer = true }
       if (newer) {
         // Earlier app versions allowed edits after dispatch. Recover the old save first, then retain those edits.
         if (draft.correction && saved.length !== 1) throw new Error('The earlier save was confirmed, but its correction is ambiguous. Both the captured request and your edits have been kept for review.')
@@ -157,6 +184,7 @@ export default function RecordEntryDialog({ fieldId, fieldName, season, initialR
       {!draft.correction ? <label>Record type<select disabled={locked} value={draft.kind} onChange={event => change({ kind: event.target.value })}><option value="observation">Observation</option><option value="operation">Operation</option><option value="note">Note</option><option value="sample">Soil sample / report</option><option value="outcome">Outcome</option></select></label> : <p>The original record will remain available.</p>}
       <label>{draft.kind === 'sample' ? 'Sampled at (leave blank if unknown)' : 'Observed at (leave blank if unknown)'}<input disabled={locked} type="datetime-local" value={draft.occurred} onChange={event => change({ occurred: event.target.value })} /></label>
       <label>{draft.kind === 'sample' ? 'Report note (optional)' : 'What did you observe or do?'}<textarea disabled={locked} required={draft.kind !== 'sample'} data-dialog-initial-focus value={draft.summary} onChange={event => change({ summary: event.target.value })} maxLength={6000} /></label>
+      {draft.kind === 'observation' ? <label>Where in the field? (optional)<input disabled={locked} value={draft.scoutingLocation || ''} onChange={event => change({ scoutingLocation: event.target.value })} maxLength={120} /></label> : null}
       {draft.kind === 'sample' ? <><div className="farm-form-grid"><label>Sample ID<input disabled={locked} value={draft.sample} onChange={event => change({ sample: event.target.value })} required maxLength={128} /></label><label>Lab (optional)<input disabled={locked} value={draft.lab} onChange={event => change({ lab: event.target.value })} maxLength={160} /></label><label>Depth from<input disabled={locked} type="number" min="0" step="any" value={draft.depthTop} onChange={event => change({ depthTop: event.target.value })} required /></label><label>Depth to<input disabled={locked} type="number" min="0" step="any" value={draft.depthBottom} onChange={event => change({ depthBottom: event.target.value })} required /></label><label>Depth unit<select disabled={locked} value={draft.depthUnit} onChange={event => change({ depthUnit: event.target.value })}><option>cm</option><option>in</option></select></label><label>Sample scope<select disabled={locked} value={draft.scope} onChange={event => change({ scope: event.target.value })}>{['point', 'zone', 'composite', 'field'].map(value => <option key={value} value={value}>{({point: 'Single point', zone: 'Management zone', composite: 'Composite sample', field: 'Whole field'})[value]}</option>)}</select></label></div>
         <p>Enter values exactly as reported. Method, units and sample depth are required. This form records a transcription; keep the original lab report with your field records.</p>
         {draft.analytes.map((analyte, index) => <fieldset key={index} className="farm-analyte"><legend>Measurement {index + 1}</legend>{(['metric', 'value', 'unit', 'method'] as const).map(key => <label key={key}>{key === 'metric' ? 'Measurement' : key === 'value' ? 'Value' : key === 'unit' ? 'Unit' : 'Lab method'}{key === 'metric' ? <><select disabled={locked} aria-label={`Measurement ${index + 1}`} required value={analyte.custom ? "custom" : analyte.metric} onChange={event => change({ analytes: draft.analytes.map((row, i) => i === index ? { ...row, custom: event.target.value === "custom", metric: event.target.value === "custom" ? "" : event.target.value } : row) })}><option value="">Choose a measurement</option>{soilMeasurements.map(([id, label]) => <option key={id} value={id}>{label}</option>)}{analyte.metric && !soilMeasurements.some(([id]) => id === analyte.metric) ? <option value={analyte.metric}>{measurementLabel(analyte.metric)}</option> : null}<option value="custom">Other measurement</option></select>{analyte.custom ? <input disabled={locked} aria-label={`Measurement ${index + 1} identifier`} placeholder="e.g. zinc" required pattern="[a-z0-9][a-z0-9_.\x2d]*" maxLength={64} value={analyte.metric} onChange={event => updateAnalyte(index, key, event.target.value)} /> : null}</> : <input disabled={locked} aria-label={`Measurement ${index + 1} ${key}`} required inputMode={key === 'value' ? 'decimal' : undefined} value={analyte[key]} onChange={event => updateAnalyte(index, key, event.target.value)} />}</label>)}{draft.analytes.length > 1 ? <button type="button" disabled={locked} onClick={() => change({ analytes: draft.analytes.filter((_, i) => i !== index) })}>Remove measurement</button> : null}</fieldset>)}

@@ -48,7 +48,8 @@ def compile_field_context(
     retained_context = _live_context(safe_field.get("retained_public_context") or [])
     imported_data = safe_field.get("field_data") if isinstance(safe_field.get("field_data"), dict) else None
     imagery = (field_context or {}).get("imagery_observation")
-    status = "available" if map_context or live_context or retained_context or imported_data or imagery else "limited"
+    comparison = (field_context or {}).get("imagery_comparison_result")
+    status = "available" if map_context or live_context or retained_context or imported_data or imagery or comparison else "limited"
     receipt = {
         "schema_version": SCHEMA_VERSION,
         "status": status,
@@ -67,6 +68,8 @@ def compile_field_context(
     }
     if imagery:
         receipt["imagery_observation"] = imagery
+    if comparison:
+        receipt["imagery_comparison"] = comparison
     if imported_data:
         receipt["imported_data"] = imported_data
     return {"receipt": receipt, "prompt": render_field_context_prompt(receipt)}

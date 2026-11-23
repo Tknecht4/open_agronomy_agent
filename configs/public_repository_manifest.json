@@ -840,6 +840,7 @@
     "tests/test_farm_import.py",
     "tests/test_farm_workspace.py",
     "tests/test_imagery_chat.py",
+    "tests/test_imagery_comparison.py",
     "tests/test_imagery_jobs.py",
     "tests/test_sentinel2_app_receipts.py",
     "tests/test_boundary_import_lineage.py",
