@@ -78,6 +78,9 @@ def test_selected_job_reaches_actual_turn_prompt_verifier_and_source_card_offlin
         session = client.get(f"/api/sessions/{sid}", headers=OWNER).json()
         assert len(session["turns"]) == 1, response.text
         turn = session["turns"][0]
+        assert "Selected satellite image (2021-06-10)" in turn["answer"]
+        assert "75% of the analyzed area passed the quality checks" in turn["answer"]
+        assert "NDVI mean 0.5 from 2700 m² (75% of the analyzed area)" in turn["answer"]
         assert len(verifier_inputs) == 1, response.text
         for projection in (prompts[0], verifier_inputs[0]):
             assert "hls2-s30:fixture" in projection

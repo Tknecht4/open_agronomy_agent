@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import hashlib
+import datetime as dt
 
 import pytest
 
@@ -884,3 +885,32 @@ def test_aci_discovery_failure_and_offline_do_not_guess_latest(monkeypatch, tmp_
     with pytest.raises(RuntimeError, match='no supported'):
         local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path))
     assert not list(tmp_path.glob('*.json'))
+
+
+def test_chat_and_field_refresh_share_weather_window_and_reuse_complete_receipt(monkeypatch):
+    from agronomy_agent.server.services import field_enrichment
+
+    calls = []
+    window = local_tools.recent_nasa_power_window(dt.datetime.now(dt.UTC).date())
+    counts = {key: 7 for key in ("T2M", "PRECTOTCORR", "WS2M")}
+
+    def capture(name, payload, **kwargs):
+        assert name == "weather-power"
+        calls.append((payload["start"], payload["end"]))
+        return {"tool": "nasa_power_daily", "status": "available",
+                "start": payload["start"], "end": payload["end"],
+                "available_days_by_parameter": counts, "requested_day_count": 7,
+                "observed_day_count": 7}
+
+    monkeypatch.setattr(field_enrichment, "run_local_tool", capture)
+    monkeypatch.setattr(chat_service, "run_local_tool", capture)
+    field = {"metadata": {"open_agronomy_agent": {"geometry": {"kind": "point", "point": {"lat": 40, "lon": -100}}}}}
+    field_enrichment.run_source("weather", field, "online")
+    retained = chat_service._call_nasa_power(40, -100, timeout=1)
+    assert calls == [window, window]
+    retained["payload"]["receipt_sha256"] = "a" * 64
+    context = {"retained_public_context": [retained]}
+    assert chat_service._has_current_weather_window(context, window)
+    assert not chat_service._has_current_weather_window(context, ("20251001", "20251007"))
+    retained["payload"]["summary"]["available_days_by_parameter"]["WS2M"] = 6
+    assert not chat_service._has_current_weather_window(context, window)

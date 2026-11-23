@@ -480,3 +480,104 @@ def test_refresh_replaces_legacy_crop_samples_and_retains_mixed_cover_for_chat(s
         compiled = compile_field_context(projected, [], safe_field_summary=_safe_field_context_summary)
         assert "Corn for grain 70.0%, Soybeans 30.0% of the boundary" in compiled["prompt"]
         assert compiled["receipt"]["retained_context"][0]["snapshot_id"] == latest["snapshot_id"]
+
+
+@pytest.mark.parametrize("label", ["Decision:", "**Decision:**", "**Decision**:"])
+def test_record_summary_survives_actual_turn_verification(settings, monkeypatch, label):
+    from uuid import uuid4
+
+    from agronomy_agent.request_scope import information_request_kind
+    from agronomy_agent.server.services import chat_service
+
+    question = "Use my dated scouting observation to summarize what I saw, where and when I saw it, and what remains unknown."
+    assert information_request_kind(question) == "field_record_summary"
+    assert information_request_kind(question + " Also tell me what to apply.") is None
+    assert information_request_kind(question + " Diagnose the cause.") is None
+
+    note = "Leaves were pale at the west edge and green in the nearby interior. The cause was undetermined."
+    summary = f"On 2025-07-21 at 16:00:00Z, you checked the west edge and nearby interior. {note}"
+    draft = f"- {label} {question}\n\n{summary}"
+
+    class CapturingBackend:
+        def generate(self, messages):
+            return draft
+
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx")
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *args: CapturingBackend())
+    with TestClient(create_app(settings)) as client:
+        field_id = create_field(client)["id"]
+        saved = client.post(f"/api/fields/{field_id}/records", headers=OWNER, json={
+            "operation_id": str(uuid4()), "events": [{
+                "event_type": "observation", "occurred_at": "2025-07-21T16:00:00Z",
+                "payload": {"season": 2025, "summary": note},
+            }],
+        })
+        assert saved.status_code == 201, saved.text
+        session = client.post("/api/sessions", headers=OWNER, json={
+            "title": "Scouting summary", "consent": {},
+            "context": {"field_context_id": field_id, "field_season": 2025},
+        })
+        assert session.status_code == 200, session.text
+        response = client.post(f"/api/sessions/{session.json()['session_id']}/turns", headers=OWNER,
+                               json={"message": question, "mode": "agronomic_rag"})
+        assert response.status_code == 200, response.text
+        turn = response.json()["turn"]
+        assert turn["answer"] == summary, turn["trace"]["metadata"]["answer_verification"]
+        assert not turn["trace"]["metadata"]["answer_verification"]["fallback_applied"]
+
+
+def test_verified_retained_nrcs_soil_reaches_offline_answer_evidence(settings, monkeypatch):
+    from agronomy_agent.server.services import chat_service, field_enrichment
+
+    def retained_soil(name, arguments, **kwargs):
+        assert name == "nrcs-soil-survey-geometry"
+        return {"tool": "nrcs_soil_survey_geometry", "status": "available",
+                "source": "https://example.test/soil", "map_unit_count": 1,
+                "map_units": [{"mukey": "12345", "musym": "A7", "muname": "Synthetic loam complex"}],
+                "boundary": "The soil survey describes mapped context."}
+
+    class CapturingBackend:
+        def generate(self, messages):
+            return "The map shows the Synthetic loam complex as a regional prior."
+
+    monkeypatch.setattr(field_enrichment, "run_local_tool", retained_soil)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx")
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *args: CapturingBackend())
+    with TestClient(create_app(settings)) as client:
+        response = client.post("/api/demo/fields", headers=OWNER, json={
+            "name": "US soil fixture", "field": {"jurisdiction": "Iowa"},
+            "geometry": {"kind": "point", "point": {"lat": 41, "lon": -96}},
+        })
+        assert response.status_code == 201, response.text
+        field_id = response.json()["field"]["id"]
+        base = f"/api/fields/{field_id}"
+        response = client.post(base + "/enrichment-jobs", headers=OWNER, json={"sources": ["soil"]})
+        assert response.status_code == 202, response.text
+        source = client.get(base + "/summary", headers=OWNER).json()["source_status"]["soil"]
+        assert source["availability"] == "available"
+        session_id = client.post("/api/sessions", headers=OWNER, json={
+            "title": "Offline mapped evidence", "consent": {}, "context": {"field_context_id": field_id},
+        }).json()["session_id"]
+        path = f"/api/sessions/{session_id}/turns"
+        response = client.post(path, headers=OWNER, json={
+            "message": "What information do I have for scouting this field?",
+            "mode": "agronomic_rag", "trace_options": {"store_prompt_messages": True},
+        })
+        assert response.status_code == 200, response.text
+        trace = response.json()["turn"]["trace"]
+        record = trace["metadata"]["field_context_compiler"]["retained_context"][0]
+        assert record["facts"] == ["Mapped soil survey unit A7 Synthetic loam complex"]
+        assert "Synthetic loam complex" in str(trace["prompt_messages"])
+        card = next(row for row in trace["structured_answer"]["evidence"] if row.get("adapter_name") == record["adapter"])
+        assert card["source_id"] == source["receipt_sha256"] and card["url"] == "https://example.test/soil"
+        monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *args: pytest.fail("saved soil read invoked a model"))
+        explicit = client.post(path, headers=OWNER, json={
+            "message": "What does the saved public soil map say about this field?",
+            "mode": "agronomic_rag",
+        })
+        assert explicit.status_code == 200, explicit.text
+        turn = explicit.json()["turn"]
+        assert "Mapped soil survey unit A7 Synthetic loam complex" in turn["answer"]
+        assert "representative soil samples" in turn["answer"]
+        assert turn["trace"]["metadata"]["generation_bypass"]["renderer"] == "retained_soil_map.v1"
+        assert client.get(base + "/summary", headers=OTHER).status_code in {403, 404}

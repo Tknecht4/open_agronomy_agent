@@ -94,6 +94,7 @@ class ServerSettings:
     allow_model_id_override: bool = False
     imagery_cache_root: Path | None = None
     imagery_worker_python: Path | None = None
+    imagery_worker_executable: Path | None = None
     imagery_cache_max_bytes: int = 2 * 1024**3
     imagery_min_free_bytes: int = 1024**3
 
@@ -213,6 +214,7 @@ def build_settings(
     allow_model_id_override: bool | None = None,
     imagery_cache_root: str | Path | None = None,
     imagery_worker_python: str | Path | None = None,
+    imagery_worker_executable: str | Path | None = None,
     imagery_cache_max_bytes: int | None = None,
     imagery_min_free_bytes: int | None = None,
 ) -> ServerSettings:
@@ -469,6 +471,12 @@ def build_settings(
     imagery_python_value = imagery_worker_python or os.getenv("AGRONOMY_AGENT_IMAGERY_PYTHON")
     imagery_root = Path(imagery_root_value).expanduser().absolute() if imagery_root_value else None
     imagery_python = Path(imagery_python_value).expanduser().absolute() if imagery_python_value else None
+    imagery_executable_value = imagery_worker_executable or os.getenv("AGRONOMY_AGENT_IMAGERY_EXECUTABLE")
+    imagery_executable = Path(imagery_executable_value).expanduser().absolute() if imagery_executable_value else None
+    if imagery_python and imagery_executable:
+        raise ValueError("configure either imagery worker Python or a standalone imagery executable")
+    if imagery_executable and (not imagery_executable.is_file() or not os.access(imagery_executable, os.X_OK)):
+        raise ValueError("standalone imagery worker must be an existing executable")
     from agronomy_agent.imagery_budget import validate_policy
     maximum = imagery_cache_max_bytes if imagery_cache_max_bytes is not None else int(os.getenv("AGRONOMY_AGENT_IMAGERY_CACHE_MAX_BYTES", str(2 * 1024**3)))
     minimum_free = imagery_min_free_bytes if imagery_min_free_bytes is not None else int(os.getenv("AGRONOMY_AGENT_IMAGERY_MIN_FREE_BYTES", str(1024**3)))
@@ -484,6 +492,7 @@ def build_settings(
         artifact_root=artifact,
         imagery_cache_root=imagery_root,
         imagery_worker_python=imagery_python,
+        imagery_worker_executable=imagery_executable,
         imagery_cache_max_bytes=maximum,
         imagery_min_free_bytes=minimum_free,
         model_config_path=resolved_model_config_path,

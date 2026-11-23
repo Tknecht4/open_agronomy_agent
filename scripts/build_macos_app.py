@@ -191,6 +191,76 @@ def _audit_macho_links(app: Path) -> int:
     return checked
 
 
+def _stage_imagery_pyproj(stage: Path, python: Path) -> Path:
+    """Give PyProj's private libraries unique names before PyInstaller flattens them."""
+    package = Path(subprocess.check_output(
+        [str(python), "-c", "from importlib.util import find_spec; print(find_spec('pyproj').origin)"],
+        text=True,
+    ).strip()).parent
+    staged = stage / "imagery-wheels" / "pyproj"
+    shutil.copytree(package, staged)
+    libraries = sorted((staged / ".dylibs").glob("*.dylib"))
+    if not libraries:
+        raise ValueError("the pinned macOS PyProj wheel is missing its private libraries")
+    names = {library.name: f"pyproj-{library.name}" for library in libraries}
+    for binary in [*libraries, *sorted(staged.rglob("*.so"))]:
+        changes = []
+        links = subprocess.check_output(["otool", "-L", str(binary)], text=True).splitlines()[1:]
+        for line in links:
+            link = line.strip().partition(" (")[0]
+            name = Path(link).name
+            if name not in names:
+                continue
+            updated = str(Path(link).with_name(names[name]))
+            if binary.name == name:
+                changes.extend(("-id", updated))
+            else:
+                changes.extend(("-change", link, updated))
+        if changes:
+            subprocess.run(["install_name_tool", *changes, str(binary)], check=True)
+            subprocess.run(["codesign", "--force", "--sign", "-", str(binary)], check=True)
+    for library in libraries:
+        library.rename(library.with_name(names[library.name]))
+    return staged.parent
+
+
+def build_imagery_helper(root: Path, stage: Path, python: Path) -> Path:
+    """Freeze optical dependencies apart from the model/vector backend."""
+    wheel_root = _stage_imagery_pyproj(stage, python)
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join(
+        value for value in (str(wheel_root), environment.get("PYTHONPATH")) if value
+    )
+    subprocess.run(
+        [
+            str(python), "-m", "PyInstaller", "--onedir", "--windowed", "--noconfirm",
+            "--name", "OpenAgronomyImagery",
+            "--osx-bundle-identifier", "io.openagronomy.desktop.imagery",
+            "--distpath", str(stage / "imagery-dist"),
+            "--workpath", str(stage / "imagery-work"),
+            "--specpath", str(stage / "imagery-spec"),
+            "--paths", str(root / "src"),
+            "--collect-submodules", "rasterio", "--collect-data", "rasterio",
+            "--collect-data", "pyproj",
+            str(root / "macos_app/imagery_helper.py"),
+        ],
+        cwd=root,
+        env=environment,
+        check=True,
+    )
+    helper = stage / "imagery-dist/OpenAgronomyImagery.app"
+    executable = helper / "Contents/MacOS/OpenAgronomyImagery"
+    subprocess.run(["codesign", "--verify", "--deep", "--strict", str(helper)], check=True)
+    health = subprocess.run(
+        [str(executable), "--health"], check=True, capture_output=True, text=True, timeout=30,
+        env={"PATH": os.defpath},
+    )
+    versions = json.loads(health.stdout)
+    if not {"rasterio", "pyproj", "scipy"} <= versions.keys():
+        raise ValueError("frozen imagery helper is missing optical dependencies")
+    return helper
+
+
 def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, object]:
     report = preflight(root, output, python=python)
     if not report["space_ready"]:
@@ -268,6 +338,7 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
             check=True,
         )
         shutil.move(str(stage / "backend-dist/OpenAgronomyBackend.app"), helpers)
+        shutil.move(str(build_imagery_helper(root, stage, python)), helpers)
         subprocess.run(
             [
                 "swiftc", "-parse-as-library", str(root / "macos_app/Launcher.swift"),
@@ -278,6 +349,10 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
         macho_count = _audit_macho_links(app)
         subprocess.run(
             ["codesign", "--verify", "--deep", "--strict", str(helpers / "OpenAgronomyBackend.app")],
+            check=True,
+        )
+        subprocess.run(
+            ["codesign", "--verify", "--deep", "--strict", str(helpers / "OpenAgronomyImagery.app")],
             check=True,
         )
         subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)

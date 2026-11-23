@@ -310,3 +310,81 @@ def test_mac_provider_https_preserves_explicit_certificate_settings(monkeypatch,
     monkeypatch.setenv(override, str(tmp_path))
     monkeypatch.setattr(urllib.request, "install_opener", lambda _: pytest.fail("explicit trust settings must be preserved"))
     backend._configure_provider_https()
+
+
+def test_frozen_backend_configures_only_its_bundled_imagery_worker(tmp_path, monkeypatch):
+    import argparse
+    from macos_app import backend
+
+    resources = tmp_path / "Example.app/Contents/Resources"
+    runtime = resources / "runtime"
+    (runtime / "configs").mkdir(parents=True)
+    (runtime / "configs/runtime_profiles.json").write_text("{}")
+    (runtime / "frontend/dist").mkdir(parents=True)
+    (runtime / "frontend/dist/index.html").touch()
+    helpers = resources.parent / "Helpers"
+    worker = helpers / "OpenAgronomyImagery.app/Contents/MacOS/OpenAgronomyImagery"
+    worker.parent.mkdir(parents=True)
+    worker.touch()
+    state = tmp_path / "state"
+    state.mkdir(mode=0o700)
+    monkeypatch.setattr(backend.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(backend.sys, "executable",
+                        str(helpers / "OpenAgronomyBackend.app/Contents/MacOS/OpenAgronomyBackend"))
+    monkeypatch.setattr(backend.os, "environ", {"AGRONOMY_AGENT_IMAGERY_PYTHON": "/ignored"})
+    monkeypatch.chdir(tmp_path)
+    args = argparse.Namespace(runtime_root=runtime, state_root=state, model_cache=None,
+                              require_bundle_manifest=False)
+    backend._configure_runtime(args)
+    assert backend.os.environ["AGRONOMY_AGENT_IMAGERY_EXECUTABLE"] == str(worker)
+    assert backend.os.environ["AGRONOMY_AGENT_IMAGERY_CACHE_ROOT"] == str(state / "cache/imagery")
+    assert "AGRONOMY_AGENT_IMAGERY_PYTHON" not in backend.os.environ
+
+
+def test_frozen_imagery_helper_serves_offline_routes(tmp_path, monkeypatch):
+    """Exercise the signed helper without building a release app or loading a model."""
+    if os.getenv("OAA_TEST_FROZEN_IMAGERY") != "1":
+        pytest.skip("requires a native Mac builder; run by the optical package contract")
+
+    from uuid import uuid4
+
+    from fastapi.testclient import TestClient
+
+    from agronomy_agent.server.app import create_app
+    from agronomy_agent.server.settings import build_settings
+    from scripts.build_macos_app import ROOT, build_imagery_helper
+
+    monkeypatch.setenv("PYINSTALLER_CONFIG_DIR", str(tmp_path / "pyinstaller-cache"))
+    helper = build_imagery_helper(ROOT, tmp_path, Path(sys.executable))
+    settings = build_settings(
+        db_path=tmp_path / "app.sqlite",
+        artifact_root=tmp_path / "artifacts",
+        network_mode="offline",
+        imagery_cache_root=tmp_path / "imagery",
+        imagery_worker_executable=helper / "Contents/MacOS/OpenAgronomyImagery",
+    )
+    headers = {"X-Agronomy-User-Email": "optical-contract@example.test"}
+    with TestClient(create_app(settings), base_url="http://127.0.0.1:8000") as client:
+        response = client.post("/api/demo/fields", headers=headers, json={
+            "name": "Synthetic optical package contract", "field": {},
+            "geometry": {"kind": "point", "point": {"lat": 40.1, "lon": -103.1}},
+        })
+        assert response.status_code == 201, response.text
+        field_id = response.json()["field"]["id"]
+        response = client.get(f"/api/demo/fields/{field_id}/imagery/analytics", headers=headers)
+        assert response.status_code == 200 and response.json()["status"] == "ready", response.text
+        providers = response.json()["providers"]
+        assert len(providers) == 3 and all(provider["analysis"] for provider in providers)
+        base = f"/api/fields/{field_id}"
+        summary = client.get(base + "/summary", headers=headers)
+        assert summary.status_code == 200, summary.text
+        response = client.post(base + "/imagery-jobs", headers=headers, json={
+            "provider_id": "hls-s30-planetary-computer", "sampling_mode": "point_pixel",
+            "start_date": "2025-07-05", "end_date": "2025-07-20",
+            "expected_geometry_revision_id": summary.json()["geometry_revision_id"],
+            "operation_id": str(uuid4()),
+        })
+        assert response.status_code == 202, response.text
+        job = client.get(f"/api/imagery-jobs/{response.json()['id']}", headers=headers)
+        assert job.status_code == 200, job.text
+        assert job.json()["result"]["status"] == "blocked_offline", job.text

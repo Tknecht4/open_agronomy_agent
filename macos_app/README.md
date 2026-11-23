@@ -56,6 +56,12 @@ force-refetched; it cannot become the new expected version. The app then starts 
 workspace using a one-time fragment token. API/model readiness, browser
 rendering, and a real answer are separate checks.
 
+The bundle includes a separate HLS and Sentinel-2 imagery helper. It uses the
+same field-scoped jobs and cache receipts as source installations. The helper
+works with public imagery in connected mode and reuses intact local analyses
+offline. The packaged smoke checks imagery dependency readiness and a fresh
+offline cache miss.
+
 Private state is under `~/Library/Application Support/OpenAgronomyAgent/desktop/`:
 the SQLite database, artifacts, model cache, receipts, and logs. The installed
 app bundle is read-only. Existing checkout and container state are not silently

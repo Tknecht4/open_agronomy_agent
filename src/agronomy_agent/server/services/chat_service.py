@@ -16,6 +16,7 @@ from pathlib import Path
 from agronomy_agent.codex_app_server import validate_canonical_backend
 
 from agronomy_agent import local_tools
+from agronomy_agent.server.services.tool_service import run_local_tool
 from agronomy_agent.geospatial.crop_cover import DOMINANT_FRACTION, coverage_facts
 from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, calculation_request_is_complete
 from agronomy_agent.agent import (
@@ -102,6 +103,7 @@ from agronomy_agent.field_measurements import (
 from agronomy_agent.server.services.answer_renderer import (
     render_map_component_explanation_answer,
     render_map_interpretation_answer,
+    render_retained_soil_map_answer,
     render_structured_answer,
 )
 from agronomy_agent.server.services.field_context_compiler import (
@@ -837,23 +839,18 @@ def _run_turn_impl_inner(
         if trace_options.get("store_prompt_messages"):
             prompt_messages = messages
     else:
-        map_component_answer = render_map_component_explanation_answer(
-            message,
-            {
-                "route": _normalize_route(route_payload),
-                "metadata": {"field_context": _safe_field_context_summary(field_context)},
-            },
-        )
-        map_interpretation_answer = map_component_answer or render_map_interpretation_answer(
-            message,
-            {
-                "route": _normalize_route(route_payload),
-                "metadata": {"field_context": _safe_field_context_summary(field_context)},
-            },
-        )
-        tool_grounded_renderer = (
-            "map_component_explanation.v1" if map_component_answer else "map_interpretation.v1"
-        )
+        map_trace = {
+            "route": _normalize_route(route_payload),
+            "metadata": {"field_context": _safe_field_context_summary(field_context)},
+        }
+        retained_soil_answer = render_retained_soil_map_answer(message, compiled_field_context["receipt"])
+        map_component_answer = None if retained_soil_answer else render_map_component_explanation_answer(message, map_trace)
+        map_interpretation_answer = retained_soil_answer or map_component_answer or render_map_interpretation_answer(message, map_trace)
+        tool_grounded_renderer = "map_interpretation.v1"
+        if retained_soil_answer:
+            tool_grounded_renderer = "retained_soil_map.v1"
+        elif map_component_answer:
+            tool_grounded_renderer = "map_component_explanation.v1"
         source_grounded = is_source_grounded_question(message)
         public_adapter_records = (
             []
@@ -2535,7 +2532,6 @@ def _run_public_adapter_preflight(
         elif country == "United States":
             field_tasks = [
                 lambda: _call_nrcs_soil_survey_for_field(latitude, longitude, field_context, timeout=timeout),
-                lambda: _call_nasa_power(latitude, longitude, timeout=timeout),
             ]
             if _should_call_daymet(message, field_context):
                 field_tasks.append(lambda: _call_daymet_single_pixel(latitude, longitude, field_context, timeout=timeout))
@@ -2546,6 +2542,9 @@ def _run_public_adapter_preflight(
             if quickstats_context:
                 crop, state_alpha, county_name = quickstats_context
                 field_tasks.append(lambda: _call_nass_quickstats(crop, state_alpha, county_name, field_context, timeout=timeout))
+        weather_window = local_tools.recent_nasa_power_window(dt.datetime.now(dt.UTC).date())
+        if not _has_current_weather_window(field_context, weather_window):
+            field_tasks.append(lambda: _call_nasa_power(latitude, longitude, timeout=timeout, window=weather_window))
         adapter_span = profiler.span("agent.tools.public_adapters", metadata={"lat": latitude, "lon": longitude}) if profiler else nullcontext()
         with adapter_span:
             records.extend(_run_public_adapter_tasks(field_tasks))
@@ -2898,7 +2897,6 @@ def _canadian_public_source_tasks(
     geometry = field_context.get("geometry") if isinstance(field_context.get("geometry"), dict) else None
     tasks: list[Callable[[], dict[str, Any]]] = [
         lambda: _call_cansis_soil_landscapes(latitude, longitude, geometry, crop=crop, province=province),
-        lambda: _call_nasa_power(latitude, longitude, timeout=timeout),
     ]
     if _should_call_daymet(message, field_context):
         tasks.append(lambda: _call_daymet_single_pixel(latitude, longitude, field_context, timeout=timeout))
@@ -3197,19 +3195,30 @@ def _call_nrcs_soil_survey_geometry(geometry: dict[str, Any], *, timeout: int) -
         )
 
 
-def _call_nasa_power(latitude: float, longitude: float, *, timeout: int) -> dict[str, Any]:
-    today = dt.datetime.now(dt.UTC).date()
-    start = (today - dt.timedelta(days=2)).strftime("%Y%m%d")
-    end = today.strftime("%Y%m%d")
+def _has_current_weather_window(field_context: dict[str, Any], window: tuple[str, str]) -> bool:
+    # The retained lane is rebuilt from integrity-checked, current, field-scoped
+    # snapshots before preflight. Older recipes remain usable as dated evidence.
+    for record in field_context.get("retained_public_context") or ():
+        if record.get("name") != "nasa_power_daily":
+            continue
+        payload = record["payload"]
+        summary = payload["summary"]
+        if (payload["status"] == "available" and payload.get("receipt_sha256")
+                and (summary.get("requested_start"), summary.get("requested_end")) == window
+                and all(summary["available_days_by_parameter"].get(key) == 7
+                        for key in ("T2M", "PRECTOTCORR", "WS2M"))):
+            return True
+    return False
+
+
+def _call_nasa_power(
+    latitude: float, longitude: float, *, timeout: int, window: tuple[str, str] | None = None,
+) -> dict[str, Any]:
+    start, end = window or local_tools.recent_nasa_power_window(dt.datetime.now(dt.UTC).date())
     try:
-        payload = local_tools.nasa_power_daily(
-            latitude=latitude,
-            longitude=longitude,
-            start=start,
-            end=end,
-            parameters=("T2M", "PRECTOTCORR", "WS2M"),
-            timeout=timeout,
-        )
+        payload = run_local_tool("weather-power", {
+            "lat": latitude, "lon": longitude, "start": start, "end": end, "timeout": timeout,
+        })
         status = str(payload.get("status") or "unavailable")
         if status not in {"available", "partial_available"}:
             return _public_tool_record(
@@ -3651,6 +3660,8 @@ def _adapter_summary(payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "status": payload.get("status"),
             "parameter_summary": payload.get("parameter_summary") or {},
+            "requested_start": payload.get("start"),
+            "requested_end": payload.get("end"),
             "requested_day_count": payload.get("requested_day_count"),
             "observed_day_count": payload.get("observed_day_count"),
             "available_days_by_parameter": payload.get("available_days_by_parameter") or {},

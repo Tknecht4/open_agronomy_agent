@@ -22,6 +22,8 @@ from agronomy_agent.geospatial.crop_cover import DOMINANT_FRACTION, coverage_fac
 SCHEMA_VERSION = "open_agronomy_agent.field_context_compiler.v1"
 AVAILABLE_STATUSES = {"available", "partial_available", "available_offline_snapshot"}
 _CROP_COVER_ADAPTERS = {"cropland_data_layer_geometry", "cropland_data_layer_point", "aafc_annual_crop_inventory"}
+_NRCS_SOIL_MAP_ADAPTERS = {"nrcs_soil_survey_geometry", "nrcs_soil_survey_point"}
+SOIL_MAP_ADAPTERS = _NRCS_SOIL_MAP_ADAPTERS | {"cansis_soil_landscapes_canada"}
 IMAGERY_BOUNDARY = (
     "The indices describe eligible pixels from one capture. It does not establish a change over time, "
     "representative crop conditions, a diagnosis, or a management recommendation."
@@ -123,20 +125,36 @@ def render_field_context_prompt(receipt: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def render_imagery_observation(imagery: dict[str, Any]) -> str:
-    boundary = "original historical boundary" if imagery["geometry_status"] == "historical" else "current boundary"
+def imagery_support_facts(imagery: dict[str, Any]) -> str:
+    """Render the verified index support in both the prompt and final answer."""
+    total = imagery["support_area_m2"]
+    clear = imagery["qa_clear_area_m2"]
+    coverage = f"{100 * clear / total:.3g}%"
+    if clear == 0:
+        return "No pixels passed the quality checks. NDVI and NDMI are unavailable."
     indices = []
     for name, index in imagery["indices"].items():
         mean = index["mean"]
-        detail = f"mean {mean}" if mean is not None else "mean unavailable"
-        indices.append(f"{name} {detail} from {index['valid_area_m2']} m² of valid index area")
+        area = index["valid_area_m2"]
+        if mean is None:
+            indices.append(f"{name} unavailable because it has no valid pixels")
+        else:
+            indices.append(f"{name} mean {mean:.3g} from {area:g} m² ({100 * area / total:.3g}% of the analyzed area)")
+    return f"{coverage} of the analyzed area passed the quality checks. " + ". ".join(indices) + "."
+
+
+def render_imagery_observation(imagery: dict[str, Any]) -> str:
+    if imagery["support_kind"] == "field_polygon":
+        location = "original historical boundary" if imagery["geometry_status"] == "historical" else "current boundary"
+    else:
+        location = "original saved location" if imagery["geometry_status"] == "historical" else "current saved location"
     return (
         f"- Selected satellite analysis (processed observation): scene {imagery['scene_id']}, "
         f"acquired {imagery['acquired_at']}, {imagery['resolution_m']} m grid, "
-        f"{imagery['support_kind'].replace('_', ' ')} on the {boundary} "
+        f"{imagery['support_kind'].replace('_', ' ')} on the {location} "
         f"(revision {imagery['geometry_revision_id']}). "
-        f"QA-clear {imagery['qa_clear_area_m2']} m² of {imagery['support_area_m2']} m² total support. "
-        f"{'; '.join(indices)}. {IMAGERY_BOUNDARY}"
+        f"QA-clear {imagery['qa_clear_area_m2']:g} m² of {imagery['support_area_m2']:g} m² total support. "
+        f"{imagery_support_facts(imagery)} {IMAGERY_BOUNDARY}"
     )
 
 
@@ -201,6 +219,18 @@ def _live_context(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _adapter_facts(name: str, summary: dict[str, Any]) -> list[str]:
     if name in _CROP_COVER_ADAPTERS:
         return coverage_facts(summary.get("coverage_by_year") or {})
+    if name in _NRCS_SOIL_MAP_ADAPTERS:
+        units = summary.get("map_units") or []
+        facts = []
+        for unit in units[:3]:
+            if not isinstance(unit, dict):
+                continue
+            label = " ".join(value for value in (
+                _text(unit.get("musym")) or _text(unit.get("mukey")), _text(unit.get("muname")),
+            ) if value)
+            if label:
+                facts.append(f"Mapped soil survey unit {label}")
+        return facts
     if name == "cansis_soil_landscapes_canada":
         landscapes = summary.get("landscapes") if isinstance(summary.get("landscapes"), list) else []
         facts: list[str] = []
@@ -284,6 +314,8 @@ def _component_label(component: Any) -> str:
 
 def _adapter_label(name: str) -> str:
     return {
+        "nrcs_soil_survey_geometry": "USDA NRCS Soil Data Access",
+        "nrcs_soil_survey_point": "USDA NRCS Soil Data Access",
         "cansis_soil_landscapes_canada": "CanSIS Soil Landscapes of Canada",
         "nasa_power_daily": "NASA POWER daily weather",
         "aafc_annual_crop_inventory": "AAFC Annual Crop Inventory",

@@ -17,6 +17,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from uuid import uuid4
 from typing import Any
 
 from scripts.smoke_macos_app import _clean_environment, _free_port, _request, _startup_summary
@@ -101,6 +102,42 @@ def smoke(app: Path, state: Path, report: Path) -> dict[str, Any]:
             if paired != 200:
                 raise ValueError(f"offline pairing returned {paired}")
             csrf = str(json.loads(pair_body)["csrf_token"])
+            field_status, field_body = _request(
+                opener, origin, "/api/demo/fields", csrf=csrf,
+                payload={"name": "Packaged imagery smoke", "field": {},
+                         "geometry": {"kind": "point", "point": {"lat": 40.1, "lon": -103.1}}},
+            )
+            if field_status != 201:
+                raise ValueError(f"offline imagery fixture returned {field_status}")
+            field_id = json.loads(field_body)["field"]["id"]
+            status, body = _request(opener, origin, f"/api/demo/fields/{field_id}/imagery/analytics", timeout=45)
+            readiness = json.loads(body)
+            if status != 200 or readiness.get("status") != "ready" or not all(
+                source.get("analysis") for source in readiness.get("providers", ())
+            ) or len(readiness.get("providers", ())) != 3:
+                raise ValueError("packaged imagery worker failed optical readiness")
+            status, body = _request(opener, origin, f"/api/fields/{field_id}/summary")
+            if status != 200:
+                raise ValueError(f"offline imagery fixture summary returned {status}")
+            revision = json.loads(body)["geometry_revisions"][0]["id"]
+            status, body = _request(
+                opener, origin, f"/api/fields/{field_id}/imagery-jobs", csrf=csrf,
+                payload={"provider_id": "hls-s30-planetary-computer",
+                         "start_date": "2025-07-05", "end_date": "2025-07-20",
+                         "expected_geometry_revision_id": revision, "operation_id": str(uuid4())},
+            )
+            if status != 202:
+                raise ValueError(f"offline imagery job was rejected with HTTP {status}")
+            job_id = json.loads(body)["id"]
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                status, body = _request(opener, origin, f"/api/imagery-jobs/{job_id}")
+                job = json.loads(body)
+                if status != 200 or job.get("status") not in {"queued", "running"}:
+                    break
+                time.sleep(.2)
+            if status != 200 or (job.get("result") or {}).get("status") != "blocked_offline":
+                raise ValueError("fresh offline imagery job did not report a cache miss")
             session_status, session_body = _request(
                 opener, origin, "/api/sessions",
                 payload={"title": "Mac app offline smoke", "consent": {}}, csrf=csrf,
@@ -133,6 +170,8 @@ def smoke(app: Path, state: Path, report: Path) -> dict[str, Any]:
                 "schema_version": "open_agronomy_agent.macos_offline_smoke.v1",
                 "status": "pass",
                 "os_public_egress_denied": True,
+                "imagery_worker_versions": readiness["worker"]["versions"],
+                "imagery_cache_miss": "blocked_offline",
                 "loopback_api_ready": True,
                 "network_mode": "offline",
                 "turn_status": turn_status,
