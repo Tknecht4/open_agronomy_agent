@@ -1134,6 +1134,24 @@ def _evidence_cards(trace: dict[str, Any]) -> list[dict[str, Any]]:
             "why_used": "Retained public field context. " + ". ".join(record["facts"]),
             "known_limitations": [record["boundary"]] if record.get("boundary") else [],
         })
+    if comparison := compiled.get("imagery_comparison"):
+        for name in ("before", "after"):
+            source = comparison.get(name) or {}
+            if source.get("chip_hash"):
+                cards.append({
+                    "source_id": source["chip_hash"], "title": f"Satellite comparison · {name}",
+                    "source": source["scene_id"], "publisher": comparison.get("provider_id"),
+                    "source_type": "processed_observation", "updated_at": source["acquired_at"],
+                    "why_used": "Selected acquisition in a shared usable-pixel comparison",
+                    "known_limitations": ["A spectral comparison supplies no verified scouting location."],
+                })
+        if observation := comparison.get("scouting_observation"):
+            cards.append({
+                "source_id": observation["integrity_sha256"], "title": "Dated grower observation",
+                "source": observation["event_id"], "publisher": "Field records",
+                "source_type": "field_record", "updated_at": observation["date"],
+                "why_used": "Supplied the recorded location for a ground check",
+            })
     if imagery := compiled.get("imagery_observation"):
         cards.append({
             "source_id": imagery["result_sha256"],

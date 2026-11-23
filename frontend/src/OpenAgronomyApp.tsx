@@ -1975,7 +1975,11 @@ export function OpenAgronomyApp() {
   useEffect(() => {
     const saved = loadPhase6ChatDraft(activeFieldConversationKey)
     setMessage(saved?.message || '')
-    setDraftImagery(typeof saved?.imagery?.jobId === 'string' ? saved.imagery : undefined)
+    const imagery = saved?.imagery
+    const pair = imagery?.comparison
+    const hasPair = pair && typeof pair.first_job_id === 'string' && typeof pair.second_job_id === 'string'
+      && typeof pair.geometry_revision_id === 'string'
+    setDraftImagery(typeof imagery?.jobId === 'string' || hasPair ? imagery : undefined)
     setDraftHydratedFor(activeFieldConversationKey)
   }, [activeFieldConversationKey])
 
@@ -2194,6 +2198,7 @@ export function OpenAgronomyApp() {
     message,
     mode,
     imagery_job_id: selectedImagery?.jobId,
+    imagery_comparison: selectedImagery?.comparison,
     model_id: mode === 'mock' || modelId === 'mock' ? undefined : modelId,
     rag_config: mode === 'baseline' ? undefined : ragConfig,
     max_tokens: selectedModelProfile?.max_tokens || 240,
@@ -3489,7 +3494,7 @@ export function OpenAgronomyApp() {
         onAddField={farmId => { setNewFieldFarmId(farmId); setNewFieldOpen(true) }}
         onGeneralQuestion={() => { startNewField(); setQuestionSeason(null); navigateToPage('analyze') }}
         onEditField={id => { const selected = storedFields.find(item => (item.field_context_id || item.id) === id); if (selected) { loadStoredField(selected); setFieldTab('details'); navigateToPage('field-editor') } else setError('Reload the workspace to load this field before editing.') }}
-        onAsk={(id, question, season, imageryJobId) => {
+        onAsk={(id, question, season, imageryJobId, comparison) => {
           const selected = storedFields.find(item => (item.field_context_id || item.id) === id)
           if (!selected) {
             setError('Reload the workspace to load this field before asking.')
@@ -3499,7 +3504,7 @@ export function OpenAgronomyApp() {
           setQuestionSeason(season ?? null)
           const fieldKey = storedFieldConversationKey(id)
           const key = freshConversationKey(fieldKey)
-          if (question) savePhase6ChatDraft(key, question, { imagery: imageryJobId ? { jobId: imageryJobId, season } : undefined })
+          if (question) savePhase6ChatDraft(key, question, { imagery: comparison ? { comparison, season } : imageryJobId ? { jobId: imageryJobId, season } : undefined })
           rememberConversation(fieldKey, key)
           setActiveFieldConversationKey(key)
           setSessionId('')
@@ -4420,7 +4425,10 @@ export function OpenAgronomyApp() {
                 {!selectedModelReady && currentReadiness?.requires_model !== false && selectedModelProfile?.local_detail ? <p>{selectedModelProfile.local_detail}</p> : null}
               </details>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
-              {showModelReadinessNotice ? <div className="model-setup-notice" role="status"><strong>{!message.trim() ? 'Model optional for calculations' : checkingTurnReadiness ? 'Checking calculation support' : currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{!message.trim() ? 'Enter a question to check local calculation support, or install a model for generated answers.' : currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : checkingTurnReadiness ? 'Checking whether this question can use a local calculation.' : 'Choose an installed model in Model settings.'}</p></div> : null}
+              {showModelReadinessNotice && selectedImagery?.comparison ? <div className="model-setup-notice" role="status">
+                {currentReadiness?.requires_model === false ? 'The saved imagery comparison can run locally without a model.' : 'Checking the two saved analyses.'}
+              </div> : null}
+              {showModelReadinessNotice && !selectedImagery?.comparison ? <div className="model-setup-notice" role="status"><strong>{!message.trim() ? 'Model optional for calculations' : checkingTurnReadiness ? 'Checking calculation support' : currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{!message.trim() ? 'Enter a question to check local calculation support, or install a model for generated answers.' : currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : checkingTurnReadiness ? 'Checking whether this question can use a local calculation.' : 'Choose an installed model in Model settings.'}</p></div> : null}
               {runtimeAccess === 'unavailable' ? <button type="button" onClick={() => void recoverRuntime()}>Retry local runtime</button> : null}
             </div>
 
@@ -4493,9 +4501,10 @@ export function OpenAgronomyApp() {
                   ? 'Describe an observation or ask about this field…'
                   : 'What would you like to understand?'}
                 rows={2}
+                readOnly={Boolean(selectedImagery?.comparison)}
               />
               {selectedImagery ? <div className="composer-actions">
-                <span>Satellite analysis attached</span>
+                <span>{selectedImagery.comparison ? 'Satellite comparison attached' : 'Satellite analysis attached'}</span>
                 <button type="button" className="composer-reference" disabled={isAnalyzing} onClick={() => setDraftImagery(undefined)}>Remove analysis</button>
               </div> : null}
               <div className="composer-actions">
@@ -4638,6 +4647,7 @@ function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknow
   const liveContext = Array.isArray(receipt?.live_context) ? receipt.live_context : []
   const retainedContext = Array.isArray(receipt?.retained_context) ? receipt.retained_context : []
   const imagery = receipt?.imagery_observation as Record<string, unknown> | undefined
+  const comparison = receipt?.imagery_comparison as { overview?: string } | undefined
   const imageryLocation = imagery?.support_kind === 'field_polygon' ? 'boundary' : 'saved location'
   const indices = imagery?.indices as Record<string, { mean: number | null; valid_area_m2: number }> | undefined
   const field = receipt?.field && typeof receipt.field === 'object' ? receipt.field as Record<string, unknown> : {}
@@ -4648,6 +4658,9 @@ function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknow
   return (
     <section className="compiled-field-context" data-testid="compiled-field-context">
       <p>{fieldLabel || 'No bounded field details were supplied for this turn.'}</p>
+      {typeof comparison?.overview === 'string' ? <article>
+        <strong>Two-date satellite comparison</strong><p>{comparison.overview}</p>
+      </article> : null}
       {imagery ? <article>
         <strong>Selected satellite analysis</strong>
         <p>{String(imagery.scene_id)} · {String(imagery.acquired_at).slice(0, 10)} · {String(imagery.resolution_m)} m grid</p>

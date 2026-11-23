@@ -140,6 +140,68 @@ describe('record reading and intake', () => {
     if (correction) expect(writes[2].events[0].corrects_event_id).toBe(savedId)
   })
 
+  it('keeps a dated scouting offset and recovers an older captured request without a duplicate', async () => {
+    const day = '2026-11-18T18:30'
+    const occurredAt = new Date(day).toISOString()
+    const writes: Array<{ operation_id: string; events: Array<{ provenance: Record<string, unknown> }> }> = []
+    vi.stubGlobal('fetch', vi.fn(async (_input, init) => {
+      const body = JSON.parse(init!.body as string)
+      writes.push(body)
+      if (writes.length === 1) throw new Error('Lost acknowledgement')
+      return response({ status: 'already_saved', events: body.events.map((event: object) => ({ ...event, id: savedId, field_context_id: 'west', occurred_at: occurredAt })) })
+    }))
+    const props = { fieldId: 'west', season: 2026, onClose: vi.fn(), onSaved: vi.fn() }
+    const first = render(<RecordEntryDialog {...props} />)
+    fireEvent.change(screen.getByLabelText('Observed at (leave blank if unknown)'), { target: { value: day } })
+    fireEvent.change(screen.getByLabelText('What did you observe or do?'), { target: { value: 'Scouted the entrance.' } })
+    fireEvent.change(screen.getByLabelText('Where in the field? (optional)'), { target: { value: 'West gate' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save record' }))
+    await screen.findByText('Lost acknowledgement')
+    expect(writes[0].events[0].provenance.observation_utc_offset_minutes).toBe(-new Date(day).getTimezoneOffset() || 0)
+    first.unmount()
+
+    const key = 'open-agronomy.record-draft.west.2026'
+    const draft = JSON.parse(localStorage.getItem(key)!)
+    const older = JSON.parse(draft.signature)
+    delete older[0].provenance.observation_utc_offset_minutes
+    localStorage.setItem(key, JSON.stringify({ ...draft, signature: JSON.stringify(older) }))
+
+    render(<RecordEntryDialog {...props} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Retry saved request' }))
+    await waitFor(() => expect(props.onClose).toHaveBeenCalledOnce())
+    expect(writes).toHaveLength(2)
+    expect(writes[1]).toEqual({ operation_id: writes[0].operation_id, events: older })
+    expect(localStorage.getItem(key)).toBeNull()
+  })
+
+  it.each(['original', 'legacy', 'edited'] as const)('saves a correction with the %s observation time basis', async mode => {
+    const instant = '2026-11-19T00:30:00.000Z'
+    const viewerOffset = -new Date(instant).getTimezoneOffset() || 0
+    const originalOffset = viewerOffset === -360 ? 60 : -360
+    const edited = '2026-11-20T18:15'
+    const writes: Array<{ events: Array<{ occurred_at: string; provenance: Record<string, unknown> }> }> = []
+    vi.stubGlobal('fetch', vi.fn(async (_input, init) => {
+      const body = JSON.parse(init!.body as string)
+      writes.push(body)
+      return response({ status: 'saved', events: body.events.map((event: object) => ({ ...event, id: savedId, field_context_id: 'west' })) })
+    }))
+    const initialRecord: SavedRecord = {
+      ...record, event_type: 'observation', occurred_at: instant,
+      provenance: { observation_time_status: 'user_supplied', ...(mode === 'legacy' ? {} : { observation_utc_offset_minutes: originalOffset }) },
+      payload: { summary: 'Scouted the entrance.', scouting_location: 'West gate' },
+    }
+    const close = vi.fn()
+    render(<RecordEntryDialog fieldId="west" season={2026} initialRecord={initialRecord} onSaved={vi.fn()} onClose={close} />)
+    fireEvent.change(screen.getByLabelText('Where in the field? (optional)'), { target: { value: 'Near the west gate' } })
+    if (mode === 'edited') fireEvent.change(screen.getByLabelText('Observed at (leave blank if unknown)'), { target: { value: edited } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save record' }))
+    await waitFor(() => expect(close).toHaveBeenCalledOnce())
+    expect(writes).toHaveLength(1)
+    const saved = writes[0].events[0]
+    expect(saved.occurred_at).toBe(mode === 'edited' ? new Date(edited).toISOString() : instant)
+    expect(saved.provenance.observation_utc_offset_minutes).toBe(mode === 'legacy' ? undefined : mode === 'original' ? originalOffset : (-new Date(edited).getTimezoneOffset() || 0))
+  })
+
   it.each([false, true])('only unlocks a definite first validation rejection (previous uncertainty=%s)', async uncertain => {
     let calls = 0
     vi.stubGlobal('fetch', vi.fn(async () => {

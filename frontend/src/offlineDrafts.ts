@@ -1,3 +1,4 @@
+import type { ImageryComparisonSelection } from './turnReadiness'
 import { quarantinePhase6OfflineStorage } from './offlineStorageRepair'
 
 export const PHASE6_CHAT_DRAFT_STORAGE_KEY = 'agronomy-agent.phase6.chat-drafts.v1'
@@ -6,7 +7,7 @@ export const PHASE6_CHAT_DRAFT_MAX_CHARS = 8000
 export type Phase6ChatDraft = {
   sessionId: string
   message: string
-  imagery?: { jobId: string; season?: number }
+  imagery?: ({ jobId: string; comparison?: never } | { comparison: ImageryComparisonSelection; jobId?: never }) & { season?: number }
   updatedAt: string
 }
 

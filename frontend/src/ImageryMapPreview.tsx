@@ -6,7 +6,17 @@ import type { FieldGeometry } from './fieldGeometry'
 import { recoverableLazy as lazy } from './WorkspaceSectionBoundary'
 
 const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then(m => ({ default: m.LeafletFieldMap })), 'Image map')
-type Overlay = { chip_hash: string; geometry_revision_id: string; display_crs: string; display_resampling: string; png_base64: string; bounds: [[number, number], [number, number]]; boundary: string }
+export type ImageryOverlay = { display_crs: string; display_resampling: string; png_base64: string; bounds: [[number, number], [number, number]]; boundary: string }
+type Overlay = ImageryOverlay & { chip_hash: string; geometry_revision_id: string }
+
+export function decodeImageryOverlay(value: ImageryOverlay): Blob {
+  if (value.display_crs !== 'EPSG:3857' || value.display_resampling !== 'nearest'
+    || !Array.isArray(value.bounds) || value.bounds.length !== 2 || value.bounds.some(point => !Array.isArray(point) || point.length !== 2 || point.some(number => !Number.isFinite(number)))
+    || !value.png_base64 || value.png_base64.length > 3 * 1024 * 1024) throw new Error('The map image is invalid.')
+  const bytes = Uint8Array.from(atob(value.png_base64), character => character.charCodeAt(0))
+  if (![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte)) throw new Error('The overlay was not a PNG image.')
+  return new Blob([bytes], { type: 'image/png' })
+}
 
 export default function ImageryMapPreview({ jobId, chipHash, geometry, geometryKey, acquiredAt, allowNetwork }: {
   jobId: string; chipHash: string; geometry: FieldGeometry; geometryKey: string; acquiredAt: string; allowNetwork: boolean
@@ -24,12 +34,8 @@ export default function ImageryMapPreview({ jobId, chipHash, geometry, geometryK
     try {
       const value = await apiGet<Overlay>(`/api/imagery-jobs/${encodeURIComponent(jobId)}/overlay`)
       if (!active.current) return
-      if (value.chip_hash !== chipHash || value.geometry_revision_id !== geometryKey || value.display_crs !== 'EPSG:3857' || value.display_resampling !== 'nearest'
-        || !Array.isArray(value.bounds) || value.bounds.length !== 2 || value.bounds.some(point => !Array.isArray(point) || point.length !== 2 || point.some(number => !Number.isFinite(number)))
-        || !value.png_base64 || value.png_base64.length > 3 * 1024 * 1024) throw new Error('The map image did not match this analysis.')
-      const bytes = Uint8Array.from(atob(value.png_base64), character => character.charCodeAt(0))
-      if (![137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte)) throw new Error('The overlay was not a PNG image.')
-      const next = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }))
+      if (value.chip_hash !== chipHash || value.geometry_revision_id !== geometryKey) throw new Error('The map image did not match this analysis.')
+      const next = URL.createObjectURL(decodeImageryOverlay(value))
       if (objectUrl.current) URL.revokeObjectURL(objectUrl.current)
       objectUrl.current = next; setUrl(next); setOverlay(value)
     } catch (cause) { if (active.current) setError(readableError(cause)) } finally { if (active.current) setBusy(false) }

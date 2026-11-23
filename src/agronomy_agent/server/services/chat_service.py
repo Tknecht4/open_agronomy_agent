@@ -510,6 +510,11 @@ def preview_turn_readiness(
             unverified = True
             if reason != "invalid_calculator_inputs":
                 reason = "operation_validation_unavailable"
+    comparison = (field_context or {}).get("imagery_comparison_selection")
+    if comparison and mode == "agronomic_rag":
+        independent = True
+        unverified = False
+        reason = "saved_imagery_comparison"
     history = prepared["recent_turns"]
     context = session_context or {}
     binding = {
@@ -527,11 +532,16 @@ def preview_turn_readiness(
     }
     if imagery := (field_context or {}).get("imagery_observation"):
         binding["imagery_job_id"] = imagery["job_id"]
+    if comparison:
+        binding["imagery_comparison"] = {
+            "job_ids": [record["id"] for record in comparison["jobs"]],
+            "geometry_revision_id": comparison["geometry_revision_id"],
+        }
     fingerprint = execution_stable_sha256({
         "binding": binding, "context": context, "max_tokens": max_tokens, "trace_options": trace_options,
     })
     schema = calculation_tool_schema()
-    calculator_record = calculator.to_dict() if calculator and (independent or unverified) else None
+    calculator_record = calculator.to_dict() if calculator and not comparison and (independent or unverified) else None
     if calculator_record:
         try:
             json.dumps(calculator_record["inputs"], allow_nan=False)
@@ -541,15 +551,16 @@ def preview_turn_readiness(
     return {
         "schema_version": "open_agronomy_agent.turn_readiness.v1",
         "requires_model": None if unverified else not independent,
-        "status": tool_plan.status if independent else "unknown" if unverified else "model_required",
+        "status": "ready" if comparison else tool_plan.status if independent else "unknown" if unverified else "model_required",
         "reason": reason,
         "binding": binding, "readiness_binding": fingerprint,
         "calculator": {
             **calculator_record, "clarification": tool_plan.clarification,
             "requirements": schema["operations"].get(calculator.operation, {}),
             "schema_version": schema["schema_version"],
-        } if independent or unverified else None,
-        "boundary": "Readiness plans supplied-input arithmetic or clarification; it is not an executed result, evidence of field sufficiency, or permission for a consequential recommendation.",
+        } if calculator_record is not None else None,
+        "boundary": ("Readiness binds the two saved jobs and field records; the comparison runs after submission."
+                     if comparison else "Readiness plans supplied-input arithmetic or clarification; it is not an executed result, evidence of field sufficiency, or permission for a consequential recommendation."),
     }
 
 
@@ -843,11 +854,15 @@ def _run_turn_impl_inner(
             "route": _normalize_route(route_payload),
             "metadata": {"field_context": _safe_field_context_summary(field_context)},
         }
-        retained_soil_answer = render_retained_soil_map_answer(message, compiled_field_context["receipt"])
-        map_component_answer = None if retained_soil_answer else render_map_component_explanation_answer(message, map_trace)
-        map_interpretation_answer = retained_soil_answer or map_component_answer or render_map_interpretation_answer(message, map_trace)
+        comparison = compiled_field_context["receipt"].get("imagery_comparison")
+        comparison_answer = comparison["message"] if comparison else None
+        retained_soil_answer = None if comparison_answer else render_retained_soil_map_answer(message, compiled_field_context["receipt"])
+        map_component_answer = None if comparison_answer or retained_soil_answer else render_map_component_explanation_answer(message, map_trace)
+        map_interpretation_answer = comparison_answer or retained_soil_answer or map_component_answer or render_map_interpretation_answer(message, map_trace)
         tool_grounded_renderer = "map_interpretation.v1"
-        if retained_soil_answer:
+        if comparison_answer:
+            tool_grounded_renderer = "imagery_comparison.v1"
+        elif retained_soil_answer:
             tool_grounded_renderer = "retained_soil_map.v1"
         elif map_component_answer:
             tool_grounded_renderer = "map_component_explanation.v1"
@@ -4556,11 +4571,13 @@ def _with_stored_field_data(
     outer = session_context if isinstance(session_context, dict) else {}
     field_id = outer.get("field_context_id") or trusted.get("field_context_id")
     if not field_id or outer.get("field_access_authorized") is not True:
-        trusted.pop("imagery_observation", None)
+        for key in ("imagery_observation", "imagery_comparison_selection", "imagery_comparison_result"):
+            trusted.pop(key, None)
         return trusted
     field = store.get_phase4_field_context(str(field_id))
     if not field:
-        trusted.pop("imagery_observation", None)
+        for key in ("imagery_observation", "imagery_comparison_selection", "imagery_comparison_result"):
+            trusted.pop(key, None)
         return trusted
     workspace_id = outer.get("field_access_workspace_id")
     if workspace_id and str(workspace_id) != str(field.get("workspace_id")):
