@@ -14,6 +14,7 @@ import zlib
 import uuid
 from contextlib import asynccontextmanager, nullcontext
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from email.parser import BytesParser
 from email.policy import default as email_policy
@@ -2231,61 +2232,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             + json.dumps((capability_preflight.get("preflight") or {}).get("issues") or [])
         )
     store = build_trace_store(settings)
-    settings = ServerSettings(
-        db_path=settings.db_path,
-        artifact_root=settings.artifact_root,
-        model_config_path=settings.model_config_path,
-        default_rag_config=settings.default_rag_config,
-        prompt_version=settings.prompt_version,
-        redaction_mode_default=settings.redaction_mode_default,
-        static_dir=settings.static_dir,
-        database_backend=settings.database_backend,
-        database_url=settings.database_url,
-        jwt_secret=settings.jwt_secret,
-        jwt_issuer=settings.jwt_issuer,
-        jwt_audience=settings.jwt_audience,
-        jwt_jwks_json=settings.jwt_jwks_json,
-        jwt_jwks_url=settings.jwt_jwks_url,
-        allow_local_dev_auth=settings.allow_local_dev_auth,
-        local_pairing_token_sha256=settings.local_pairing_token_sha256,
-        desktop_local_origin=settings.desktop_local_origin,
+    settings = replace(
+        settings,
         local_dev_origins=tuple(loopback_origin(value) for value in settings.local_dev_origins),
-        oidc_authorization_endpoint=settings.oidc_authorization_endpoint,
-        oidc_token_endpoint=settings.oidc_token_endpoint,
-        oidc_client_id=settings.oidc_client_id,
-        oidc_client_secret=settings.oidc_client_secret,
-        oidc_redirect_uri=settings.oidc_redirect_uri,
-        oidc_session_secret=settings.oidc_session_secret,
-        oidc_logout_endpoint=settings.oidc_logout_endpoint,
-        oidc_post_logout_redirect_uri=settings.oidc_post_logout_redirect_uri,
-        oidc_scopes=settings.oidc_scopes,
-        rate_limit_requests=settings.rate_limit_requests,
-        rate_limit_window_seconds=settings.rate_limit_window_seconds,
-        structured_access_logs=settings.structured_access_logs,
-        otel_enabled=settings.otel_enabled,
-        otel_service_name=settings.otel_service_name,
-        network_mode=settings.network_mode,
-        vlm_observation_backend=settings.vlm_observation_backend,
-        vlm_observation_endpoint=settings.vlm_observation_endpoint,
-        vlm_observation_api_key=settings.vlm_observation_api_key,
-        vlm_observation_timeout_seconds=settings.vlm_observation_timeout_seconds,
-        attachment_scan_backend=settings.attachment_scan_backend,
-        attachment_scan_endpoint=settings.attachment_scan_endpoint,
-        attachment_scan_api_key=settings.attachment_scan_api_key,
-        attachment_scan_timeout_seconds=settings.attachment_scan_timeout_seconds,
-        model_queue_max_wait_ms=settings.model_queue_max_wait_ms,
-        model_queue_wait_ms_estimate=settings.model_queue_wait_ms_estimate,
-        agent_runtime=settings.agent_runtime,
-        knowledge_update_root=settings.knowledge_update_root,
-        knowledge_update_public_key=settings.knowledge_update_public_key,
-        knowledge_update_trust_policy=settings.knowledge_update_trust_policy,
-        knowledge_update_allow_unsigned=settings.knowledge_update_allow_unsigned,
-        allow_rag_config_override=settings.allow_rag_config_override,
-        allow_model_id_override=settings.allow_model_id_override,
-        imagery_cache_root=settings.imagery_cache_root,
-        imagery_worker_python=settings.imagery_worker_python,
-        imagery_cache_max_bytes=settings.imagery_cache_max_bytes,
-        imagery_min_free_bytes=settings.imagery_min_free_bytes,
         corpus_audit_id=_corpus_audit(settings, store),
     )
     app = FastAPI(title="Agronomy Agent Cockpit")

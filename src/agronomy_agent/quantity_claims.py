@@ -8,9 +8,11 @@ mass-fraction illustration can be checked here. Neither grants field authority.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 import re
+
+from agronomy_agent.request_scope import information_request_kind
 
 _NUM = r"[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)"
 _UNIT = (
@@ -176,6 +178,34 @@ def _plain_unit_exponent(match: re.Match[str], annotations: set[str], digits: di
     exp = match.group('plain')
     annotations.add(match.group('unit') + '^' + exp)
     return match.group('unit') + 'power' + exp.translate(digits)
+
+
+_RECORD_TIMESTAMP = re.compile(
+    r"(?<![\w-])(?P<day>\d{4}-\d{2}-\d{2})(?:T| +(?:at +)?)"
+    r"(?P<clock>\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?)"
+    r"(?P<zone>Z|[+-]\d{2}:\d{2}| +UTC)(?![\w:+-]|\.\d)", re.I,
+)
+
+
+def _record_timestamps(text: str, *, keep_day: bool = True) -> tuple[str, set[str]]:
+    """Keep the complete instant together without lending its digits to other claims."""
+    identities: set[str] = set()
+
+    def replace(match: re.Match[str]) -> str:
+        zone = match["zone"].strip().upper()
+        if zone in {"Z", "UTC"}:
+            zone = "+00:00"
+        try:
+            if int(zone[4:]) >= 60:
+                raise ValueError("invalid UTC offset")
+            instant = datetime.fromisoformat(f"{match['day']}T{match['clock']}{zone}")
+            identities.add(instant.astimezone(timezone.utc).isoformat())
+        except (ValueError, OverflowError):
+            identities.add("invalid timestamp: " + match.group())
+        # Preserve the source's calendar date for answers that omit the time.
+        return match["day"] if keep_day else "record_timestamp"
+
+    return _RECORD_TIMESTAMP.sub(replace, text), identities
 
 
 def _calendar_dates(text: str) -> tuple[str, set[str]]:
@@ -364,7 +394,17 @@ def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tupl
     source = f"{question}\n{evidence}"
     source_dates: set[str] = set()
     answer_dates: set[str] = set()
-    if re.search(r"\b(?:dates?|dated|collected|sampled|analy[sz]ed|issued|issuance|reported|"
+    # Compare equivalent ISO/prose timestamps as a single value for saved-record summaries.
+    record_summary = information_request_kind(question) == "field_record_summary"
+    unsupported_timestamps: set[str] = set()
+    if record_summary:
+        source, _ = _record_timestamps(source)
+        _, source_timestamps = _record_timestamps(evidence)
+        answer, answer_timestamps = _record_timestamps(answer, keep_day=False)
+        unsupported_timestamps = (answer_timestamps - source_timestamps) | {
+            value for value in answer_timestamps if value.startswith("invalid timestamp:")
+        }
+    if record_summary or re.search(r"\b(?:dates?|dated|collected|sampled|analy[sz]ed|issued|issuance|reported|"
                  r"acquired|acquisition|sown|planted|harvested)\b", question, re.I):
         source, source_dates = _calendar_dates(source)
         answer, answer_dates = _calendar_dates(answer)
@@ -390,7 +430,7 @@ def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tupl
             a, b, total = (Decimal(v.replace(",", "")) for v in equation.groups())
             if sorted([a, b]) == sorted([count, mass]) and total == result.value:
                 grounded_operand_spans.extend((equation.span(1), equation.span(2)))
-    values: list[str] = sorted((answer_annotations - source_annotations) | (answer_dates - source_dates)
+    values: list[str] = sorted(unsupported_timestamps | (answer_annotations - source_annotations) | (answer_dates - source_dates)
                                | {value for value in answer_dates if value.startswith("invalid calendar date:")})
     for match in NUMBER_RE.finditer(answer):
         if match.span() in checked_spans:

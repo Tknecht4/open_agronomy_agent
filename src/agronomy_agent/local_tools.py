@@ -1892,6 +1892,12 @@ def public_source_lane_card(source_lane_id: str, **context: Any) -> dict[str, An
     return _public_source_lane_context(source_lane_id, **context)
 
 
+def recent_nasa_power_window(today: dt.date) -> tuple[str, str]:
+    """Seven completed UTC observation days with a three-day publication lag."""
+    end = today - dt.timedelta(days=3)
+    return (end - dt.timedelta(days=6)).strftime("%Y%m%d"), end.strftime("%Y%m%d")
+
+
 def nasa_power_daily(
     latitude: float,
     longitude: float,

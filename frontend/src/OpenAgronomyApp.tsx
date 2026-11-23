@@ -1279,7 +1279,8 @@ export function AnswerContextDisclosure({
 }) {
   const mapContext = Array.isArray(receipt?.map_context) ? receipt.map_context : []
   const liveContext = Array.isArray(receipt?.live_context) ? receipt.live_context : []
-  const labels = [...mapContext, ...liveContext]
+  const retainedContext = Array.isArray(receipt?.retained_context) ? receipt.retained_context : []
+  const labels = [...mapContext, ...liveContext, ...retainedContext]
     .map((value) => {
       const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}
       return typeof item.label === 'string' ? item.label.trim() : ''
@@ -4635,7 +4636,9 @@ function EvidenceDisclosure({
 function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknown> | undefined }) {
   const mapContext = Array.isArray(receipt?.map_context) ? receipt.map_context : []
   const liveContext = Array.isArray(receipt?.live_context) ? receipt.live_context : []
+  const retainedContext = Array.isArray(receipt?.retained_context) ? receipt.retained_context : []
   const imagery = receipt?.imagery_observation as Record<string, unknown> | undefined
+  const imageryLocation = imagery?.support_kind === 'field_polygon' ? 'boundary' : 'saved location'
   const indices = imagery?.indices as Record<string, { mean: number | null; valid_area_m2: number }> | undefined
   const field = receipt?.field && typeof receipt.field === 'object' ? receipt.field as Record<string, unknown> : {}
   const fieldLabel = ['crop', 'region', 'jurisdiction', 'concern']
@@ -4648,7 +4651,7 @@ function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknow
       {imagery ? <article>
         <strong>Selected satellite analysis</strong>
         <p>{String(imagery.scene_id)} · {String(imagery.acquired_at).slice(0, 10)} · {String(imagery.resolution_m)} m grid</p>
-        <p>{String(imagery.support_kind).replace(/_/g, ' ')} · {imagery.geometry_status === 'historical' ? 'Historical boundary' : 'Current boundary at answer time'}</p>
+        <p>{String(imagery.support_kind).replace(/_/g, ' ')} · {imagery.geometry_status === 'historical' ? `Original ${imageryLocation}` : `Current ${imageryLocation} at answer time`}</p>
         <p>{Number(imagery.qa_clear_area_m2).toLocaleString()} of {Number(imagery.support_area_m2).toLocaleString()} m² QA-clear</p>
         <ul>{Object.entries(indices || {}).map(([name, index]) => <li key={name}>
           {name} · {index.mean == null ? 'No valid index support' : `Mean ${index.mean} on ${index.valid_area_m2.toLocaleString()} m²`}
@@ -4666,13 +4669,16 @@ function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknow
           </article>
         )
       })}
-      {liveContext.map((value, index) => {
+      {[...liveContext, ...retainedContext].map((value, index) => {
         const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}
         const facts = Array.isArray(item.facts) ? item.facts.map(String).filter(Boolean) : []
+        const retained = index >= liveContext.length
+        const fetched = typeof item.fetched_at === 'string' ? item.fetched_at.slice(0, 10) : ''
         return (
-          <article key={`live-${index}`}>
+          <article key={String(item.snapshot_id || `public-${index}`)}>
             <strong>{String(item.label || item.adapter || 'Public source')}</strong>
             <p>{facts.join(' · ') || 'No usable value returned.'}</p>
+            {retained ? <small>{fetched ? `Retained public check · Fetched ${fetched}` : 'Retained public check'}</small> : null}
           </article>
         )
       })}

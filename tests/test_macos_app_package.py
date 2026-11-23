@@ -310,3 +310,32 @@ def test_mac_provider_https_preserves_explicit_certificate_settings(monkeypatch,
     monkeypatch.setenv(override, str(tmp_path))
     monkeypatch.setattr(urllib.request, "install_opener", lambda _: pytest.fail("explicit trust settings must be preserved"))
     backend._configure_provider_https()
+
+
+def test_frozen_backend_configures_only_its_bundled_imagery_worker(tmp_path, monkeypatch):
+    import argparse
+    from macos_app import backend
+
+    resources = tmp_path / "Example.app/Contents/Resources"
+    runtime = resources / "runtime"
+    (runtime / "configs").mkdir(parents=True)
+    (runtime / "configs/runtime_profiles.json").write_text("{}")
+    (runtime / "frontend/dist").mkdir(parents=True)
+    (runtime / "frontend/dist/index.html").touch()
+    helpers = resources.parent / "Helpers"
+    worker = helpers / "OpenAgronomyImagery.app/Contents/MacOS/OpenAgronomyImagery"
+    worker.parent.mkdir(parents=True)
+    worker.touch()
+    state = tmp_path / "state"
+    state.mkdir(mode=0o700)
+    monkeypatch.setattr(backend.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(backend.sys, "executable",
+                        str(helpers / "OpenAgronomyBackend.app/Contents/MacOS/OpenAgronomyBackend"))
+    monkeypatch.setattr(backend.os, "environ", {"AGRONOMY_AGENT_IMAGERY_PYTHON": "/ignored"})
+    monkeypatch.chdir(tmp_path)
+    args = argparse.Namespace(runtime_root=runtime, state_root=state, model_cache=None,
+                              require_bundle_manifest=False)
+    backend._configure_runtime(args)
+    assert backend.os.environ["AGRONOMY_AGENT_IMAGERY_EXECUTABLE"] == str(worker)
+    assert backend.os.environ["AGRONOMY_AGENT_IMAGERY_CACHE_ROOT"] == str(state / "cache/imagery")
+    assert "AGRONOMY_AGENT_IMAGERY_PYTHON" not in backend.os.environ

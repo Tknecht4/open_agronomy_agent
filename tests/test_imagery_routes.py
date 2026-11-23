@@ -287,3 +287,93 @@ def test_runtime_readiness_does_not_treat_configuration_as_dependency_health(run
     assert result["status"] == "worker_unavailable"
     assert result["pixel_access"] == "not_live_verified"
     assert not any(provider["analysis"] for provider in result["providers"])
+
+
+def test_standalone_worker_reuses_bounded_analysis_arguments(tmp_path, monkeypatch):
+    settings = build_settings(
+        db_path=tmp_path / "db", artifact_root=tmp_path / "a", imagery_cache_root=tmp_path / "c",
+        imagery_worker_executable=sys.executable, network_mode="offline",
+    )
+
+    def run(command, **kwargs):
+        assert command[:2] == [sys.executable, "--geometry"]
+        assert kwargs["standalone"]
+        assert "--online" not in command
+        assert command[command.index("--max-cache-bytes") + 1] == str(settings.imagery_cache_max_bytes)
+        kwargs["stdout"].write(b'{"status":"blocked_offline"}')
+        return type("Completed", (), {"returncode": 2})()
+
+    monkeypatch.setattr(service, "_run_process", run)
+    assert service._run_worker(settings, tmp_path / "c", {}, PAYLOAD)["status"] == "blocked_offline"
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="Darwin launches a standalone helper through posix_spawn")
+def test_standalone_spawn_closes_inheritable_parent_descriptors(tmp_path):
+    import os
+    import subprocess
+
+    with (tmp_path / "private.txt").open("w") as handle:
+        descriptor = handle.fileno()
+        info = os.fstat(descriptor)
+        os.set_inheritable(descriptor, True)
+        check = """
+import os, sys
+try:
+    observed = os.fstat(int(sys.argv[1]))
+except OSError:
+    sys.exit(0)
+sys.exit((observed.st_dev, observed.st_ino) == (int(sys.argv[2]), int(sys.argv[3])))
+"""
+        result = service._run_process(
+            [sys.executable, "-c", check, str(descriptor), str(info.st_dev), str(info.st_ino)],
+            standalone=True, cwd=tmp_path, stdin=subprocess.DEVNULL, capture_output=True, timeout=10,
+        )
+    assert result.returncode == 0, result.stderr.decode()
+
+
+def test_mounted_app_uses_standalone_worker_for_health_and_overlay(tmp_path, monkeypatch):
+    import base64
+    import hashlib
+    from subprocess import CompletedProcess
+
+    from test_imagery_jobs import body
+
+    settings = build_settings(
+        db_path=tmp_path / "db", artifact_root=tmp_path / "a", imagery_cache_root=tmp_path / "c",
+        imagery_worker_executable=sys.executable, network_mode="online",
+    )
+
+    def run(command, **kwargs):
+        assert kwargs["standalone"]
+        assert command[0] == sys.executable
+        if command[1:] == ["--health"]:
+            return CompletedProcess(command, 0, b'{"scipy":"synthetic"}', b"")
+        chip = "a" * 64
+        assert command[1:3] == ["--overlay", "--cache-root"]
+        assert command[-2:] == ["--chip-hash", chip]
+        assert "PYTHONPATH" not in kwargs["env"]
+        result = {
+            "chip_hash": chip, "source_preview_sha256": hashlib.sha256(b"fixture PNG").hexdigest(),
+            "display_crs": "EPSG:3857", "display_resampling": "nearest",
+            "bounds": [[40, -104], [41, -103]], "png_base64": base64.b64encode(b"\x89PNG\r\n\x1a\n").decode(),
+        }
+        kwargs["stdout"].write(json.dumps(result).encode())
+        return CompletedProcess(command, 0)
+
+    service._worker_health.cache_clear()
+    monkeypatch.setattr(service, "_run_process", run)
+    monkeypatch.setattr(service, "_run_worker", _worker)
+    try:
+        with TestClient(create_app(settings)) as client:
+            field_id = client.post("/api/demo/fields", headers=OWNER,
+                json={"name": "Standalone fixture", "field": {}, "geometry": GEOMETRY}).json()["field"]["field_context_id"]
+            ready = client.get(f"/api/demo/fields/{field_id}/imagery/analytics", headers=OWNER).json()
+            assert ready["status"] == "ready"
+            assert all(provider["analysis"] for provider in ready["providers"])
+            job = client.post(f"/api/fields/{field_id}/imagery-jobs", headers=OWNER,
+                              json=body(client, field_id)).json()
+            result = client.get(f"/api/imagery-jobs/{job['id']}/overlay", headers=OWNER)
+            assert result.status_code == 200, result.text
+            assert result.json()["current_geometry"] is True
+    finally:
+        service._worker_health.cache_clear()

@@ -78,6 +78,12 @@ def _configure_runtime(args: argparse.Namespace) -> tuple[Path, Path, Path]:
     os.environ["AGRONOMY_AGENT_GEO_CACHE_DIR"] = str(state_root / "cache/geo")
     os.environ["AGRONOMY_AGENT_AGNO_INDEX_CACHE_DIR"] = str(state_root / "cache/agno_lexical_index")
     os.environ["AGRONOMY_AGENT_TOOL_CACHE_ROOT"] = str(state_root / "cache/public_tools")
+    if getattr(sys, "frozen", False):
+        helpers = Path(sys.executable).resolve().parents[3]
+        worker = helpers / "OpenAgronomyImagery.app/Contents/MacOS/OpenAgronomyImagery"
+        if worker.is_file():
+            os.environ["AGRONOMY_AGENT_IMAGERY_EXECUTABLE"] = str(worker)
+            os.environ["AGRONOMY_AGENT_IMAGERY_CACHE_ROOT"] = str(state_root / "cache/imagery")
     os.environ["AGRONOMY_AGENT_SPATIAL_PACK_ROOT"] = str(state_root / "spatial-pack")
     os.environ["HF_HOME"] = str(model_cache.parent)
     os.environ["HF_HUB_CACHE"] = str(model_cache)

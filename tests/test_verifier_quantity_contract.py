@@ -808,3 +808,18 @@ MOISTURE_EXAMPLE = "For example, use 35% moisture as 0.35."
 ])
 def test_moisture_arithmetic_binds_only_equation_and_checked_example_numbers(statement, unsupported):
     assert unsupported_quantities(statement, question=MOISTURE_COMPARISON, evidence="") == unsupported
+
+
+@pytest.mark.parametrize(("draft", "supported"), [
+    ("You scouted on 2025-07-21 at 16:00:00Z.", True),
+    ("The date was July 21, 2025.", True),
+    ("You scouted on 2025-07-22 at 01:00:00+09:00.", True),
+    ("You scouted on 2025-07-21 at 17:00:00Z.", False),
+    ("You scouted on 2025-07-21 at 17:00:00+00:60.", False),
+    ("You scouted on 2025-07-22 at 16:00:00Z.", False),
+    ("You scouted on 2025-07-21 at 16:00:00Z and counted 16 plants.", False),
+])
+def test_scouting_timestamp_is_checked_as_one_instant(draft, supported):
+    question = "Use my dated scouting observation to summarize what I saw, where and when I saw it, and what remains unknown."
+    evidence = "- 2025-07-21T16:00:00Z observation: Pale leaves. 17 plants were checked."
+    assert (not unsupported_quantities(draft, question=question, evidence=evidence)) is supported

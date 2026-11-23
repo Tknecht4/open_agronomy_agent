@@ -50,6 +50,14 @@ def information_request_kind(text: str) -> str | None:
         r"\s+(?:crosses|moves|occurs|affects|is|are)\b)", r'\1drift', text)
     if re.search(r"\b(?:then|also)\b", text) or has_action_directive(text):
         return None
+    record = r"(?:my|the) (?:(?:dated|saved) )?(?:scouting (?:observations?|notes?|records?)|field (?:notes?|records?))"
+    if re.fullmatch(
+        rf"(?:use {record} to (?:summarize|summarise) what i saw|"
+        rf"(?:summarize|summarise) {record})"
+        r"(?:,? (?:and )?where and when i saw it)?"
+        r"(?:,? and what remains unknown)?[.!?]*", text,
+    ):
+        return "field_record_summary"
     normal = r"(?:(?:an?|the) )?(?:seasonal |long[- ]term )?climate normals?"
     forecast = (r"(?:(?:an?|the) )?(?:next week['’]s |short[- ]term )?"
                 r"(?:weather )?forecasts?(?: for next week)?")

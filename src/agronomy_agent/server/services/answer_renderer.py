@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from html import escape
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from agronomy_agent.answer_safety import normalize_general_answer, normalize_public_answer
 from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, apply_soileri_coverage_disclosure
@@ -11,7 +12,7 @@ from agronomy_agent.map_component_interpretation import is_map_component_explana
 from agronomy_agent.server.services.leak_guard import detect_prompt_leaks
 from agronomy_agent.geospatial.context_support import mapped_coverage_label
 from agronomy_agent.geospatial.crop_cover import coverage_facts
-from agronomy_agent.server.services.field_context_compiler import IMAGERY_BOUNDARY
+from agronomy_agent.server.services.field_context_compiler import IMAGERY_BOUNDARY, SOIL_MAP_ADAPTERS, imagery_support_facts
 
 
 @dataclass(frozen=True)
@@ -105,6 +106,19 @@ def render_structured_answer(
         trace=trace,
     )
     clean_answer = _localize_known_safety_boundaries(clean_answer, question=question)
+    imagery = (metadata.get("field_context_compiler") or {}).get("imagery_observation")
+    if imagery and not validated_calculator:
+        date = imagery["acquired_at"][:10]
+        historical = imagery["geometry_status"] == "historical"
+        boundary = "original field boundary" if historical else "saved field boundary"
+        location = "original saved location" if historical else "saved location"
+        scope = {
+            "field_polygon": boundary.capitalize(),
+            "native_pixel": f"One native pixel at the {location}",
+            "point_buffer": f"Sample around the {location}",
+        }[imagery["support_kind"]]
+        facts = f"**Selected satellite image ({date}).** {scope}. {imagery_support_facts(imagery)}"
+        clean_answer = f"{facts}\n\n{clean_answer}" if clean_answer else facts
     calculator_clarification = (validated_calculator
                                and (metadata.get("tool_plan") or {}).get("status") == "clarification_required")
     # Exact whole-request replay binds these typed gaps. Generic word matching
@@ -136,6 +150,35 @@ def render_map_interpretation_answer(question: str, trace: dict[str, Any]) -> st
     """Return a complete answer only when map evidence satisfies the strict tool-grounded contract."""
 
     return _map_interpretation_answer(question, trace)
+
+
+def render_retained_soil_map_answer(question: str, receipt: dict[str, Any]) -> str | None:
+    """Report current saved map facts for an explicit read of the soil receipt."""
+    if receipt.get("imagery_observation") or not re.fullmatch(
+        r"(?:what does (?:the|my) saved (?:public )?soil (?:map|survey) (?:say|tell me) about (?:this|my) field"
+        r"|summari[sz]e (?:the|my) saved (?:public )?soil (?:map|survey)(?: for (?:this|my) field)?)"
+        r"[.!?]*(?:\s+describe what it mapped and what i still need to verify in the field[.!?]*)?",
+        question.strip(), re.I,
+    ):
+        return None
+    for record in receipt.get("retained_context") or ():
+        if (record["adapter"] not in SOIL_MAP_ADAPTERS or not record.get("receipt_sha256")
+                or not record.get("snapshot_id") or not record.get("facts")):
+            continue
+        fetched = (record.get("fetched_at") or "")[:10]
+        date_note = f" (fetched {fetched})" if fetched else ""
+        facts = "\n".join(f"- {escape(fact)}" for fact in record["facts"])
+        scope = (
+            "CanSIS describes the broad soil landscape at the field's representative lookup point."
+            if record["adapter"] == "cansis_soil_landscapes_canada"
+            else "These map units describe mapped soils at the saved field location."
+        )
+        return (
+            f"**{record['label']}**{date_note}\n\n{facts}\n\n{scope} "
+            "Check current conditions with field observations or representative soil samples. "
+            "Field checks can confirm texture, wetness and rooting depth where they matter."
+        )
+    return None
 
 
 def render_map_component_explanation_answer(question: str, trace: dict[str, Any]) -> str | None:
@@ -1070,6 +1113,27 @@ def _evidence_cards(trace: dict[str, Any]) -> list[dict[str, Any]]:
     cards.extend(_public_adapter_cards(trace))
     cards.extend(_map_context_cards(trace))
     compiled = (trace.get("metadata") or {}).get("field_context_compiler") or {}
+    for record in compiled.get("retained_context") or ():
+        if not record.get("receipt_sha256") or not record.get("snapshot_id"):
+            continue
+        name = record["adapter"]
+        source = record.get("source")
+        location = urlsplit(source) if source else None
+        url = urlunsplit((location.scheme, location.netloc, location.path, "", "")) if location else None
+        cards.append({
+            "doc_id": f"retained-tool:{record['snapshot_id']}",
+            "title": record["label"],
+            "publisher": _public_adapter_publisher(name),
+            "source": url or name,
+            "source_id": record["receipt_sha256"],
+            "source_type": "public_adapter",
+            "url": url,
+            "updated_at": record.get("fetched_at"),
+            "adapter_name": name,
+            "adapter_status": record["status"],
+            "why_used": "Retained public field context. " + ". ".join(record["facts"]),
+            "known_limitations": [record["boundary"]] if record.get("boundary") else [],
+        })
     if imagery := compiled.get("imagery_observation"):
         cards.append({
             "source_id": imagery["result_sha256"],

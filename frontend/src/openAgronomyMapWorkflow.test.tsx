@@ -3985,6 +3985,31 @@ describe('production answer origin and publicity wording', () => {
     }
   })
 
+  it('shows retained soil evidence in an offline answer with no live adapter result', async () => {
+    const turn = publicityTurn('tool')
+    turn.trace!.metadata!.field_context_compiler = {
+      status: 'available',
+      live_context: [],
+      retained_context: [{
+        adapter: 'nrcs-soil-survey-geometry',
+        label: 'USDA NRCS Soil Data Access',
+        facts: ['Mapped soil unit: Synthetic loam complex'],
+        fetched_at: '2026-11-22T20:00:00+00:00',
+        snapshot_id: 'retained-nrcs',
+      }],
+    }
+    installPublicitySavedTurn(turn)
+    render(<OpenAgronomyApp />)
+    await screen.findByText(turn.answer)
+    expect(screen.getByText('Context used').closest('summary')).toHaveTextContent('USDA NRCS Soil Data Access')
+    fireEvent.click(screen.getByRole('button', { name: /Sources & checks/ }))
+    const context = within(screen.getByRole('dialog', { name: 'Sources & checks' }))
+    fireEvent.click((await context.findByText('Compiled field context')).closest('summary')!)
+    expect(context.getByText('USDA NRCS Soil Data Access')).toBeVisible()
+    expect(context.getByText('Mapped soil unit: Synthetic loam complex')).toBeVisible()
+    expect(context.getByText('Retained public check · Fetched 2026-11-22')).toBeVisible()
+  })
+
   it('keeps retrieval separate from coverage IDs, consumption and current authority', async () => {
     const turn = publicityTurn('tool')
     turn.trace!.retrieved_docs = [{ rank: 1, doc_id: 'retrieved-context', title: 'Dated regional context', source_type: 'context', score: 1 }]

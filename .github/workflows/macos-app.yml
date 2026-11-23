@@ -18,6 +18,7 @@ on:
       - "!configs/github_repository_policy.json"
       - "data/**"
       - "requirements/requirements-macos-app-*.txt"
+      - "requirements/requirements-imagery.txt"
       - "requirements/requirements-container.txt"
       - "requirements/requirements-security.txt"
   workflow_dispatch:
@@ -46,6 +47,21 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 2
+      - name: Detect packaged imagery changes
+        if: github.event_name == 'pull_request'
+        id: imagery_contract
+        run: |
+          git diff --name-only HEAD^1 HEAD -- .github/workflows/macos-app.yml macos_app \
+            scripts/build_macos_app.py scripts/smoke_macos_offline.py \
+            'requirements/requirements-macos-app-*.txt' requirements/requirements-imagery.txt requirements/requirements-container.txt \
+            'src/agronomy_agent/imagery_*.py' 'src/agronomy_agent/sentinel2_*.py' \
+            src/agronomy_agent/geospatial src/agronomy_agent/field_imagery.py src/agronomy_agent/server/imagery_job_routes.py \
+            src/agronomy_agent/server/services/imagery_service.py src/agronomy_agent/server/app.py \
+            src/agronomy_agent/server/settings.py > "$RUNNER_TEMP/imagery-contract-files"
+          if test -s "$RUNNER_TEMP/imagery-contract-files"; then
+            echo 'required=true' >> "$GITHUB_OUTPUT"
+          fi
       - name: Reject native qualification outside main
         if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref != 'refs/heads/main'
         run: |
@@ -95,13 +111,24 @@ jobs:
           npm run typecheck
           npm test
       - name: Build ad hoc Mac candidate
-        if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main') || steps.imagery_contract.outputs.required == 'true'
         run: |
           mkdir -p outputs/macos
           python scripts/build_macos_app.py --preflight \
             --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
           python scripts/build_macos_app.py \
             --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
+      - name: Smoke packaged imagery and offline answers for the PR
+        if: steps.imagery_contract.outputs.required == 'true'
+        run: |
+          state="$RUNNER_TEMP/packaged-imagery-smoke"
+          python -m scripts.smoke_macos_app \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$state" --report "$RUNNER_TEMP/installed-backend-smoke.json"
+          python -m scripts.smoke_macos_offline \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$state" --report "$RUNNER_TEMP/installed-imagery-smoke.json"
+          cat "$RUNNER_TEMP/installed-imagery-smoke.json"
       - name: Smoke native first-run model installation
         if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
         run: |

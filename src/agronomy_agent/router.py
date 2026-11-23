@@ -227,7 +227,16 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
 
     if stored_grain_probe_monitoring(question):
         return _stored_grain_probe_route(route.audience)
-    if information_request_kind(question) == 'regulatory_information':
+    information_task = information_request_kind(question)
+    if information_task == "field_record_summary":
+        return QueryRoute(
+            question_type="field_data", risk_level="low",
+            namespaces=("field_data_boundary",), required_tools=(),
+            answer_style="plain", audience=route.audience, query_expansion=(),
+            guidance="Summarize the authorized saved field record. Preserve what was observed, its date and location, and any stated unknowns.",
+            knowledge_bucket="farmer_knowledge", knowledge_domains=("farmer_knowledge",),
+        )
+    if information_task == 'regulatory_information':
         return QueryRoute(
             question_type='field_data', risk_level='high',
             namespaces=('field_data_boundary', 'regional_environment'), required_tools=(),
@@ -235,10 +244,10 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             guidance='Interpret the requested recordkeeping requirements from dated applicable regulator sources. Keep an unverified retention period unknown and preserve the source jurisdiction and activity scope.',
             knowledge_bucket='farmer_knowledge', knowledge_domains=('farmer_knowledge',),
         )
-    if information_request_kind(question) not in {None, "source_context", "regulatory_information"} or is_quantity_concept_explanation(question):
+    if information_task not in {None, "source_context", "regulatory_information"} or is_quantity_concept_explanation(question):
         return QueryRoute(
             question_type="exam_review", risk_level="low",
-            namespaces=("exam_review", "crop_management") if information_request_kind(question) else ("exam_review", "product_stewardship"), required_tools=(),
+            namespaces=("exam_review", "crop_management") if information_task else ("exam_review", "product_stewardship"), required_tools=(),
             answer_style="exam_review", audience=route.audience,
             query_expansion=(),
             guidance="Answer the requested explanation or analytical method directly; do not add a field operation, product choice or nutrient target.",

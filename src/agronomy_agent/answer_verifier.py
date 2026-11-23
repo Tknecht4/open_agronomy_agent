@@ -1575,6 +1575,7 @@ def assess_claim_risk(
     if (
         _INTERNAL_PROCESS_RE.search(candidate)
         or _INTERNAL_CONTROL_CAPSULE_RE.search(candidate)
+        or _copied_decision_header(candidate, question)
         or _INTERNAL_SOURCE_ID_RE.search(candidate)
         or _VACUOUS_INSTRUCTION_ECHO_RE.search(candidate)
     ):
@@ -2605,7 +2606,7 @@ def _verify_answer_policy(
                     selection_policy="localized_application_scope_cleanup_v1" if application_cleaned else "bounded_application_scope_recovery_v1",
                     localized_cleanup=({"kind":"unasked_application_instruction", "removed_text":list(application_removed),
                         "retained_prose_unchanged":True, "editor_invoked":False} if application_cleaned else None))
-    cleaned, removed = _remove_leading_control_capsule(draft)
+    cleaned, removed = _remove_leading_control_capsule(draft, question=question)
     if removed:
         original_assessment = assess_claim_risk(
             draft, question=question, evidence_text=evidence_text,
@@ -2745,12 +2746,22 @@ def verify_answer(
     return observation.finish(result) if observation is not None else result
 
 
-def _remove_leading_control_capsule(answer: str) -> tuple[str, str]:
+def _copied_decision_header(answer: str, question: str) -> bool:
+    if information_request_kind(question) != "field_record_summary":
+        return False
+    header, separator, prose = answer.strip().partition("\n\n")
+    match = re.fullmatch(r"(?:[-*]\s+)?(?:Decision:|\*\*Decision:\*\*|\*\*Decision\*\*:)\s*(.+)", header, re.IGNORECASE)
+    return bool(separator and prose.strip() and match and match[1].strip() == question.strip())
+
+
+def _remove_leading_control_capsule(answer: str, *, question: str = "") -> tuple[str, str]:
     """Remove only a separate leading block made entirely of control labels."""
     blocks = answer.strip().split("\n\n", 1)
     if len(blocks) != 2 or not blocks[1].strip():
         return answer, ""
     header, prose = blocks
+    if _copied_decision_header(answer, question):
+        return prose.strip(), header
     control_line = re.compile(
         r"^\s*(?:[-*]\s*)?(?:decision|preserve|primary decision evidence|"
         r"supporting or boundary evidence|evidence roles?)\s*:", re.I

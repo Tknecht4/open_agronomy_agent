@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import threading
 from typing import Any
 from agronomy_agent.geospatial.geometry import geodesic_metrics
+from agronomy_agent.local_tools import recent_nasa_power_window
 from agronomy_agent.server.services.tool_service import run_local_tool
 from agronomy_agent.field_imagery import search_field_imagery
 from agronomy_agent.server.storage.farm_store import geometry_geojson
@@ -14,8 +15,10 @@ _SLOTS = threading.BoundedSemaphore(2)
 
 def _normalize(source: str, value: dict[str, Any]) -> dict[str, Any]:
     status = str(value.get("status") or "unknown")
-    aliases = {"ok": "available", "ready": "available", "partial_available": "partial", "blocked_offline": "offline", "no_data": "no_match", "empty": "no_match", "no_scene": "no_match", "error": "provider_error", "unavailable": "provider_error", "source_unavailable": "provider_error", "location_required": "invalid_geometry"}
+    aliases = {"ok": "available", "ready": "available", "partial_available": "partial", "blocked_offline": "offline", "no_data": "no_match", "no_records": "no_match", "empty": "no_match", "no_scene": "no_match", "error": "provider_error", "unavailable": "provider_error", "source_unavailable": "provider_error", "location_required": "invalid_geometry"}
     availability = aliases.get(status, status)
+    if source == "imagery" and status == "available" and value.get("count") == 0:
+        availability = "no_match"
     if availability not in SUCCESS | {"offline", "provider_error", "rate_limited", "invalid_geometry", "unsupported_geometry", "not_installed", "integrity_failed", "credentials_required", "jurisdiction_unknown"}:
         availability = "provider_error"
     message = str(value.get("message") or value.get("boundary") or value.get("reason") or "")
@@ -36,8 +39,11 @@ def run_source(source: str, field: dict[str, Any], network_mode: str) -> dict[st
     country, province = field.get("country"), field.get("province_state")
     today = datetime.now(timezone.utc).date()
     if source == "weather":
-        end = today - timedelta(days=3)
-        value = run_local_tool("weather-power", {"lat": point["latitude"], "lon": point["longitude"], "start": (end - timedelta(days=6)).strftime("%Y%m%d"), "end": end.strftime("%Y%m%d")}, network_mode=network_mode)
+        start, end = recent_nasa_power_window(today)
+        value = run_local_tool(
+            "weather-power", {"lat": point["latitude"], "lon": point["longitude"], "start": start, "end": end},
+            network_mode=network_mode,
+        )
     elif source == "imagery":
         if geometry.get("type") == "MultiPolygon":
             return {"availability": "unsupported_geometry", "message": "This imagery source currently accepts one polygon or a point. Your complete multipart boundary is retained unchanged; it has not been simplified or split for this check.", "role": "scene_metadata"}
