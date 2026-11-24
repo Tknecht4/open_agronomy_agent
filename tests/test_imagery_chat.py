@@ -142,3 +142,20 @@ def test_selection_is_scoped_and_client_payload_cannot_supply_an_observation(sav
     result = _preview(client, sid, text_only)
     assert result.status_code == 200, result.text
     assert "imagery_job_id" not in result.json()["binding"]
+
+
+def test_retired_date_comparison_cannot_be_run_again(runtime):
+    client, field_id, _ = runtime
+    assert client.post(f"/api/fields/{field_id}/imagery-comparison", headers=OWNER, json={}).status_code == 404
+
+    sid = _session(client, field_id)
+    store = client.app.state.trace_store
+    turn_id = store.create_turn(
+        sid, "What changed between the images?", "Historical comparison answer.",
+        parent_turn_id=None, system_state={"mode": "agronomic_rag"}, objectives={},
+        trace={"metadata": {"field_context_compiler": {"imagery_comparison": {"status": "descriptive_only"}}}},
+    )
+    response = client.post("/api/replay", headers=OWNER, json={"base_turn_id": turn_id, "pipeline": "full"})
+    assert response.status_code == 409, response.text
+    saved = client.get(f"/api/sessions/{sid}", headers=OWNER).json()["turns"]
+    assert [turn["answer"] for turn in saved] == ["Historical comparison answer."]

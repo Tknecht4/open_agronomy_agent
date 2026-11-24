@@ -80,6 +80,41 @@ def test_head_and_rejected_attempts_have_request_limit(origin):
         assert budget.snapshot()['request_limit_refusals']==1
 
 
+def test_proxy_reuses_upstream_connection_without_carrying_cookies():
+    requests = []
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            requests.append((self.client_address, self.headers.get("Cookie")))
+            self.send_response(206)
+            self.send_header("Content-Length", "4")
+            self.send_header("Content-Range", "bytes 0-3/8")
+            self.send_header("Set-Cookie", "test=ignored; Path=/")
+            self.end_headers()
+            self.wfile.write(b"1234")
+
+    with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            href = f"http://127.0.0.1:{server.server_port}/asset"
+            with cog.bounded_cog_proxy({"red": href}) as (urls, state):
+                assert fetch(urls["red"]) == fetch(urls["red"]) == 206
+            assert state["requests"] == 2
+            assert state["bytes"] == 8 and state["reserved"] == 0
+            assert len(requests) == 2
+            assert requests[0][0] == requests[1][0]
+            assert all(cookie is None for _, cookie in requests)
+        finally:
+            server.shutdown()
+            thread.join(timeout=5)
+
+
 def test_invalid_and_nested_budgets_are_rejected_without_egress():
     for args in [(True,8),(0,8),(2**30+1,8),(10,0),(10,2**28+1)]:
         with pytest.raises(ValueError):
@@ -97,7 +132,7 @@ def test_truncated_buffered_body_spends_quota_before_reservation_released(monkey
     responses=[]
     def client(*a,**kw):
         return httpx.Client(*a,event_hooks={'response':[responses.append]},**kw)
-    monkeypatch.setattr(cog,'httpx',SimpleNamespace(Client=client,HTTPError=httpx.HTTPError))
+    monkeypatch.setattr(cog,'httpx',SimpleNamespace(Client=client,HTTPError=httpx.HTTPError,Limits=httpx.Limits))
     # Keep the production chunk size: the former one-byte test fixture hid this.
     assert cog._PROXY_CHUNK_BYTES==16384
     class Handler(BaseHTTPRequestHandler):
@@ -138,7 +173,7 @@ def test_conflicting_chunked_framing_is_rejected_before_consumption(monkeypatch)
     responses=[]
     def client(*a,**kw):
         return httpx.Client(*a,event_hooks={'response':[responses.append]},**kw)
-    monkeypatch.setattr(cog,'httpx',SimpleNamespace(Client=client,HTTPError=httpx.HTTPError))
+    monkeypatch.setattr(cog,'httpx',SimpleNamespace(Client=client,HTTPError=httpx.HTTPError,Limits=httpx.Limits))
     class Handler(BaseHTTPRequestHandler):
         def log_message(self,*a):pass
         def do_GET(self):

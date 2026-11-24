@@ -19,16 +19,16 @@ A synthetic demonstration field and a deterministic calculation in the desktop w
 
 ## Get started
 
-The exercised source-checkout target is an Apple Silicon Mac with Python 3.11 or 3.12 and Node 24 LTS. Follow [native setup](docs/public/operations/native-setup.md) to install dependencies and explicitly provision the pinned model, then launch:
+The exercised source-checkout target is an Apple Silicon Mac with Python 3.11 or 3.12 and Node 24 LTS. Follow [native setup](docs/public/operations/native-setup.md) to install dependencies, then launch:
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/run_cockpit.py \
   --host 127.0.0.1 --port 8000 \
   --frontend --frontend-port 5173 \
-  --model-config configs/model.yaml --warm-model
+  --model-config configs/model.yaml
 ```
 
-Open <http://127.0.0.1:5173>. Stop with **Ctrl+C**. Setup, health checks, storage, and recovery details stay in the [operator guide](docs/public/operations/native-setup.md).
+Open <http://127.0.0.1:5173> and go to **Questions → Model settings**. Use the download button beside Gemma 4 E2B or E4B, then select it when it is ready. Stop with **Ctrl+C**. See the [operator guide](docs/public/operations/native-setup.md) for setup, health checks, storage, and recovery.
 
 The active document and graph corpus is included. Optional Prairie soil maps use a separately verified [offline spatial pack](docs/public/operations/offline-data-setup.md); unavailable coverage is reported explicitly.
 

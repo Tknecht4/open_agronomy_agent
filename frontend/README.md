@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-`frontend/` is the supported farm and field React workspace. **Farms** opens the farm directory; a farm opens its fields and map, and a field opens its overview, imagery, soil/terrain, records, and tables. **Fields** shows fields across farms. **Records** shows the season's activity. **Questions** provides field-scoped or general conversation. It is a client of the FastAPI application; a rendered page does not prove the API, model, corpus, or adapters are ready. See the [workspace guide](../docs/public/operations/workspace.md) for the user flow.
+`frontend/` is the supported farm and field React workspace. In **Farms**, expand a farm to see its fields, then select a field to focus the map. **Open field** shows its overview, imagery, soil and terrain, records, and tables in the left pane beside the same map. **Records** shows the season's activity. **Questions** provides field-scoped or general conversation. It is a client of the FastAPI application; a rendered page does not prove the API, model, corpus, or adapters are ready. See the [workspace guide](../docs/public/operations/workspace.md) for the user flow.
 
 ## Dependency audit
 
@@ -27,8 +27,8 @@ the exception when an upstream fix is available or reassess before expiry.
 
 - `src/main.tsx` mounts the application.
 - `src/OpenAgronomyApp.tsx` owns routing and the question/editor workflow.
-- `src/FarmWorkspace.tsx` owns farm scope and loading; `FarmDirectory.tsx` and `FarmFieldTable.tsx` render the directory and field list. `FieldDossier.tsx` owns field detail.
-- `src/design-tokens.css` defines shared values; `workspace.css` owns shell and controls; `FarmWorkspace.css` owns farm layouts. Nested semantic sections are not implicitly cards. Farm/field/record views own their single page heading; the outer shell supplies headings for other views.
+- `src/FarmWorkspace.tsx` owns farm scope and loading. `FarmDirectory.tsx` and `FarmFieldList.tsx` render the expandable directory. `FieldDossier.tsx` owns field detail.
+- `src/design-tokens.css` defines shared values; `workspace.css` owns shell and controls; `FarmWorkspace.css` owns farm layouts. Nested semantic sections are not implicitly cards. Farms and Records supply their page headings. The outer shell supplies headings for other views.
 - `src/WorkspaceNavigation.tsx` owns the open desktop sidebar and native mobile navigation drawer.
 - `src/ModelSettings.tsx` owns the anchored desktop model popover and native mobile model sheet; model choices and availability come from the API.
 - `src/FieldSetupDialog.tsx` owns the name/location/review field wizard; `src/WorkspaceDialog.tsx` supplies accessible modal behavior.
@@ -47,7 +47,7 @@ the exception when an upstream fix is available or reassess before expiry.
 
 ## Navigation and model settings
 
-Farms, Fields, Records, and Questions are primary. Data management, Evidence, and Benchmarks form the second navigation group; runtime status, Privacy, and About live in the navigation footer. Small windows use the same hierarchy in a navigation drawer.
+Farms, Records, and Questions are primary. Data management, Evidence, and Benchmarks form the second navigation group. Runtime status, Privacy, and About live in the navigation footer. Small windows use the same hierarchy in a navigation drawer.
 
 Questions opens in Together on desktop and Conversation on smaller screens. A workspace without a field still has a browsable regional overview; it does not create field geometry or infer a location. Map-only and conversation-only views remain available. On mobile, the explicit Map control preserves the question draft while giving GIS the full content width.
 
@@ -195,12 +195,14 @@ needs one successful visit to its server to receive these fixes.
 
 ## Farm cockpit
 
-The entry route is `#farms`; `FarmWorkspace` owns farm/season filters, table/map
-selection and stable field URLs. `FieldDossier` owns field tabs; `FarmRecords`
-owns idempotent grouped intake. `FieldImportDialog` uses server-retained previews
-and commits. The detailed legacy editor is `#field-editor`, while `#analyze`
-remains the single-field/general Questions view. Farm grouping is not an
-independent authorization boundary.
+`#farms` holds the expandable farm list, map and field details. `FarmWorkspace`
+owns field selection, search, filters and season scope. A field link with
+`view=map` selects it on the map. Field detail links, including older `#fields`
+links, open in Farms with their field, season and detail section intact. `FieldDossier`
+owns field tabs, `FarmRecords` owns idempotent grouped intake, and
+`FieldImportDialog` uses server-retained previews and commits. **Edit field**
+opens `#field-editor` from Farms. `#analyze` is the Questions view. Farm grouping
+is not an independent authorization boundary.
 
 Imagery jobs use authorized saved geometry and retain result history. HLS and
 Sentinel-2 C1 have independent admission checks. `ImageryMapPreview` displays a

@@ -131,7 +131,7 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
     if (busy) return
     setBusy(true); setError('')
     try {
-      await onSave({ operationId: operationId.current, season, name: name.trim(), crop: crop.trim(), region: region.trim(), jurisdiction: jurisdiction.trim(),
+      await onSave({ operationId: operationId.current, season, name: name.trim(), crop: crop.trim(), region: dataOnly ? region.trim() : '', jurisdiction: dataOnly ? jurisdiction.trim() : '',
         geometry, acres: (geometry.kind === 'polygon' || geometry.kind === 'geojson') ? String(Math.round(geometry.acres)) : '', concern: '', notes: uploadNote, boundaryImport: boundaryImportFromUpload(upload, upload?.feature_summaries?.find(feature => feature.id === selectedFeature) || null) })
     } catch (cause) { if (mountedRef.current) setError(String((cause as Error)?.message || cause)) }
     finally { if (mountedRef.current) setBusy(false) }
@@ -154,11 +154,6 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
         <label>Crop for {season} <span className="optional">optional</span><input value={crop} list="field-crops" onChange={event => setCrop(event.target.value)} placeholder="Choose or type a crop" /></label>
         <label>Season year<input type="number" min="1900" max="2200" value={season} onChange={event => { const year = Number(event.target.value); if (year >= 1900 && year <= 2200) setSeason(year) }} /></label>
         <datalist id="field-crops">{['Barley', 'Canola', 'Wheat', 'Oats', 'Corn', 'Soybean', 'Lentils', 'Peas', 'Forage'].map(value => <option key={value} value={value} />)}</datalist>
-        <details className="setup-region"><summary>Region & province <span className="optional">optional</span></summary>
-          <div className="field-grid"><label>Region<input value={region} onChange={event => setRegion(event.target.value)} placeholder="County or municipality" /></label>
-          <label>Province / jurisdiction<input value={jurisdiction} onChange={event => setJurisdiction(event.target.value)} placeholder="e.g. Alberta" /></label></div>
-          {previousRegion?.jurisdiction ? <button type="button" className="text-button" onClick={() => { setJurisdiction(previousRegion.jurisdiction); setRegion(previousRegion.region) }}>Use {previousRegion.region || previousRegion.jurisdiction} from my previous field</button> : null}
-        </details>
       </div> : null}
       {step === 1 ? <div className="setup-location">
         <div className="setup-location-heading"><div><h3>Where is this field?</h3><p>Use a pin or boundary if known. You can keep the location unknown and add it later.</p></div></div>
@@ -189,10 +184,14 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
         {upload?.warnings?.map(warning => <p key={warning} className="prefill-note">{warning}</p>)}</>}
       </div> : null}
       {step === 2 ? <div className="setup-review"><span className="eyebrow">Review field</span><h3>{name}</h3>
-        <dl><div><dt>Crop for {season}</dt><dd>{crop || 'Not specified'}</dd></div><div><dt>Region</dt><dd>{[region, jurisdiction].filter(Boolean).join(', ') || 'Not specified'}</dd></div>
+        <dl><div><dt>Crop for {season}</dt><dd>{crop || 'Not specified'}</dd></div>
           <div><dt>Location</dt><dd>{geometry.kind === 'point' ? `${geometry.point.lat.toFixed(5)}, ${geometry.point.lon.toFixed(5)}` : geometry.kind === 'polygon' ? `${geometry.points.length} boundary corners` : geometry.kind === 'geojson' ? `${geometry.geojson.type} · complete imported boundary` : 'Unknown · data only'}</dd></div>
-          <div><dt>Area</dt><dd>{(geometry.kind === 'polygon' || geometry.kind === 'geojson') ? `About ${Math.round(geometry.acres).toLocaleString()} acres · calculated from boundary` : 'Not measured · add a boundary later'}</dd></div></dl>
-        <p>{dataOnly ? 'Map context and imagery remain unavailable until you add a valid location.' : 'Only the details you entered will be saved. Regional maps add context; they never replace field observations.'}</p>
+          {geometry.kind === 'polygon' || geometry.kind === 'geojson' ? <div><dt>Area</dt><dd>{Math.round(geometry.acres).toLocaleString()} acres</dd></div> : null}</dl>
+        {dataOnly ? <details className="setup-region"><summary>Region & province <span className="optional">optional</span></summary>
+          <div className="field-grid"><label>Region<input value={region} onChange={event => setRegion(event.target.value)} placeholder="County or municipality" /></label>
+          <label>Province / jurisdiction<input value={jurisdiction} onChange={event => setJurisdiction(event.target.value)} placeholder="e.g. Alberta" /></label></div>
+          {previousRegion?.jurisdiction ? <button type="button" className="text-button" onClick={() => { setJurisdiction(previousRegion.jurisdiction); setRegion(previousRegion.region) }}>Use {previousRegion.region || previousRegion.jurisdiction} from my previous field</button> : null}
+        </details> : null}
         {uploadNote ? <p className="prefill-note">{uploadNote}</p> : null}
       </div> : null}
     </div>

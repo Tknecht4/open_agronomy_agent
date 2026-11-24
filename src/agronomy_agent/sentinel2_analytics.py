@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 
-from agronomy_agent.field_imagery import _EARTH_SEARCH, _request_json, _valid_geometry, _dates
+from agronomy_agent.field_imagery import _EARTH_SEARCH, _request_json, _valid_geometry, _dates, scene_cloud_exceeds_limit
 from agronomy_agent.geospatial.catalog import source_definition
 from agronomy_agent.geospatial.cog import bounded_cog_proxy, MAX_COG_TRANSFER_BYTES
 from agronomy_agent.geospatial.products import cached_product, write_chip_bundle
@@ -79,6 +79,8 @@ def _scene(request: dict[str, Any]) -> dict[str, Any]:
     if not features:
         raise LookupError("no matching Sentinel-2 scene")
     item = validate_item(features[0])
+    if scene_cloud_exceeds_limit(item["scene_cloud_percent"]):
+        raise LookupError("Sentinel-2 scene exceeds the cloud limit")
     if identity["scene_id"] and item["id"] != identity["scene_id"]:
         raise RuntimeError("provider returned a different Sentinel-2 scene")
     acquired = datetime.fromisoformat(item["acquired_at"].replace("Z", "+00:00"))
@@ -103,7 +105,7 @@ def _array_identity(arrays: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _process(request: dict[str, Any], root: Path, admission: Any) -> dict[str, Any]:
+def _process(request: dict[str, Any], root: Path, publish: Any) -> dict[str, Any]:
     started = time.monotonic()
     identity = request["identity"]
     try:
@@ -165,9 +167,10 @@ def _process(request: dict[str, Any], root: Path, admission: Any) -> dict[str, A
                    "cog_transfer_limit_bytes": MAX_COG_TRANSFER_BYTES}
         packed = io.BytesIO()
         np.savez_compressed(packed, **arrays, metadata_json=_canonical(metadata).decode())
-        write_chip_bundle(store, receipt, request["bounds"], npz=packed.getvalue(),
-                          png=ndvi_preview(arrays["ndvi"], arrays["valid_mask"], arrays["field_weights"], Image),
-                          admission=admission)
+        with publish() as admission:
+            write_chip_bundle(store, receipt, request["bounds"], npz=packed.getvalue(),
+                              png=ndvi_preview(arrays["ndvi"], arrays["valid_mask"], arrays["field_weights"], Image),
+                              admission=admission)
         return receipt
     except LookupError:
         return {"status": "no_scene", "provider_id": PROVIDER_ID, "scene_id": identity["scene_id"],
@@ -195,4 +198,4 @@ def analyze_sentinel2_scene(geometry: dict[str, Any], scene_id: str | None = Non
     return cached_product(request_hash=request["request_hash"], provider_id=PROVIDER_ID, scene_id=scene_id,
                           cache_root=cache_root, network_mode=network_mode, budget_root=budget_root,
                           max_cache_bytes=max_cache_bytes, min_free_bytes=min_free_bytes,
-                          process=lambda root, admission: _process(request, root, admission))
+                          process=lambda root, publish: _process(request, root, publish))

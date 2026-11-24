@@ -254,6 +254,16 @@ def _model_queue_circuit_breaker(settings: ServerSettings, *, mode: str, model_i
     return {**metadata, "tripped": False}
 
 
+def _selected_model_revision(model_id: str, model_config: dict[str, Any]) -> str | None:
+    serving_model_id = str(model_config.get("serving_model_id") or model_config.get("model_id") or "")
+    assistant_model_id = str(model_config.get("assistant_model_id") or "")
+    if model_id == serving_model_id or model_id == str(model_config.get("model_id") or ""):
+        return str(model_config.get("model_revision") or "").strip() or None
+    if model_id == assistant_model_id:
+        return str(model_config.get("assistant_model_revision") or "").strip() or None
+    return None
+
+
 def _build_mlx_generator(
     model_id: str,
     model_config: dict[str, Any],
@@ -263,14 +273,7 @@ def _build_mlx_generator(
     effective_config_path = model_config_path or os.getenv(
         "AGRONOMY_AGENT_MODEL_CONFIG", DEFAULT_MODEL_CONFIG
     )
-    serving_model_id = str(model_config.get("serving_model_id") or model_config.get("model_id") or "")
-    assistant_model_id = str(model_config.get("assistant_model_id") or "")
-    if model_id == serving_model_id or model_id == str(model_config.get("model_id") or ""):
-        selected_revision = str(model_config.get("model_revision") or "").strip() or None
-    elif model_id == assistant_model_id:
-        selected_revision = str(model_config.get("assistant_model_revision") or "").strip() or None
-    else:
-        selected_revision = None
+    selected_revision = _selected_model_revision(model_id, model_config)
     if backend in {"http", "mlx_http", "openai_compatible"}:
         base_url = os.getenv("AGRONOMY_AGENT_MODEL_BASE_URL", "").strip()
         if not base_url:
@@ -510,11 +513,6 @@ def preview_turn_readiness(
             unverified = True
             if reason != "invalid_calculator_inputs":
                 reason = "operation_validation_unavailable"
-    comparison = (field_context or {}).get("imagery_comparison_selection")
-    if comparison and mode == "agronomic_rag":
-        independent = True
-        unverified = False
-        reason = "saved_imagery_comparison"
     history = prepared["recent_turns"]
     context = session_context or {}
     binding = {
@@ -532,16 +530,11 @@ def preview_turn_readiness(
     }
     if imagery := (field_context or {}).get("imagery_observation"):
         binding["imagery_job_id"] = imagery["job_id"]
-    if comparison:
-        binding["imagery_comparison"] = {
-            "job_ids": [record["id"] for record in comparison["jobs"]],
-            "geometry_revision_id": comparison["geometry_revision_id"],
-        }
     fingerprint = execution_stable_sha256({
         "binding": binding, "context": context, "max_tokens": max_tokens, "trace_options": trace_options,
     })
     schema = calculation_tool_schema()
-    calculator_record = calculator.to_dict() if calculator and not comparison and (independent or unverified) else None
+    calculator_record = calculator.to_dict() if calculator and (independent or unverified) else None
     if calculator_record:
         try:
             json.dumps(calculator_record["inputs"], allow_nan=False)
@@ -551,7 +544,7 @@ def preview_turn_readiness(
     return {
         "schema_version": "open_agronomy_agent.turn_readiness.v1",
         "requires_model": None if unverified else not independent,
-        "status": "ready" if comparison else tool_plan.status if independent else "unknown" if unverified else "model_required",
+        "status": tool_plan.status if independent else "unknown" if unverified else "model_required",
         "reason": reason,
         "binding": binding, "readiness_binding": fingerprint,
         "calculator": {
@@ -559,8 +552,7 @@ def preview_turn_readiness(
             "requirements": schema["operations"].get(calculator.operation, {}),
             "schema_version": schema["schema_version"],
         } if calculator_record is not None else None,
-        "boundary": ("Readiness binds the two saved jobs and field records; the comparison runs after submission."
-                     if comparison else "Readiness plans supplied-input arithmetic or clarification; it is not an executed result, evidence of field sufficiency, or permission for a consequential recommendation."),
+        "boundary": "Readiness plans supplied-input arithmetic or clarification; it is not an executed result, evidence of field sufficiency, or permission for a consequential recommendation.",
     }
 
 
@@ -854,15 +846,11 @@ def _run_turn_impl_inner(
             "route": _normalize_route(route_payload),
             "metadata": {"field_context": _safe_field_context_summary(field_context)},
         }
-        comparison = compiled_field_context["receipt"].get("imagery_comparison")
-        comparison_answer = comparison["message"] if comparison else None
-        retained_soil_answer = None if comparison_answer else render_retained_soil_map_answer(message, compiled_field_context["receipt"])
-        map_component_answer = None if comparison_answer or retained_soil_answer else render_map_component_explanation_answer(message, map_trace)
-        map_interpretation_answer = comparison_answer or retained_soil_answer or map_component_answer or render_map_interpretation_answer(message, map_trace)
+        retained_soil_answer = render_retained_soil_map_answer(message, compiled_field_context["receipt"])
+        map_component_answer = None if retained_soil_answer else render_map_component_explanation_answer(message, map_trace)
+        map_interpretation_answer = retained_soil_answer or map_component_answer or render_map_interpretation_answer(message, map_trace)
         tool_grounded_renderer = "map_interpretation.v1"
-        if comparison_answer:
-            tool_grounded_renderer = "imagery_comparison.v1"
-        elif retained_soil_answer:
+        if retained_soil_answer:
             tool_grounded_renderer = "retained_soil_map.v1"
         elif map_component_answer:
             tool_grounded_renderer = "map_component_explanation.v1"
@@ -1251,7 +1239,8 @@ def _run_turn_impl_inner(
         and not generation_metadata.get("generation_unavailable")
         and not generation_metadata.get("generation_bypass")
     ):
-        verifier_model_id = str(verification_config.get("model_id") or model_to_use)
+        assistant_verifier = model_config.get("assistant_verifier_model_id") if model_to_use == model_config.get("assistant_model_id") else None
+        verifier_model_id = str(assistant_verifier or verification_config.get("model_id") or model_to_use)
         editor = verification_backend_factory() if verification_backend_factory is not None else _build_mlx_generator(verifier_model_id, model_config, settings.model_config_path)
         editor_max_tokens = int(verification_config.get("max_tokens", 180))
         if benchmark_eval_id is not None:
@@ -1505,7 +1494,7 @@ def _run_turn_impl_inner(
     }
     model_record = {
         "model_id": model_to_use if mode != "mock" else "mock",
-        "model_revision": model_config.get("model_revision"),
+        "model_revision": _selected_model_revision(model_to_use, model_config),
         "backend": (
             str(getattr(generation_backend, "backend_id", ""))
             if generation_backend is not None
@@ -4571,13 +4560,11 @@ def _with_stored_field_data(
     outer = session_context if isinstance(session_context, dict) else {}
     field_id = outer.get("field_context_id") or trusted.get("field_context_id")
     if not field_id or outer.get("field_access_authorized") is not True:
-        for key in ("imagery_observation", "imagery_comparison_selection", "imagery_comparison_result"):
-            trusted.pop(key, None)
+        trusted.pop("imagery_observation", None)
         return trusted
     field = store.get_phase4_field_context(str(field_id))
     if not field:
-        for key in ("imagery_observation", "imagery_comparison_selection", "imagery_comparison_result"):
-            trusted.pop(key, None)
+        trusted.pop("imagery_observation", None)
         return trusted
     workspace_id = outer.get("field_access_workspace_id")
     if workspace_id and str(workspace_id) != str(field.get("workspace_id")):

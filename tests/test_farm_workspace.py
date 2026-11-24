@@ -581,3 +581,64 @@ def test_verified_retained_nrcs_soil_reaches_offline_answer_evidence(settings, m
         assert "representative soil samples" in turn["answer"]
         assert turn["trace"]["metadata"]["generation_bypass"]["renderer"] == "retained_soil_map.v1"
         assert client.get(base + "/summary", headers=OTHER).status_code in {403, 404}
+
+
+def test_saved_geometry_resolves_partial_levels_and_preserves_reported_location(monkeypatch):
+    from shapely.geometry import box
+    from agronomy_agent.server.services import field_location
+
+    area = {"code": "STATE_19", "name": "Iowa", "abbreviation": "IA"}
+    left = {"code": "COUNTY_19169", "name": "Story County", "parent_code": "19"}
+    right = {"code": "COUNTY_19127", "name": "Marshall County", "parent_code": "19"}
+
+    def query(layer, geom, root):
+        rows = {
+            field_location.LAYER: [],
+            "us_tiger_2026_states": [(area, box(-94, 41, -92, 43))],
+            "us_tiger_2026_counties": [(left, box(-94, 41, -93, 43)), (right, box(-93, 41, -92, 43))],
+        }[layer]
+        return {"status": "verified", "observed": {"database_sha256": layer}}, [
+            row for row in rows if row[1].intersects(geom)
+        ]
+
+    monkeypatch.setattr(field_location, "_candidates", query)
+    field = {"metadata": {"open_agronomy_agent": {
+        "geometry": {"kind": "point", "point": {"lat": 42, "lon": -93.5}}
+    }}}
+    location = field_location.mapped_location(field, geometry_revision_id="saved")
+    assert location["label"] == "Story County, Iowa, United States"
+    assert location["geometry_revision_id"] == "saved"
+    assert field_location.routing_location(field, location) == ("United States", "Iowa")
+    conflict = {**field, "country": "Canada", "province_state": "Alberta"}
+    assert field_location.mapped_location(conflict)["status"] == "conflict"
+    assert field_location.routing_location(conflict) == (None, None)
+    assert conflict["country"] == "Canada"
+    field["metadata"]["open_agronomy_agent"]["geometry"] = {
+        "kind": "polygon",
+        "points": [{"lat": 42, "lon": -93.25}, {"lat": 42, "lon": -92.75},
+                   {"lat": 42.25, "lon": -92.75}, {"lat": 42.25, "lon": -93.25}],
+    }
+    partial = field_location.mapped_location(field)
+    assert partial["status"] == "partial"
+    assert partial["label"] == "Iowa, United States"
+    assert partial["county_rm"] is None
+    assert partial["geometry_sha256"] != location["geometry_sha256"]
+
+
+def test_invalid_administrative_outline_cannot_authorize_location(monkeypatch, tmp_path):
+    from agronomy_agent.server.services import field_location, geospatial_service
+
+    invalid = {
+        "geometry": {"type": "Polygon", "coordinates": [[[-94, 41], [-92, 43], [-94, 43], [-92, 41], [-94, 41]]]},
+        "properties": {"name": "Iowa", "code": "STATE_19"},
+    }
+    monkeypatch.setattr(geospatial_service, "verified_local_candidates", lambda layer, _: (
+        {"status": "verified"}, [invalid] if layer.id == "us_tiger_2026_states" else [],
+    ))
+    field = {"metadata": {"open_agronomy_agent": {
+        "geometry": {"kind": "point", "point": {"lat": 42, "lon": -93.75}},
+    }}}
+    location = field_location.mapped_location(field, pack_root=tmp_path)
+    assert location["status"] == "ambiguous"
+    assert location["country"] is None and location["province_state"] is None
+    assert field_location.routing_location(field, location) == (None, None)

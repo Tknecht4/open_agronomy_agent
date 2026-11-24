@@ -1,0 +1,159 @@
+{
+  "schema_version": "open_agronomy_agent.administrative_geospatial_sources.v1",
+  "sources": [
+    {
+      "id": "ca_statcan_2021_provinces_territories",
+      "title": "Province and Territory Cartographic Boundary File, 2021 Census",
+      "publisher": "Statistics Canada, Census of Population",
+      "jurisdiction": [
+        "Canada"
+      ],
+      "canonical_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+      "catalogue_api_url": "https://www150.statcan.gc.ca/n1/en/catalogue/92-160-X2021001",
+      "download_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lpr_000a21a_e.zip",
+      "source_record_id": "92-160-X2021001",
+      "format": "2021_cartographic_boundary_zipped_shapefile",
+      "source_crs": "EPSG:3347 (NAD83 / Statistics Canada Lambert)",
+      "source_scale": "2021 Census cartographic province and territory boundary; a land-mass cartographic representation for geographic organization",
+      "currency": "2021 Census geography; official source file last modified 2022-01-05",
+      "license": {
+        "identifier": "Statistics Canada Open Licence",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-08-14",
+        "attribution": "Contains information licensed under the Statistics Canada Open Licence from Statistics Canada."
+      },
+      "runtime": {
+        "status": "candidate_local_profile",
+        "raw_path": "external_state_only/raw/canada_context_boundaries/ca_statcan_2021_provinces_territories/source.zip",
+        "lineage_path": "external_state_only/raw/canada_context_boundaries/ca_statcan_2021_provinces_territories/source.zip.lineage.json",
+        "derived_path": "external_state_only/derived/geo_layers/ca_statcan_2021_provinces_territories.sqlite3",
+        "derived_manifest_path": "external_state_only/derived/geo_layers/ca_statcan_2021_provinces_territories_manifest.json",
+        "layer_id": "ca_statcan_2021_provinces_territories",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "A 2021 Census cartographic boundary for geographic orientation and source routing. It is not a surveyed farm boundary, proof of legal land location or jurisdiction, crop-production evidence, current field condition, or management authorization."
+    },
+    {
+      "id": "ca_statcan_2021_census_subdivisions",
+      "title": "2021 Census subdivision cartographic boundaries",
+      "publisher": "Statistics Canada",
+      "jurisdiction": [
+        "Canada"
+      ],
+      "canonical_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+      "catalogue_api_url": "https://www150.statcan.gc.ca/n1/en/catalogue/92-160-X2021001",
+      "download_url": "https://data.source.coop/dataforcanada/d4c-datapkg-statistical/archive/statcan/boundaries/2021/lcsd000a21a_e.zip",
+      "source_record_id": "92-160-X2021001",
+      "format": "zipped_shapefile",
+      "source_crs": "EPSG:3347",
+      "source_scale": "Published administrative geography",
+      "currency": "Pinned edition in source identity",
+      "license": {
+        "identifier": "Statistics Canada Open Licence",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-11-23",
+        "attribution": "Contains information licensed under the Statistics Canada Open Licence from Statistics Canada."
+      },
+      "runtime": {
+        "layer_id": "ca_statcan_2021_census_subdivisions",
+        "status": "candidate_local_profile",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Administrative location and source selection."
+    },
+    {
+      "id": "ab_municipal_districts",
+      "title": "Alberta municipal districts and counties",
+      "publisher": "Government of Alberta",
+      "jurisdiction": [
+        "Canada"
+      ],
+      "canonical_url": "https://open.canada.ca/data/dataset/1d1376c6-8bf8-4c3a-a87e-6b176d8c6a39",
+      "catalogue_api_url": "https://open.canada.ca/data/dataset/1d1376c6-8bf8-4c3a-a87e-6b176d8c6a39",
+      "download_url": "https://geospatial.alberta.ca/titan/rest/services/boundaries/municipal_boundary_public/MapServer/3/query?where=1%3D1&outFields=*&outSR=4326&f=geojson",
+      "source_record_id": "1d1376c6-8bf8-4c3a-a87e-6b176d8c6a39",
+      "format": "geojson",
+      "source_crs": "EPSG:4326",
+      "source_scale": "Published administrative geography",
+      "currency": "Pinned edition in source identity",
+      "license": {
+        "identifier": "Open Government Licence - Alberta",
+        "attribution": "Contains information licensed under the Open Government Licence – Alberta.",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-11-23"
+      },
+      "runtime": {
+        "layer_id": "ab_municipal_districts",
+        "status": "candidate_local_profile",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Administrative location and source selection."
+    },
+    {
+      "id": "us_tiger_2026_states",
+      "title": "2026 TIGER/Line state and equivalents",
+      "publisher": "U.S. Census Bureau",
+      "jurisdiction": [
+        "United States"
+      ],
+      "canonical_url": "https://www.census.gov/geographies/mapping-files/2026/geo/tiger-line-file.html",
+      "catalogue_api_url": "https://www2.census.gov/geo/tiger/TIGER2026/STATE/tl_2026_us_state.zip",
+      "download_url": "https://www2.census.gov/geo/tiger/TIGER2026/STATE/tl_2026_us_state.zip",
+      "source_record_id": "TIGER2026/STATE",
+      "format": "zipped_shapefile",
+      "source_crs": "EPSG:4269",
+      "source_scale": "Published administrative geography",
+      "currency": "Pinned edition in source identity",
+      "license": {
+        "identifier": "U.S. Government public domain",
+        "attribution": "U.S. Census Bureau, 2026 TIGER/Line. No warranty, expressed or implied, is made with regard to the accuracy of the data.",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-11-23"
+      },
+      "runtime": {
+        "layer_id": "us_tiger_2026_states",
+        "status": "candidate_local_profile",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Administrative location and source selection."
+    },
+    {
+      "id": "us_tiger_2026_counties",
+      "title": "2026 TIGER/Line county and equivalents",
+      "publisher": "U.S. Census Bureau",
+      "jurisdiction": [
+        "United States"
+      ],
+      "canonical_url": "https://www.census.gov/geographies/mapping-files/2026/geo/tiger-line-file.html",
+      "catalogue_api_url": "https://www2.census.gov/geo/tiger/TIGER2026/COUNTY/tl_2026_us_county.zip",
+      "download_url": "https://www2.census.gov/geo/tiger/TIGER2026/COUNTY/tl_2026_us_county.zip",
+      "source_record_id": "TIGER2026/COUNTY",
+      "format": "zipped_shapefile",
+      "source_crs": "EPSG:4269",
+      "source_scale": "Published administrative geography",
+      "currency": "Pinned edition in source identity",
+      "license": {
+        "identifier": "U.S. Government public domain",
+        "attribution": "U.S. Census Bureau, 2026 TIGER/Line. No warranty, expressed or implied, is made with regard to the accuracy of the data.",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-11-23"
+      },
+      "runtime": {
+        "layer_id": "us_tiger_2026_counties",
+        "status": "candidate_local_profile",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Administrative location and source selection."
+    }
+  ]
+}

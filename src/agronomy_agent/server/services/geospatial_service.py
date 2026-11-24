@@ -78,8 +78,18 @@ def _local_layer_installed(layer: RegionLayer) -> bool:
     return layer.query_backend == "local_sqlite" and _local_layer_readiness(layer)["status"] == "verified"
 
 
+ADMINISTRATIVE_LAYER_IDS = frozenset({
+    "ca_statcan_2021_census_subdivisions", "ab_municipal_districts",
+    "us_tiger_2026_states", "us_tiger_2026_counties",
+})
+
+
 def _local_layer_readiness(layer: RegionLayer) -> dict[str, Any]:
-    return local_layer_integrity(Path(str(layer.local_database or "")), layer_id=layer.id)
+    database = Path(str(layer.local_database or ""))
+    if layer.id in ADMINISTRATIVE_LAYER_IDS:
+        return local_layer_integrity(database, layer_id=layer.id,
+                                     registry_path=repo_path("data/manifests/administrative_geospatial_sources.json"))
+    return local_layer_integrity(database, layer_id=layer.id)
 
 
 class LocalLayerIntegrityError(ValueError):
@@ -927,6 +937,18 @@ def _source_mode(layers: list[RegionLayer]) -> str:
     if modes == {"local_sqlite"}:
         return "bundled_official_geospatial_layers"
     return "hybrid_official_remote_and_bundled_layers"
+
+
+def verified_local_candidates(layer: RegionLayer, bounds: tuple[float, float, float, float]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Read all bounded candidates for an offline containment decision."""
+    readiness = _local_layer_readiness(layer)
+    if readiness.get("status") != "verified":
+        return readiness, []
+    result = _query_local_sqlite_layer(layer, geometry=_arcgis_envelope(*_expanded_bbox(bounds)), geometry_type="esriGeometryEnvelope")
+    _assert_stable_local_source(layer, readiness)
+    if result["exceededTransferLimit"]:
+        return {**readiness, "status": "coverage_limited"}, []
+    return readiness, result["features"]
 
 
 def _query_local_sqlite_layer(layer: RegionLayer, *, geometry: str, geometry_type: str) -> dict[str, Any]:

@@ -324,6 +324,7 @@ def test_curated_profile_and_spatial_contract_are_explicit_portable_inputs() -> 
     assert all(path.is_file() for path in master.included_corpus_paths)
     assert geospatial.profile_ids == (
         "canada-context-boundaries-v1",
+        "field-location-v1",
         "prairie-dss-v1",
     )
     assert geospatial.layer_ids == ()

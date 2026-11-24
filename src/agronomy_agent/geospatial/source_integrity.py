@@ -154,7 +154,13 @@ def local_layer_integrity(
                 expected["database_sha256"] = descriptor.get("output_sha256")
                 expected["database_bytes"] = descriptor.get("output_bytes")
                 expected["feature_count"] = descriptor.get("feature_count")
-                if descriptor.get("schema_version") != LAYER_SCHEMA_VERSION:
+                context_layer = layer_id in {
+                    "ca_statcan_2021_provinces_territories", "ca_statcan_2021_census_agricultural_regions",
+                    "ca_aafc_terrestrial_ecoregions_v2_2", "ca_statcan_2021_census_subdivisions",
+                    "ab_municipal_districts", "us_tiger_2026_states", "us_tiger_2026_counties",
+                }
+                schema = "open_agronomy_agent.canada_context_boundary_layer.v1" if context_layer else LAYER_SCHEMA_VERSION
+                if descriptor.get("schema_version") != schema:
                     errors.append("derivation_schema_mismatch")
                 if descriptor.get("source_id") != expected["source_id"]:
                     errors.append("derivation_source_identity_mismatch")

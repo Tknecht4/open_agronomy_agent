@@ -341,9 +341,19 @@ def resolve_local_model_snapshot(
             revision_label = revision or "the configured default revision"
             raise LocalModelSnapshotUnavailable(
                 f"Local model snapshot unavailable for {model_id}@{revision_label}. "
-                "No automatic download was attempted. Provision it explicitly with "
-                "scripts/download_model.py before starting the answer engine."
+                "Download the model from Answer model settings."
             ) from exc
+
+    from agronomy_agent.model_assets import pinned_model_assets, verified_model_asset
+
+    try:
+        assets = pinned_model_assets(model_id, revision)
+        if assets and any(not verified_model_asset(snapshot / asset.name, snapshot.parents[1], asset) for asset in assets):
+            raise ValueError("Snapshot files failed verification.")
+    except (OSError, ValueError, KeyError) as exc:
+        raise LocalModelSnapshotUnavailable(
+            f"Local model snapshot is incomplete or invalid for {model_id}. Download it from Answer model settings."
+        ) from exc
 
     names = {path.name for path in snapshot.rglob("*") if path.is_file()}
     has_tokenizer = "tokenizer.json" in names or "tokenizer.model" in names
@@ -362,7 +372,7 @@ def resolve_local_model_snapshot(
     ):
         raise LocalModelSnapshotUnavailable(
             f"Local model snapshot is incomplete for {model_id}@{revision or 'configured default'}. "
-            "No automatic download was attempted; rerun scripts/download_model.py while online."
+            "Download the model from Answer model settings."
         )
     return snapshot
 

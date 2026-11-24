@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import re
 import secrets
 import time
@@ -26,8 +27,9 @@ from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
 import yaml
-from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
+from pydantic import BaseModel, ConfigDict, Field as RequestField
 from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.staticfiles import StaticFiles
 
@@ -35,7 +37,9 @@ from agronomy_agent.agent import LocalModelSnapshotUnavailable, load_model_confi
 from agronomy_agent.corpus_governance import audit_runtime_corpora
 from agronomy_agent.field_events import FieldEventSyncError, FieldEventOperationConflict
 from agronomy_agent.knowledge_updates import read_activation, validate_activation_freshness
+from agronomy_agent.model_assets import pinned_model_assets
 from agronomy_agent.paths import repo_path
+from agronomy_agent.server.services.model_installation import ModelInstallation, ModelInstallError
 from agronomy_agent.runtime_profiles import load_runtime_profile_registry
 from agronomy_agent.phase5_optimization import candidate_promotion_gate
 from agronomy_agent.phase5_reports import model_registry_comparison, stage_latency_report
@@ -60,7 +64,6 @@ from agronomy_agent.server.schemas import (
     ChatRequest,
     CreateSessionRequest,
     CreateTurnRequest,
-    ImageryComparisonSelection,
     TurnReadinessRequest,
     TurnReadinessResponse,
     DataSourceRequest,
@@ -515,8 +518,6 @@ def _turn_operation_hash(payload: CreateTurnRequest) -> str:
     if payload.imagery_job_id is None:
         # Keep the identity of already persisted operations without a selection.
         excluded.add("imagery_job_id")
-    if payload.imagery_comparison is None:
-        excluded.add("imagery_comparison")
     return _hash_payload(payload.model_dump(mode="json", exclude=excluded))
 
 
@@ -2201,6 +2202,11 @@ def _demo_model_policy(active_model_id: str) -> str:
     )
 
 
+class InstallAnswerModelRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    model_id: str = RequestField(min_length=1, max_length=160)
+
+
 def create_app(settings: ServerSettings | None = None) -> FastAPI:
     settings = settings or build_settings()
     if settings.desktop_local_origin is not None:
@@ -2260,6 +2266,17 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     image_observation_adapter = _build_image_observation_adapter(settings)
     telemetry = build_telemetry(enabled=settings.otel_enabled, service_name=settings.otel_service_name)
     runtime_model_config = load_model_config(settings.model_config_path)
+    serving_model_id = str(runtime_model_config.get("serving_model_id") or settings.default_model_id)
+    assistant_model_id = str(runtime_model_config.get("assistant_model_id") or "")
+    serving_revision = str(runtime_model_config.get("model_revision") or "").strip() or None
+    assistant_revision = str(runtime_model_config.get("assistant_model_revision") or "").strip() or None
+    answer_model_revisions = {serving_model_id: serving_revision}
+    if assistant_model_id:
+        answer_model_revisions.setdefault(assistant_model_id, assistant_revision)
+    model_installation = ModelInstallation()
+    model_installation_local = bool(settings.desktop_local_origin or settings.allow_local_dev_auth) and (
+        os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx").strip().lower() == "mlx"
+    )
     operator_model_ids = {
         str(model_id)
         for model_id in (
@@ -2751,7 +2768,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         *,
         imagery_job_id: uuid.UUID | str | None = None,
         imagery_result_sha256: str | None = None,
-        imagery_comparison: ImageryComparisonSelection | None = None,
     ) -> dict[str, Any] | None:
         def canonical_geometry(value: Any) -> Any:
             if not isinstance(value, dict):
@@ -2791,9 +2807,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         inner.pop("field_history", None)
         inner.pop("field_answer_history", None)
         inner.pop("field_data", None)
-        for key in ("imagery_observation", "imagery_comparison_selection", "imagery_comparison_result"):
-            inner.pop(key, None)
-            outer.pop(key, None)
+        inner.pop("imagery_observation", None)
+        outer.pop("imagery_observation", None)
         outer_field_id = str(outer.get("field_context_id") or "").strip()
         inner_field_id = str(inner.get("field_context_id") or "").strip()
         if outer_field_id and inner_field_id and outer_field_id != inner_field_id:
@@ -2806,7 +2821,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
         field_context_id = outer_field_id or inner_field_id
         if not field_context_id:
-            if imagery_job_id is not None or imagery_comparison is not None:
+            if imagery_job_id is not None:
                 raise HTTPException(404, "Image analysis not found for this field")
             outer["field_context"] = inner
             return outer
@@ -2867,18 +2882,26 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
         # The stored jurisdiction owns location aliases too: a client state or
         # province cannot shadow it in query parsing or adapter selection.
-        for key in ("province", "province_state", "state", "state_alpha"):
+        for key in ("province", "province_state", "state", "state_alpha", "county", "county_name", "county_rm", "mapped_location"):
             inner.pop(key, None)
+        from agronomy_agent.server.services.field_location import mapped_location, routing_location
+        saved_location = {**record, "country": stored_country, "province_state": stored.get("jurisdiction") or None}
+        mapped = mapped_location(saved_location)
+        country, province = routing_location(saved_location, mapped)
+        if mapped["country"]:
+            inner["mapped_location"] = mapped
+        if country and mapped["county_rm"]:
+            inner["county"] = mapped["county_rm"]
         inner.update(
             {
                 "field_context_id": field_context_id,
                 "field_conversation_key": str(outer.get("field_conversation_key") or f"field:{field_context_id}"),
                 "crop": stored.get("crop") or inner.get("crop"),
                 "region": stored.get("region") or None,
-                "jurisdiction": stored.get("jurisdiction") or None,
-                "province_state": stored.get("jurisdiction") or None,
-                "country": stored_country,
-                "country_code": {"Canada": "CA", "United States": "US"}.get(stored_country),
+                "jurisdiction": province,
+                "province_state": province,
+                "country": country,
+                "country_code": {"Canada": "CA", "United States": "US"}.get(country),
                 "concern": stored.get("concern") or inner.get("concern"),
                 "geometry": canonical_geometry(stored.get("geometry") or inner.get("geometry")),
                 "regional_context": stored.get("regionalContext") or inner.get("regional_context"),
@@ -2926,14 +2949,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             inner["field_answer_history"] = field_answer_history
         if imagery_job_id is not None:
             inner["imagery_observation"] = _resolve_turn_imagery(record, str(imagery_job_id), imagery_result_sha256)
-        if imagery_comparison is not None:
-            from agronomy_agent.server.services.imagery_comparison_service import ComparisonConflict, bind_selection
-            try:
-                inner["imagery_comparison_selection"] = bind_selection(store, record, imagery_comparison)
-            except LookupError as exc:
-                raise HTTPException(404, str(exc)) from exc
-            except ComparisonConflict as exc:
-                raise HTTPException(409, str(exc)) from exc
         outer.update(
             {
                 "field_context_id": field_context_id,
@@ -2988,8 +3003,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         persisted.pop("ephemeral_private_source_summary", None)
         if isinstance(persisted.get("field_context"), dict):
             persisted["field_context"] = dict(persisted["field_context"])
-            for name in ("field_history", "field_answer_history", "field_data", "imagery_observation",
-                         "imagery_comparison_selection", "imagery_comparison_result"):
+            for name in ("field_history", "field_answer_history", "field_data", "imagery_observation"):
                 persisted["field_context"].pop(name, None)
         return persisted
 
@@ -3880,24 +3894,52 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "job_queue": job_execution,
         }
 
+    def installation_profile(model_id: str, revision: str | None) -> dict[str, Any]:
+        if not model_installation_local:
+            return {}
+        assets = pinned_model_assets(model_id, revision)
+        if not assets:
+            return {}
+        phase, detail = model_installation.status(model_id)
+        return {
+            "download_bytes": sum(asset.size for asset in assets),
+            "download_allowed": settings.network_mode == "online",
+            "install_status": phase,
+            "install_detail": detail,
+        }
+
+    @app.post("/api/models/install", status_code=202)
+    def start_model_install(payload: InstallAnswerModelRequest, request: Request, background: BackgroundTasks) -> dict[str, str]:
+        if not model_installation_local:
+            raise HTTPException(404, "Local model downloads are unavailable on this runtime.")
+        _demo_field_user(request)
+        if settings.network_mode != "online":
+            raise HTTPException(409, "Connect to download a model.")
+        model_id = payload.model_id
+        revision = answer_model_revisions.get(model_id)
+        if not revision or not pinned_model_assets(model_id, revision):
+            raise HTTPException(404, "This model is unavailable for download.")
+        try:
+            if model_installation.start(model_id):
+                background.add_task(model_installation.run, model_id, revision)
+        except ModelInstallError as error:
+            raise HTTPException(409, str(error)) from error
+        return {"status": "downloading"}
+
     @app.get("/api/configs")
-    async def configs() -> dict[str, Any]:
+    def configs() -> dict[str, Any]:
         rag_configs = (
             list(selectable_runtime_rag_configs)
             if settings.allow_rag_config_override
             else [settings.default_rag_config]
         )
-        model_config = _read_json(repo_path(settings.model_config_path))
+        model_config = runtime_model_config
         model_ids = [
-            model_config.get("serving_model_id") or settings.default_model_id,
+            serving_model_id,
             model_config.get("model_id"),
             model_config.get("assistant_model_id"),
             model_config.get("draft_model_id"),
         ]
-        serving_model_id = str(model_config.get("serving_model_id") or settings.default_model_id)
-        assistant_model_id = str(model_config.get("assistant_model_id") or "")
-        serving_revision = str(model_config.get("model_revision") or "").strip() or None
-        assistant_revision = str(model_config.get("assistant_model_revision") or "").strip() or None
         serving_readiness = local_model_snapshot_status(serving_model_id, revision=serving_revision)
         model_profiles = [
             {
@@ -3909,6 +3951,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "local_ready": bool(serving_readiness["ready"]),
                 "local_status": str(serving_readiness["status"]),
                 "local_detail": str(serving_readiness["detail"]),
+                **installation_profile(serving_model_id, serving_revision),
             }
         ]
         if assistant_model_id:
@@ -3923,6 +3966,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "local_ready": bool(assistant_readiness["ready"]),
                     "local_status": str(assistant_readiness["status"]),
                     "local_detail": str(assistant_readiness["detail"]),
+                    **installation_profile(assistant_model_id, assistant_revision),
                 }
             )
         knowledge_activation = (
@@ -7100,7 +7144,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 except ConversationScopeError as exc:
                     raise HTTPException(status_code=409, detail={"code": "conversation_scope_mismatch", "boundary": str(exc)}) from exc
             context = _authorize_demo_turn_field_context(
-                request, context, imagery_job_id=turn.imagery_job_id, imagery_comparison=turn.imagery_comparison,
+                request, context, imagery_job_id=turn.imagery_job_id,
             )
             result = _turn_readiness_for_context(
                 payload.session_id, context, message=turn.message, mode=turn.mode,
@@ -7109,24 +7153,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
         return {**result, "request_id": str(payload.request_id)}
 
-    def _execute_turn_imagery_comparison(context: dict[str, Any]) -> None:
-        from agronomy_agent.server.services.imagery_comparison_service import ComparisonConflict, compare_selection
-
-        field = store.get_phase4_field_context(context["field_context_id"])
-        if not field or field["workspace_id"] != context["field_access_workspace_id"]:
-            raise HTTPException(404, "Image analysis not found for this field")
-        inner = context["field_context"]
-        try:
-            inner["imagery_comparison_result"] = compare_selection(
-                store, settings, field, inner["imagery_comparison_selection"],
-            )
-        except ComparisonConflict as exc:
-            raise HTTPException(409, str(exc)) from exc
-
     def _run_turn_with_persisted_context(
         *, session_id: str, incoming_context: dict[str, Any],
         owner_id: str, request: Request, readiness_binding: str | None = None,
-        imagery_job_id: uuid.UUID | None = None, imagery_comparison: ImageryComparisonSelection | None = None,
+        imagery_job_id: uuid.UUID | None = None,
         **turn_kwargs: Any,
     ) -> dict[str, Any]:
         # Core execution checks operation identity under this same reentrant
@@ -7143,12 +7173,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 raise ValueError("session not found")
             authorized_context = _authorize_demo_turn_field_context(
                 request, _bind_turn_context(latest, incoming_context),
-                imagery_job_id=imagery_job_id, imagery_comparison=imagery_comparison,
+                imagery_job_id=imagery_job_id,
             )
             if readiness_binding is not None:
                 _turn_readiness_for_context(session_id, authorized_context, expected_binding=readiness_binding, **turn_kwargs)
-            if imagery_comparison is not None:
-                _execute_turn_imagery_comparison(authorized_context)
             context_update = _persistable_demo_turn_context(authorized_context)
             result = run_turn(
                 store=store, session_id=session_id,
@@ -7185,7 +7213,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             authorized_context = await asyncio.to_thread(
                 _authorize_demo_turn_field_context, request, _bind_turn_context(session, payload.session_context),
                 imagery_job_id=payload.imagery_job_id,
-                imagery_comparison=payload.imagery_comparison,
             )
             if payload.readiness_binding is not None:
                 _turn_readiness_for_context(
@@ -7205,7 +7232,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 request=request,
                 readiness_binding=payload.readiness_binding,
                 imagery_job_id=payload.imagery_job_id,
-                imagery_comparison=payload.imagery_comparison,
                 message=payload.message,
                 mode=payload.mode,
                 model_id=selected_model_id,
@@ -7283,7 +7309,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             authorized_context = await asyncio.to_thread(
                 _authorize_demo_turn_field_context, request, _bind_turn_context(session, payload.session_context),
                 imagery_job_id=payload.imagery_job_id,
-                imagery_comparison=payload.imagery_comparison,
             )
             if payload.readiness_binding is not None:
                 _turn_readiness_for_context(
@@ -7333,7 +7358,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     request=request,
                     readiness_binding=payload.readiness_binding,
                     imagery_job_id=payload.imagery_job_id,
-                    imagery_comparison=payload.imagery_comparison,
                     message=payload.message,
                     mode=payload.mode,
                     model_id=model_id,
@@ -7704,28 +7728,19 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             require_workspace_for_user(user, field_record["workspace_id"])
             if _demo_field_metadata(field_record).get("kind") == "map_field":
                 receipt = ((base_turn.get("trace") or {}).get("metadata") or {}).get("field_context_compiler") or {}
-                imagery = receipt.get("imagery_observation") if (
+                uses_saved_imagery = (
                     payload.pipeline in {"full", "answer_only"}
                     and (payload.mode or (base_turn.get("system_state") or {}).get("mode")) == "agronomic_rag"
-                ) else None
-                comparison = receipt.get("imagery_comparison") if (
-                    payload.pipeline in {"full", "answer_only"}
-                    and (payload.mode or (base_turn.get("system_state") or {}).get("mode")) == "agronomic_rag"
-                ) else None
-                pair = comparison["selection"] if comparison else None
+                )
+                # Historical answers remain readable, but their retired evidence cannot be rerun.
+                if uses_saved_imagery and receipt.get("imagery_comparison"):
+                    raise HTTPException(409, "The imagery comparison used by this saved answer has been retired.")
+                imagery = receipt.get("imagery_observation") if uses_saved_imagery else None
                 replay_context = await asyncio.to_thread(
                     _authorize_demo_turn_field_context, request, replay_context,
                     imagery_job_id=imagery["job_id"] if imagery else None,
                     imagery_result_sha256=imagery["result_sha256"] if imagery else None,
-                    imagery_comparison=ImageryComparisonSelection(
-                        first_job_id=pair["jobs"][0]["id"], second_job_id=pair["jobs"][1]["id"],
-                        geometry_revision_id=pair["geometry_revision_id"],
-                    ) if pair else None,
                 )
-                if pair:
-                    if replay_context["field_context"]["imagery_comparison_selection"] != pair:
-                        raise HTTPException(409, "The saved comparison evidence has changed.")
-                    await asyncio.to_thread(_execute_turn_imagery_comparison, replay_context)
             else:
                 if (payload.override_session_context or {}).get("field_context") is not None:
                     raise HTTPException(status_code=409, detail={

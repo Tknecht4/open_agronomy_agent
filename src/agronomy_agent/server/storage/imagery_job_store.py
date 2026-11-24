@@ -75,16 +75,33 @@ def current_geometry_revision(store: Any, field_id: str) -> str | None:
         return row[0] if row else None
 
 
-def list_jobs(store: Any, field_id: str, limit: int = 30) -> list[dict[str, Any]]:
+def is_running(store: Any, job_id: str) -> bool:
     with store._cursor() as cursor:
-        return [_decode(row) for row in cursor.execute("SELECT * FROM field_imagery_jobs WHERE field_id=? ORDER BY created_at DESC,id DESC LIMIT ?", (field_id, limit)).fetchall()]
+        return cursor.execute("SELECT 1 FROM field_imagery_jobs WHERE id=? AND status='running'", (job_id,)).fetchone() is not None
 
 
-def queue(store: Any, field: dict[str, Any], payload: dict[str, Any], operation_id: str, expected_revision: str) -> tuple[dict, bool]:
+def list_jobs(
+    store: Any, field_id: str, limit: int = 30, *, series: bool = False, include_series_children: bool = False,
+) -> list[dict[str, Any]]:
+    with store._cursor() as cursor:
+        return [_decode(row) for row in cursor.execute(
+            """SELECT * FROM field_imagery_jobs WHERE field_id=?
+               AND (CASE WHEN json_valid(request_json) THEN COALESCE(json_extract(request_json,'$.kind')='series',0) ELSE 0 END)=?
+               AND (? OR CASE WHEN json_valid(request_json) THEN json_extract(request_json,'$.series_job_id') IS NULL ELSE 1 END)
+               ORDER BY created_at DESC,id DESC LIMIT ?""", (field_id, int(series), int(include_series_children), limit),
+        ).fetchall()]
+
+
+def queue(store: Any, field: dict[str, Any], payload: dict[str, Any], operation_id: str, expected_revision: str, *, series_child: bool = False) -> tuple[dict, bool]:
     from agronomy_agent.server.field_data_routes import _stored_geometry
     geometry = _stored_geometry(field)
     digest = hashlib.sha256(_json({"request": payload, "revision": expected_revision}).encode()).hexdigest()
     with store._cursor() as cursor:
+        if series_child:
+            parent = cursor.execute("""SELECT status FROM field_imagery_jobs WHERE id=? AND field_id=?
+                                      AND geometry_revision_id=?""", (payload["series_job_id"], field["id"], expected_revision)).fetchone()
+            if not parent or parent[0] != "running":
+                raise RuntimeError("This imagery series is no longer running")
         previous = cursor.execute("""SELECT jobs.* FROM field_imagery_operations operations
             JOIN field_imagery_jobs jobs ON jobs.id=operations.job_id
             WHERE operations.field_id=? AND operations.operation_id=?""", (field["id"], operation_id)).fetchone()
@@ -100,7 +117,9 @@ def queue(store: Any, field: dict[str, Any], payload: dict[str, Any], operation_
             cursor.execute("INSERT INTO field_imagery_operations VALUES (?,?,?,?)",
                 (field["id"], operation_id, active["id"], digest))
             return _decode(active), False
-        if cursor.execute("SELECT COUNT(*) FROM field_imagery_jobs WHERE status IN ('queued','running')").fetchone()[0] >= 4:
+        # Series children use their admitted parent's slots.
+        if not series_child and cursor.execute("""SELECT COUNT(*) FROM field_imagery_jobs
+            WHERE status IN ('queued','running') AND json_extract(request_json, '$.series_job_id') IS NULL""").fetchone()[0] >= 4:
             raise RuntimeError("Four image analyses are already pending. Wait for one to finish")
         job_id, now = str(uuid4()), _now()
         cursor.execute("""INSERT INTO field_imagery_jobs(id,workspace_id,field_id,geometry_revision_id,geometry_json,operation_id,request_json,request_sha256,status,created_at,updated_at)

@@ -54,7 +54,7 @@ def field_summary(store: Any, field: dict[str, Any], season: int | None) -> dict
     result = next(row for row in rows if row["id"] == field["id"])
     entry = field.get("metadata", {}).get("open_agronomy_agent", {})
     from agronomy_agent.server.storage.imagery_job_store import list_jobs
-    image_jobs = list_jobs(store, field["id"])
+    image_jobs = list_jobs(store, field["id"], include_series_children=True)
     completed = next((job for job in image_jobs if job["status"] in {"completed", "superseded"} and job.get("result")), None)
     latest_image = None
     if completed:
@@ -68,7 +68,9 @@ def field_summary(store: Any, field: dict[str, Any], season: int | None) -> dict
         latest_job = cursor.execute("SELECT id,status FROM field_enrichment_jobs WHERE field_id=? ORDER BY created_at DESC LIMIT 1", (field["id"],)).fetchone()
         seasons = [season_record(row) for row in cursor.execute("SELECT * FROM field_seasons WHERE field_id=? ORDER BY season DESC", (field["id"],)).fetchall()]
         revisions = [dict(row) for row in cursor.execute("SELECT id, geometry_sha256, supersedes_id, created_at FROM field_geometry_revisions WHERE field_id=? ORDER BY created_at DESC", (field["id"],)).fetchall()]
-    return {**result, "latest_context_job": dict(latest_job) if latest_job else None, "latest_image": latest_image,
+    from agronomy_agent.server.services.field_location import mapped_location
+    location = mapped_location(field, geometry_revision_id=result["geometry_revision_id"])
+    return {**result, "mapped_location": location, "latest_context_job": dict(latest_job) if latest_job else None, "latest_image": latest_image,
         "location_confirmation": entry.get("location_confirmation"), "seasons": seasons, "geometry_revisions": revisions,
         "confirmed_facts": {"country": field.get("country"), "province_state": field.get("province_state"),
             "crop": result["crop"], "season": season, "legacy_undated_crop": result["legacy_undated_crop"]},

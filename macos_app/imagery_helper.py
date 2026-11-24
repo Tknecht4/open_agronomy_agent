@@ -32,12 +32,6 @@ def main() -> None:
         overlay()
         return
 
-    if sys.argv[1:2] == ["--compare"]:
-        from agronomy_agent.imagery_comparison import main as compare
-        del sys.argv[1]
-        compare()
-        return
-
     import truststore
     truststore.inject_into_ssl()
     from agronomy_agent.imagery_worker import main as analyze

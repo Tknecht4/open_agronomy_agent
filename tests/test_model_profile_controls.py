@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
+import shutil
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -7,10 +11,12 @@ import pytest
 import yaml
 
 from agronomy_agent.agent import generate_answer, load_model_config, resolve_local_model_snapshot
+from agronomy_agent.model_assets import ModelAsset, pinned_model_assets, verified_model_asset
 from agronomy_agent.offline_readiness import build_offline_readiness
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG
 from agronomy_agent.server.app import _demo_model_policy, create_app
 from agronomy_agent.server.services.model_adaptation_service import model_adaptation_readiness
+from agronomy_agent.server.services import model_installation
 from agronomy_agent.server.services.model_decision_service import (
     CONFERENCE_MODEL_CONFIG_PATH,
     conference_model_decision,
@@ -131,8 +137,11 @@ def test_gemma_270m_bounded_profile_is_single_model_and_revision_pinned() -> Non
 def test_pre_demo_profile_pins_every_selectable_local_model() -> None:
     config = load_model_config(DEFAULT_MODEL_CONFIG)
 
-    assert config["model_revision"]
-    assert config["assistant_model_revision"]
+    assert pinned_model_assets(config["serving_model_id"], config["model_revision"])
+    assert config["assistant_model_id"] == "mlx-community/gemma-4-e4b-it-4bit"
+    assert config["assistant_model_revision"] == "475b9088d29754a3379866cf5aeb6b41acd313c2"
+    assert sum(asset.size for asset in pinned_model_assets(config["assistant_model_id"], config["assistant_model_revision"])) == 5_179_241_512
+    assert config["assistant_verifier_model_id"] == config["assistant_model_id"]
     assert config["serving_quality_gate"] == "open_agronomy_system_interface_v2"
     assert config["answer_verification"]["mode"] == "risk_conditioned_selective_v3"
 
@@ -253,8 +262,125 @@ def test_local_snapshot_resolution_fails_closed_without_downloading(monkeypatch:
     try:
         resolve_local_model_snapshot("example/missing-model", revision="immutable-revision")
     except RuntimeError as exc:
-        assert "No automatic download was attempted" in str(exc)
+        assert "Download the model from Answer model settings" in str(exc)
     else:
         raise AssertionError("missing local model should fail closed")
     assert observed["local_files_only"] is True
     assert observed["revision"] == "immutable-revision"
+
+
+def test_model_installer_repairs_unverified_files_and_reuses_verified_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    model_id = "approved/example"
+    revision = "a" * 40
+    snapshot = tmp_path / "models--approved--example" / "snapshots" / revision
+    snapshot.mkdir(parents=True)
+    expected = {"existing.json": b"existing", "download.safetensors": b"weights"}
+    assets = tuple(ModelAsset(name, len(content), hashlib.sha256(content).hexdigest(), "b" * 40)
+                   for name, content in expected.items())
+    (snapshot / "existing.json").write_bytes(expected["existing.json"])
+    (snapshot / "download.safetensors").write_bytes(b"damage!")
+    calls: list[dict[str, Any]] = []
+
+    def download(**kwargs: Any) -> None:
+        calls.append(kwargs)
+        (snapshot / kwargs["filename"]).write_bytes(expected[kwargs["filename"]])
+
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
+    monkeypatch.setattr(model_installation, "pinned_model_assets", lambda *_: assets)
+    monkeypatch.setattr("huggingface_hub.hf_hub_download", download)
+    monkeypatch.setattr(shutil, "disk_usage", lambda _: SimpleNamespace(free=2**33))
+    model_installation.install_model(model_id, revision)
+    model_installation.install_model(model_id, revision)
+
+    assert calls == [{
+        "repo_id": model_id, "revision": revision, "filename": "download.safetensors",
+        "cache_dir": tmp_path, "endpoint": "https://huggingface.co", "token": False, "force_download": True,
+    }]
+
+
+def test_model_installer_accepts_hub_shared_blobs_and_repairs_snapshot_pointer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    model_id = "approved/example"
+    revision = "a" * 40
+    data = b"pinned shared weights"
+    asset = ModelAsset("model.safetensors", len(data), hashlib.sha256(data).hexdigest(), "b" * 64)
+    repo = tmp_path / "models--approved--example"
+    blob = repo / "blobs" / asset.blob_id
+    pointer = repo / "snapshots" / revision / asset.name
+    shared = tmp_path / "blobs" / "cc" / ("c" * 64)
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path))
+    monkeypatch.setattr(model_installation, "pinned_model_assets", lambda *_: (asset,))
+    monkeypatch.setattr(shutil, "disk_usage", lambda _: SimpleNamespace(free=2**33))
+
+    def cold_download(**kwargs: Any) -> None:
+        assert kwargs["filename"] == asset.name
+        for path in (blob, pointer, shared):
+            path.parent.mkdir(parents=True, exist_ok=True)
+        shared.write_bytes(data)
+        blob.symlink_to(shared)
+        pointer.symlink_to(blob)
+
+    monkeypatch.setattr("huggingface_hub.hf_hub_download", cold_download)
+    model_installation.install_model(model_id, revision)
+    assert verified_model_asset(pointer, repo, asset)
+
+    wrong = tmp_path / "external-copy"
+    wrong.write_bytes(data)
+    pointer.unlink()
+    pointer.symlink_to(wrong)
+    assert not verified_model_asset(pointer, repo, asset)
+    assert verified_model_asset(blob, repo, asset)
+
+    def unexpected_download(**_: Any) -> None:
+        pytest.fail("The verified shared blob should be reused without a transfer")
+
+    monkeypatch.setattr("huggingface_hub.hf_hub_download", unexpected_download)
+    model_installation.install_model(model_id, revision)
+    assert pointer.resolve() == shared
+    assert verified_model_asset(pointer, repo, asset)
+    assert wrong.read_bytes() == data
+    shared.write_bytes(b"x" * len(data))
+    assert not verified_model_asset(pointer, repo, asset)
+
+
+def test_local_install_route_rejects_other_models_and_reports_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx")
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "empty-cache"))
+    monkeypatch.setattr(shutil, "disk_usage", lambda _: SimpleNamespace(free=0))
+    config = load_model_config(DEFAULT_MODEL_CONFIG)
+    selected = config["assistant_model_id"]
+    settings = build_settings(
+        db_path=tmp_path / "downloads.sqlite3", artifact_root=tmp_path / "artifacts",
+        allow_local_dev_auth=True, network_mode="online",
+    )
+    with TestClient(create_app(settings), base_url="http://127.0.0.1") as client:
+        assert client.post("/api/models/install", json={"model_id": "other/model"}).status_code == 404
+        assert client.post("/api/models/install", headers={"Origin": "https://untrusted.example"},
+                           json={"model_id": selected}).status_code == 403
+        assert client.post("/api/models/install", json={"model_id": selected, "revision": "main"}).status_code == 422
+        assert client.post("/api/models/install", json={"model_id": selected}).status_code == 202
+        profiles = client.get("/api/configs").json()["model_profiles"]
+        assert [profile["id"] for profile in profiles] == [config["serving_model_id"], selected]
+        assert profiles[1]["install_status"] == "failed"
+        assert profiles[1]["local_ready"] is False
+        assert "Free at least 5.3 GB" in profiles[1]["install_detail"]
+
+
+def test_install_queue_coalesces_repeated_requests_and_releases_after_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    queue = model_installation.ModelInstallation()
+    assert queue.start("approved/first")
+    assert not queue.start("approved/first")
+    with pytest.raises(model_installation.ModelInstallError, match="current model download"):
+        queue.start("approved/second")
+
+    def invalid(*_: Any) -> None:
+        raise model_installation.ModelInstallError("The downloaded model did not match the verified files.")
+
+    monkeypatch.setattr(model_installation, "install_model", invalid)
+    queue.run("approved/first", "a" * 40)
+    assert queue.status("approved/first")[0] == "failed"
+    assert queue.start("approved/first")
+    assert queue.status("approved/first") == ("downloading", None)

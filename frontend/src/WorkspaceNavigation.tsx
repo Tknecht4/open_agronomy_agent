@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { BookOpen, ChartNoAxesCombined, Database, MapPin, Menu, MessageSquareText, Sprout } from 'lucide-react'
+import { BookOpen, ChartNoAxesCombined, Database, Menu, MessageSquareText, Sprout } from 'lucide-react'
 import type { FieldAnswerCapability } from './fieldRuntimeAvailability'
 import { WorkspaceDialog } from './WorkspaceDialog'
 
-export type WorkspacePage = 'farms' | 'records' | 'field-editor' | 'analyze' | 'fields' | 'evidence' | 'benchmarks' | 'sources' | 'privacy' | 'about'
+export type WorkspacePage = 'farms' | 'records' | 'field-editor' | 'analyze' | 'evidence' | 'benchmarks' | 'sources' | 'privacy' | 'about'
 
 export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile }: {
   page: WorkspacePage
@@ -17,7 +17,6 @@ export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile
   useEffect(() => { setOpen(false) }, [page, mobile])
   const primaryItems = [
     ['farms', 'Farms', Sprout],
-    ['fields', 'Fields', MapPin],
     ['records', 'Records', BookOpen],
     ['analyze', 'Questions', MessageSquareText],
   ] as const
@@ -29,7 +28,7 @@ export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile
   const brand = <div className="workspace-brand"><span className="workspace-brand-symbol"><Sprout size={22} aria-hidden="true" /></span><span>Open Agronomy</span></div>
   const navigation = <>
     <nav className="workspace-navigation" aria-label="Primary">
-      {primaryItems.map(([id, label, Icon]) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined} onClick={() => choose(id)}><Icon size={18} aria-hidden="true" />{label}</button>)}
+      {primaryItems.map(([id, label, Icon]) => <button key={id} type="button" aria-current={page === id || (id === 'farms' && page === 'field-editor') ? 'page' : undefined} onClick={() => choose(id)}><Icon size={18} aria-hidden="true" />{label}</button>)}
     </nav>
     <div className="workspace-navigation-divider" />
     <nav className="workspace-navigation" aria-label="Review">

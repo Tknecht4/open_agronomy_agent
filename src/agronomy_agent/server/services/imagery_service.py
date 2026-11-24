@@ -5,7 +5,7 @@ allowlisted provider, dates and a scene ID; geometry comes from saved state.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import re
 import json
@@ -23,14 +23,20 @@ import logging
 from functools import lru_cache
 from typing import Any
 
-from agronomy_agent.field_imagery import _valid_search_geometry
-from agronomy_agent.imagery_analytics import _request_identity
+from httpx import HTTPError
+
+from agronomy_agent.field_imagery import _PC_TOKEN, _request_json, _valid_search_geometry, scene_cloud_exceeds_limit
+from agronomy_agent.imagery_analytics import _request_identity, validate_access_token
 from agronomy_agent.imagery_receipts import validate_hls_receipt
 from agronomy_agent.sentinel2_receipts import request_identity as sentinel_request, validate_sentinel2_receipt
 from agronomy_agent.imagery_store import ImageryStore
 from agronomy_agent.paths import REPO_ROOT
+from agronomy_agent.server.services.imagery_series import SERIES_WORKERS
 
-_WORKER_SLOT = threading.BoundedSemaphore(1)
+_WORKER_SLOT = threading.BoundedSemaphore(SERIES_WORKERS)
+_HLS_TOKEN_LOCK = threading.Lock()
+_hls_token: tuple[str, datetime] | None = None
+_hls_retry_after = 0.0
 _PUBLIC_KEYS = frozenset((
     "status", "evidence_role", "interpretation", "provider_id", "scene_id",
     "request_hash", "geometry_hash", "process_version", "source_native_grid",
@@ -193,7 +199,30 @@ def _support_assessment(result: dict[str, Any]) -> dict[str, Any]:
             ]}
 
 
-def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+def _hls_access_token() -> str:
+    """Reuse public access to the shared HLS container until near expiry."""
+    global _hls_token, _hls_retry_after
+    with _HLS_TOKEN_LOCK:
+        now = datetime.now(timezone.utc)
+        if _hls_token and _hls_token[1] > now + timedelta(minutes=2):
+            return _hls_token[0]
+        if time.monotonic() < _hls_retry_after:
+            raise RuntimeError("public HLS signing temporarily unavailable")
+        try:
+            grant = _request_json(_PC_TOKEN)
+            token = validate_access_token(grant.get("token"))
+            expiry = datetime.fromisoformat(grant["msft:expiry"].replace("Z", "+00:00"))
+            if expiry.tzinfo is None or expiry <= now + timedelta(minutes=2):
+                raise ValueError("public HLS access expires too soon")
+        except (HTTPError, OSError, RuntimeError, TypeError, ValueError, AttributeError, KeyError) as exc:
+            _hls_retry_after = time.monotonic() + 5
+            raise RuntimeError("public HLS signing temporarily unavailable") from exc
+        _hls_token = (token, expiry)
+        _hls_retry_after = 0
+        return token
+
+
+def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: dict[str, Any], *, display_preview: bool = False) -> dict[str, Any]:
     # Credentials, private overlays, proxy configuration and user-site Python
     # state are deliberately absent from this public-imagery subprocess.
     env = {"PATH": os.defpath, "PYTHONPATH": str(REPO_ROOT / "src"),
@@ -216,17 +245,64 @@ def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: d
                 command.extend(["--" + name.replace("_", "-"), str(payload[name])])
         if settings.network_mode == "online":
             command.append("--online")
+        if display_preview:
+            command.append("--display-preview")
+        worker_input: dict[str, Any] = {"stdin": subprocess.DEVNULL}
+        if payload.get("series_job_id"):
+            command.append("--concurrent-publication")
+            if payload.get("catalog_item") is not None:
+                item_path = Path(temporary) / "catalog-item.json"
+                item_path.write_text(json.dumps(payload["catalog_item"], allow_nan=False), encoding="utf-8")
+                item_path.chmod(0o600)
+                command.extend(["--catalog-item", str(item_path)])
+            if settings.network_mode == "online":
+                try:
+                    worker_input = {"input": _hls_access_token().encode("utf-8")}
+                except RuntimeError:
+                    return {"status": "unavailable", "reason": "public_hls_access_temporarily_unavailable"}
+                # Keep the token in memory and pass it through the worker pipe.
+                command.append("--access-token-stdin")
+        limit = 3 * 1024 * 1024 if display_preview else 128 * 1024
         with tempfile.TemporaryFile() as output:
-            completed = _run_process(command, standalone=bool(standalone), cwd=REPO_ROOT, env=env, stdin=subprocess.DEVNULL,
-                                       stdout=output, stderr=subprocess.DEVNULL, timeout=150, check=False)
+            completed = _run_process(command, standalone=bool(standalone), cwd=REPO_ROOT, env=env,
+                                     stdout=output, stderr=subprocess.DEVNULL, timeout=55 if display_preview else 150,
+                                     check=False, **worker_input)
             output.seek(0)
-            data = output.read(128 * 1024 + 1)
-        if completed.returncode not in (0, 2) or len(data) > 128 * 1024:
+            data = output.read(limit + 1)
+        if completed.returncode not in (0, 2) or len(data) > limit:
             raise ValueError("imagery worker failed")
         result = json.loads(data)
         if not isinstance(result, dict):
             raise ValueError("imagery worker returned invalid result")
         return result
+
+
+def scene_preview(settings: Any, field: dict, geometry: dict, payload: dict) -> dict[str, Any]:
+    from agronomy_agent.imagery_scene_preview import request_identity as preview_identity, valid_preview
+
+    _, identity = preview_identity(geometry, payload["provider_id"], payload["scene_id"], payload["start_date"], payload["end_date"])
+    if not settings.imagery_cache_root or not (settings.imagery_worker_executable or settings.imagery_worker_python):
+        return {"status": "not_configured", "message": "Set up the local imagery worker to view scenes."}
+    try:
+        result = _run_worker(settings, field_cache(settings, field), geometry, payload, display_preview=True)
+    except subprocess.TimeoutExpired:
+        return {"status": "timed_out", "message": "The preview timed out. Retry or choose another scene."}
+    except (OSError, ValueError):
+        return {"status": "worker_unavailable", "message": "The imagery worker could not prepare the preview. Check imagery setup."}
+    if result.get("status") == "available" and valid_preview(result, identity):
+        return result
+    messages = {
+        "no_pixels": "This scene has no image pixels at the saved field.",
+        "cache_miss": "This scene has no saved preview. Connect to load it.",
+        "scene_unavailable": "The selected scene is no longer available for this field.",
+        "storage_limit": "The imagery cache has reached its storage limit.",
+        "storage_unavailable": "The imagery cache could not be verified.",
+        "busy": "The imagery worker is busy. Retry when it finishes.",
+    }
+    status = result.get("status")
+    if isinstance(status, str) and status in messages:
+        return {"status": status, "message": messages[status]}
+    return {"status": "preview_unavailable", "message": "The selected image could not be read. Retry or choose another scene."}
 
 
 def request_identity(geometry: dict, payload: dict) -> tuple[str, str]:
@@ -252,6 +328,8 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
     except (OSError, RuntimeError, sqlite3.Error, ValueError):
         return {"status": "storage_unavailable", "reason": "imagery_cache_unavailable"}
     if cached:
+        if scene_cloud_exceeds_limit((cached.get("source") or {}).get("scene_cloud_percent")):
+            return {"status": "no_scene", "reason": "scene_cloud_limit"}
         try:
             validate_receipt(cached, geometry=geometry, provider_id=payload["provider_id"],
                 sampling_mode=payload.get("sampling_mode") or ("point_pixel" if geometry["type"] == "Point" else "field_polygon"),
@@ -261,7 +339,9 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
         return public_receipt({**cached, "cache_hit": True}, field["id"])
     if settings.network_mode == "offline":
         return {"status": "blocked_offline", "reason": "no matching local chip"}
-    if not _WORKER_SLOT.acquire(blocking=False):
+    acquired = (_WORKER_SLOT.acquire(timeout=35) if payload.get("series_job_id")
+                else _WORKER_SLOT.acquire(blocking=False))
+    if not acquired:
         return {"status": "busy"}
     try:
         result = _run_worker(settings, cache, geometry, payload)
@@ -273,6 +353,8 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
             validate_receipt(stored, geometry=geometry, provider_id=payload["provider_id"],
                 sampling_mode=payload.get("sampling_mode") or ("point_pixel" if geometry["type"] == "Point" else "field_polygon"),
                 sample_radius_m=payload.get("sample_radius_m"))
+            if scene_cloud_exceeds_limit((stored.get("source") or {}).get("scene_cloud_percent")):
+                return {"status": "no_scene", "reason": "scene_cloud_limit"}
             result = stored
         return public_receipt(result, field["id"])
     except (OSError, ValueError, TypeError, KeyError, RuntimeError, sqlite3.Error, subprocess.TimeoutExpired):
@@ -379,7 +461,7 @@ def preview(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip
     return store.preview_bytes(chip_hash)
 
 
-def map_overlay(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip_hash: str) -> dict[str, Any] | None:
+def map_overlay(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip_hash: str, *, index: str = "NDVI") -> dict[str, Any] | None:
     original = preview(settings, field, geometry, chip_hash)
     standalone = settings.imagery_worker_executable
     executable = standalone or settings.imagery_worker_python
@@ -390,6 +472,8 @@ def map_overlay(settings: Any, field: dict[str, Any], geometry: dict[str, Any], 
         str(executable), "-m", "agronomy_agent.imagery_overlay",
     ]
     command.extend(["--cache-root", str(cache), "--chip-hash", chip_hash])
+    if index == "NDMI":
+        command.extend(["--index", index])
     env = {"PATH": os.defpath, "PYTHONNOUSERSITE": "1"}
     if not standalone:
         env["PYTHONPATH"] = str(REPO_ROOT / "src")
@@ -409,7 +493,8 @@ def map_overlay(settings: Any, field: dict[str, Any], geometry: dict[str, Any], 
         result = json.loads(data)
         bounds = result["bounds"]
         image = base64.b64decode(result["png_base64"], validate=True)
-        if (result["chip_hash"] != chip_hash or result["source_preview_sha256"] != hashlib.sha256(original).hexdigest()
+        if (result["chip_hash"] != chip_hash or result.get("index", "NDVI") != index
+            or result["source_preview_sha256"] != hashlib.sha256(original).hexdigest()
             or result["display_crs"] != "EPSG:3857" or result["display_resampling"] != "nearest"
             or len(bounds) != 2 or any(len(point) != 2 for point in bounds)
             or any(type(value) not in (int, float) or not math.isfinite(value) for point in bounds for value in point)

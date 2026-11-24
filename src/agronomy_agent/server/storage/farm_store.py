@@ -236,13 +236,15 @@ def workspace_rows(store: Any, workspace_id: str, season: int | None) -> list[di
             raw = verified_snapshot(snapshot)
             snapshots[key] = {'availability': snapshot['availability'] if raw is not None else 'integrity_failed',
                 'freshness': 'stale' if snapshot['expires_at'] < _now() else 'current', 'fetched_at': snapshot['fetched_at']}
+        fields_with_snapshots = {field_id for field_id, _, _ in snapshots}
         result = []
         for row in rows:
             metadata = json.loads(row["metadata"] or "{}").get("open_agronomy_agent", {})
             if metadata.get("kind") != "map_field":
                 continue
             geometry = metadata.get("geometry") or {"kind": "none"}
-            scope = scope_identity({'metadata': json.loads(row['metadata'] or '{}'), 'country': row['country'], 'province_state': row['province_state']})
+            scope = (scope_identity({'metadata': {'open_agronomy_agent': metadata}, 'country': row['country'], 'province_state': row['province_state']})
+                     if row['id'] in fields_with_snapshots else None)
             statuses = {source: snapshots.get((row['id'], scope, source), {'availability': 'not_requested', 'freshness': 'unknown'}) for source in sorted(SOURCES)}
             checked = [value for value in statuses.values() if value['availability'] != 'not_requested']
             review = sum(value['availability'] not in SUCCESS or value['freshness'] == 'stale' for value in checked)

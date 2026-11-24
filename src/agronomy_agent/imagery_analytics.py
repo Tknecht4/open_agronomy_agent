@@ -6,6 +6,7 @@ the serving environment need not install them to import this module.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import hashlib
 import io
@@ -21,6 +22,7 @@ import httpx
 
 from agronomy_agent.field_imagery import (
     _PC_TOKEN, _PLANETARY_COMPUTER, _clean_asset, _request_json, _valid_search_geometry,
+    MAX_SCENE_CLOUD_PERCENT, scene_cloud_exceeds_limit,
 )
 from agronomy_agent.imagery_store import ImageryStore
 from agronomy_agent.geospatial.cog import bounded_cog_proxy as _bounded_cog_proxy, MAX_COG_TRANSFER_BYTES
@@ -124,9 +126,11 @@ def _request_identity(geometry: dict[str, Any], provider_id: str, scene_id: str 
 
 
 def _scene_item(geometry: dict[str, Any], provider_id: str, scene_id: str | None,
-                start_date: str | None, end_date: str | None) -> dict[str, Any]:
-    collection, band_keys = BAND_KEYS[provider_id]
-    body: dict[str, Any] = {"collections": [collection], "limit": 1, "intersects": geometry}
+                start_date: str | None, end_date: str | None, *,
+                preview_bands: tuple[str, ...] | None = None) -> dict[str, Any]:
+    collection, _ = BAND_KEYS[provider_id]
+    body: dict[str, Any] = {"collections": [collection], "limit": 1, "intersects": geometry,
+                            "query": {"eo:cloud_cover": {"lte": MAX_SCENE_CLOUD_PERCENT}}}
     if scene_id:
         body["ids"] = [scene_id.split(":", 1)[1]]
     else:
@@ -140,7 +144,13 @@ def _scene_item(geometry: dict[str, Any], provider_id: str, scene_id: str | None
         raise RuntimeError("invalid STAC scene response")
     if not features:
         raise LookupError("no matching HLS scene")
-    item = features[0]
+    return _validate_scene_item(features[0], provider_id, scene_id, start_date, end_date, preview_bands)
+
+
+def _validate_scene_item(item: dict, provider_id: str, scene_id: str | None,
+                         start_date: str | None, end_date: str | None,
+                         preview_bands: tuple[str, ...] | None = None) -> dict[str, Any]:
+    collection, band_keys = BAND_KEYS[provider_id]
     if not isinstance(item, dict) or item.get("collection") != collection:
         raise RuntimeError("unexpected STAC collection")
     item_id = item.get("id")
@@ -150,6 +160,8 @@ def _scene_item(geometry: dict[str, Any], provider_id: str, scene_id: str | None
     assets = item.get("assets")
     if not isinstance(properties, dict) or not isinstance(assets, dict):
         raise RuntimeError("incomplete STAC item")
+    if scene_cloud_exceeds_limit(properties.get("eo:cloud_cover")):
+        raise LookupError("HLS scene exceeds the cloud limit")
     acquired = properties.get("datetime")
     if not isinstance(acquired, str) or len(acquired) > 40:
         raise RuntimeError("missing acquisition time")
@@ -157,7 +169,7 @@ def _scene_item(geometry: dict[str, Any], provider_id: str, scene_id: str | None
         acquired_date = datetime.fromisoformat(acquired.replace("Z", "+00:00")).date().isoformat()
         if not start_date <= acquired_date <= end_date:
             raise RuntimeError("HLS acquisition outside requested date interval")
-    wanted = (*band_keys, "Fmask")
+    wanted = preview_bands or (*band_keys, "Fmask")
     clean: dict[str, dict[str, Any]] = {}
     for key in wanted:
         asset = assets.get(key)
@@ -173,14 +185,18 @@ def _scene_item(geometry: dict[str, Any], provider_id: str, scene_id: str | None
             "scene_cloud_percent": properties.get("eo:cloud_cover"), "assets": clean}
 
 
-def _signed_hrefs(item: dict[str, Any]) -> dict[str, str]:
-    token = _request_json(_PC_TOKEN).get("token")
+def validate_access_token(token: Any) -> str:
     if not isinstance(token, str) or not 1 <= len(token) <= 2048:
         raise RuntimeError("public HLS SAS unavailable")
     token = token.lstrip("?")
     pairs = parse_qsl(token, keep_blank_values=True)
     if not pairs or not all(k and v for k, v in pairs) or any(x in token for x in ("#", "\n", "\r")):
         raise RuntimeError("invalid public HLS SAS")
+    return token
+
+
+def _signed_hrefs(item: dict[str, Any], token: str | None = None) -> dict[str, str]:
+    token = validate_access_token(token if token is not None else _request_json(_PC_TOKEN).get("token"))
     return {key: f"{asset['href']}?{token}" for key, asset in item["assets"].items()}
 
 
@@ -297,13 +313,15 @@ def _read_assets(item: dict[str, Any], hrefs: dict[str, str], grid: tuple[Any, .
     np, rasterio, (Resampling, _, _, WarpedVRT), _, _, _ = deps
     crs, transform, width, height, _, _ = grid
     _, band_keys = BAND_KEYS[provider_id]
-    arrays = []
-    masks = []
-    source_meta: dict[str, Any] = {}
-    with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", GDAL_HTTP_MAX_RETRY="0",
-                      GDAL_HTTP_TIMEOUT="20", CPL_DEBUG="OFF", VSI_CACHE="FALSE"):
-        for key in (*band_keys, "Fmask"):
-            _validate_scale(item["assets"][key]["raster_bands"], key)
+    keys = (*band_keys, "Fmask")
+
+    def read_band(key: str) -> tuple[Any, Any, dict[str, Any]]:
+        asset = item["assets"][key]
+        _validate_scale(asset["raster_bands"], key)
+        # Each thread opens its own GDAL dataset and environment. Only the
+        # bounded loopback proxy and its transfer counters are shared.
+        with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", GDAL_HTTP_MAX_RETRY="0",
+                          GDAL_HTTP_TIMEOUT="20", CPL_DEBUG="OFF", VSI_CACHE="FALSE"):
             with rasterio.open(hrefs[key]) as src:
                 if src.count != 1 or src.crs is None or src.width < 1 or src.height < 1:
                     raise RuntimeError("invalid HLS COG band")
@@ -311,18 +329,20 @@ def _read_assets(item: dict[str, Any], hrefs: dict[str, str], grid: tuple[Any, .
                 if (src.crs != source_grid[0] or src.transform != source_grid[1] or
                         src.width != source_grid[2] or src.height != source_grid[3]):
                     raise RuntimeError("HLS band grids are inconsistent")
-                source_meta[key] = {"asset_id": item["assets"][key]["id"],
-                                    "crs": src.crs.to_string(), "dtype": src.dtypes[0],
-                                    "nodata": src.nodata, "cog_scale": src.scales[0],
-                                    "cog_offset": src.offsets[0],
-                                    "scale": None if key == "Fmask" else SCALE,
-                                    "offset": None if key == "Fmask" else 0,
-                                    "raster_bands": item["assets"][key]["raster_bands"]}
+                metadata = {"asset_id": asset["id"], "crs": src.crs.to_string(),
+                            "dtype": src.dtypes[0], "nodata": src.nodata, "cog_scale": src.scales[0],
+                            "cog_offset": src.offsets[0], "scale": None if key == "Fmask" else SCALE,
+                            "offset": None if key == "Fmask" else 0, "raster_bands": asset["raster_bands"]}
                 with WarpedVRT(src, crs=crs, transform=transform, width=width, height=height,
                                resampling=Resampling.nearest) as vrt:
                     data = vrt.read(1, masked=True)
-                    arrays.append(np.asarray(data.data))
-                    masks.append(np.ma.getmaskarray(data).copy())
+                    return np.asarray(data.data), np.ma.getmaskarray(data).copy(), metadata
+
+    # GDAL may launch separate HTTP operations for each band. Keep the same
+    # order for cache identities even when those reads finish out of order.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        arrays, masks, metadata = zip(*pool.map(read_band, keys), strict=True)
+    source_meta = dict(zip(keys, metadata, strict=True))
     # Retain the exact encoded source-window values before any QA masking or
     # reflectance conversion. The separate invalid mask gives off-tile values
     # no observational meaning even when a VRT supplied numeric zeros there.
@@ -399,6 +419,8 @@ def analyze_scene(
     sampling_mode: str | None = None, sample_radius_m: int | None = None,
     budget_root: str | Path | None = None,
     max_cache_bytes: int = 2 * 1024**3, min_free_bytes: int = 1024**3,
+    catalog_item: dict | None = None, concurrent_publication: bool = False,
+    access_token: str | None = None,
 ) -> dict[str, Any]:
     """Reuse verified chips or admit one bounded writer before public egress."""
     from agronomy_agent.geospatial.products import cached_product
@@ -409,11 +431,12 @@ def analyze_scene(
         request_hash=request_hash, provider_id=provider_id, scene_id=scene_id,
         cache_root=cache_root, network_mode=network_mode, budget_root=budget_root,
         max_cache_bytes=max_cache_bytes, min_free_bytes=min_free_bytes,
-        process=lambda root, admission: _analyze_scene_admitted(
+        concurrent_publication=concurrent_publication,
+        process=lambda root, publish: _analyze_scene_admitted(
             geometry, provider_id, scene_id, cache_root=root, network_mode=network_mode,
             start_date=start_date, end_date=end_date, buffer_m=buffer_m,
             context_pixels=context_pixels, sampling_mode=sampling_mode,
-            sample_radius_m=sample_radius_m, admission=admission))
+            sample_radius_m=sample_radius_m, publish=publish, catalog_item=catalog_item, access_token=access_token))
 
 
 def _analyze_scene_admitted(
@@ -422,7 +445,7 @@ def _analyze_scene_admitted(
     start_date: str | None = None, end_date: str | None = None,
     buffer_m: int = 0, context_pixels: int | None = None,
     sampling_mode: str | None = None, sample_radius_m: int | None = None,
-    admission: Any,
+    publish: Any, catalog_item: dict | None = None, access_token: str | None = None,
 ) -> dict[str, Any]:
     """Return a source-bound single-scene receipt; offline reuses exact cached work.
 
@@ -447,8 +470,7 @@ def _analyze_scene_admitted(
     repository = Path(__file__).resolve().parents[2]
     if root == repository or repository in root.parents:
         raise ValueError("imagery cache must be outside the repository")
-    store = ImageryStore(root)
-    cached = store.get(request_hash, scene_id=scene_id)
+    cached = ImageryStore(root, read_only=True).get(request_hash, scene_id=scene_id) if (root / "imagery-v1.sqlite3").exists() else None
     if cached:
         return {**cached, "cache_hit": True}
     if network_mode == "offline":
@@ -458,8 +480,11 @@ def _analyze_scene_admitted(
     started = time.monotonic()
     try:
         deps = _dependencies()
-        item = _scene_item(canonical_geometry, provider_id, scene_id, start_date, end_date)
-        hrefs = _signed_hrefs(item)
+        if catalog_item is not None:
+            item = _validate_scene_item(catalog_item, provider_id, scene_id, start_date, end_date)
+        else:
+            item = _scene_item(canonical_geometry, provider_id, scene_id, start_date, end_date)
+        hrefs = _signed_hrefs(item) if access_token is None else _signed_hrefs(item, access_token)
         with _bounded_cog_proxy(hrefs) as (local_hrefs, transfer):
             source_grid = _source_grid(local_hrefs, deps)
             if is_point:
@@ -560,8 +585,13 @@ def _analyze_scene_admitted(
                                 field_weights=weights, fmask=fmask, ndvi=ndvi,
                                 metadata_json=_canonical(metadata).decode())
         from agronomy_agent.geospatial.products import write_chip_bundle
-        write_chip_bundle(store, receipt, bounds, npz=packed.getvalue(),
-                          png=_png(ndvi, valid, weights, Image), admission=admission)
+        png = _png(ndvi, valid, weights, Image)
+        with publish() as admission:
+            store = ImageryStore(root)
+            cached = store.get(request_hash, scene_id=scene_id)
+            if cached:
+                return {**cached, "cache_hit": True}
+            write_chip_bundle(store, receipt, bounds, npz=packed.getvalue(), png=png, admission=admission)
         return receipt
     except LookupError:
         return {"status": "no_scene", "provider_id": provider_id, "scene_id": scene_id,

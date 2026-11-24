@@ -15,7 +15,7 @@ It is not an agronomist replacement or a regulatory, diagnostic, or field-outcom
 | View | Primary task | Boundary |
 |---|---|---|
 | **Workspace** | Ask and inspect a question with an optional selected field; expand the map when needed | An unknown field value stays unknown. Sources & checks shows observed evidence and trace, not proof of correctness. |
-| **Fields** | Add a field by name and pin/draw/import, then use Overview, Records & soil tests, and Map context | Mapped layers and calculated acreage are context/estimates, not measurements. |
+| **Farms** | Expand a farm, select a field to focus the map, and open its records, imagery, soil and terrain, or data tables | Mapped layers and calculated acreage are context/estimates, not measurements. |
 | **Data** | Inspect a private session reference and see governed knowledge and adapter readiness | Private inspection does not admit a source to the shared corpus or training. |
 
 The [workspace guide](operations/workspace.md) covers field setup, offline drafts, imports, exports, and evidence review. The [customization guide](developer/customizing-the-harness.md) maps model, source, graph, capability, UI, and evaluation extension seams.

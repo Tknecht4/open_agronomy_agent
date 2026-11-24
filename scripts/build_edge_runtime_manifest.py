@@ -62,6 +62,7 @@ CONTROL_PATHS = (
     "scripts/validate_edge_runtime_translation.py",
     "data/manifests/canada_agronomy_sources.json",
     "data/manifests/canada_geospatial_sources.json",
+    "data/manifests/administrative_geospatial_sources.json",
     "data/manifests/source_licensing_matrix.json",
 )
 BENCHMARK_ROOTS: tuple[str, ...] = ()

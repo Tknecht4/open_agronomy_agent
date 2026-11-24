@@ -13,6 +13,11 @@ import json
 from typing import Any
 
 
+INDEX_COLOR_SCALE = {
+    "stops": [{"value": -1, "color": "#b93c5f"}, {"value": 0, "color": "#5c912f"}, {"value": 1, "color": "#00e600"}],
+}
+
+
 def reproject_preview(png: bytes, grid: dict[str, Any], *, clip_geometry: dict[str, Any] | None = None) -> dict[str, Any]:
     import numpy as np
     from PIL import Image
@@ -79,18 +84,52 @@ def reproject_preview(png: bytes, grid: dict[str, Any], *, clip_geometry: dict[s
         "boundary": "Display reprojection only. Transparency retains native excluded or undefined support. Read numerical values from the original processing receipt."}
 
 
+def ndmi_native_preview(data: bytes, grid: dict[str, Any]) -> bytes:
+    import numpy as np
+    from PIL import Image
+    from agronomy_agent.geospatial.raster import ndvi_preview
+
+    shape = grid["height"], grid["width"]
+    if any(type(size) is not int or not 0 < size <= 4096 for size in shape) or shape[0] * shape[1] > 4_000_000:
+        raise ValueError("Preview grid exceeds display limits")
+    with np.load(io.BytesIO(data), allow_pickle=False) as arrays:
+        valid = arrays["valid_mask"]
+        weights = arrays["sample_weights"] if "sample_weights" in arrays else arrays["field_weights"]
+        if "ndmi" in arrays:
+            ndmi = arrays["ndmi"]
+        else:
+            nir, swir = arrays["bands"][[3, 4]]
+            denominator = nir + swir
+            eligible = valid & (nir >= 0) & (swir >= 0) & (denominator > 1e-6)
+            ndmi = np.full(shape, np.nan, dtype=np.float32)
+            np.divide(nir - swir, denominator, out=ndmi, where=eligible)
+        if ndmi.shape != shape or weights.shape != shape or valid.shape != shape:
+            raise ValueError("NDMI support does not match the native grid")
+        return ndvi_preview(ndmi, valid, weights, Image)
+
+
 def main() -> None:
     from agronomy_agent.imagery_store import ImageryStore
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache-root", required=True)
     parser.add_argument("--chip-hash", required=True)
+    parser.add_argument("--index", choices=("NDVI", "NDMI"), default="NDVI")
     args = parser.parse_args()
     store = ImageryStore(args.cache_root, read_only=True)
     receipt = store.get_by_chip_hash(args.chip_hash)
     image = store.preview_bytes(args.chip_hash)
     if not receipt or image is None:
         raise ValueError("Verified preview not found")
-    print(json.dumps({**reproject_preview(image, receipt["grid"]), "chip_hash": args.chip_hash}))
+    display = image
+    if args.index == "NDMI":
+        arrays = store.read_verified_artifact(args.chip_hash, "npz")
+        if arrays is None:
+            raise ValueError("Verified NDMI arrays not found")
+        display = ndmi_native_preview(arrays, receipt["grid"])
+    overlay = reproject_preview(display, receipt["grid"])
+    print(json.dumps({**overlay, "chip_hash": args.chip_hash, "index": args.index,
+                      "color_scale": INDEX_COLOR_SCALE,
+                      "source_preview_sha256": hashlib.sha256(image).hexdigest()}))
 
 
 if __name__ == "__main__":

@@ -36,7 +36,8 @@ def _normalize(source: str, value: dict[str, Any]) -> dict[str, Any]:
 def run_source(source: str, field: dict[str, Any], network_mode: str) -> dict[str, Any]:
     geometry = geometry_geojson(field["metadata"]["open_agronomy_agent"]["geometry"])
     point = geodesic_metrics(geometry)["representative_point"]
-    country, province = field.get("country"), field.get("province_state")
+    from agronomy_agent.server.services.field_location import routing_location
+    country, province = routing_location(field)
     today = datetime.now(timezone.utc).date()
     if source == "weather":
         start, end = recent_nasa_power_window(today)
@@ -50,7 +51,7 @@ def run_source(source: str, field: dict[str, Any], network_mode: str) -> dict[st
         value = search_field_imagery(geometry, "hls-s30-planetary-computer", (today - timedelta(days=30)).isoformat(), today.isoformat(), limit=5, network_mode=network_mode)
         value["message"] = f"{len(value.get('scenes', []))} scenes returned (limit 5). Field pixel coverage has not been assessed." if value.get("status") == "available" else value.get("message", "")
     elif country not in {"Canada", "United States"}:
-        return {"availability": "jurisdiction_unknown", "message": "Confirm the country in field details. No country-specific source was selected.", "role": "regional_prior"}
+        return {"availability": "jurisdiction_unknown", "message": "A verified or saved country is needed to select this source.", "role": "regional_prior"}
     elif source == "soil":
         if country == "Canada":
             value = run_local_tool("cansis-soil-landscapes-canada", {"lat": point["latitude"], "lon": point["longitude"], "geometry": geometry, "province": province}, network_mode=network_mode)

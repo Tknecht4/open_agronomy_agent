@@ -258,6 +258,14 @@ other backends fail explicitly rather than pretending persistence succeeded.
 
 `imagery_job_routes.py` owns bounded durable processing requests, cancellation,
 restart interruption, authorized historical previews and record references.
+`imagery_series` uses the same job store for the date-range request and its
+individual HLS jobs. Discovery follows bounded Planetary Computer search pages
+with the same date, geometry and cloud filters for both HLS collections.
+Workers reuse each page's unsigned asset metadata and run up to three scenes
+concurrently. Cache publication rechecks capacity under the shared writer lock.
+The public HLS container token stays in memory until near expiry and reaches
+each worker through standard input.
+Each chart observation binds one verified job and its saved geometry revision.
 `imagery_service` admits HLS and Sentinel-2 with independent validators and
 read-back verification. Display overlays use a separate worker reprojection.
 No browser supplies a worker path, arbitrary asset URL or execution environment.

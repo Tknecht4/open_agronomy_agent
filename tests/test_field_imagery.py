@@ -130,6 +130,53 @@ def test_l30_uses_landsat_near_infrared_band(monkeypatch: pytest.MonkeyPatch) ->
     assert set(result["scenes"][0]["assets"]) == {"B04", "B05", "Fmask"}
 
 
+def test_series_pushes_down_cloud_limit_and_checks_catalog_response(monkeypatch):
+    acquisitions = [
+        {"collection": collection, "id": name,
+         "properties": {"datetime": f"2025-07-{day:02d}T12:00:00Z", "eo:cloud_cover": cloud}}
+        for collection, name, day, cloud in (
+            ("hls2-l30", "landsat", 15, 70),
+            ("hls2-s30", "too-cloudy", 12, 70.01),
+            ("hls2-s30", "sentinel", 10, 0),
+            ("hls2-s30", "unknown", 14, None),
+        )
+    ]
+
+    calls = []
+
+    def response(url, *, body):
+        assert url == imagery._PLANETARY_COMPUTER
+        assert body["query"] == {"eo:cloud_cover": {"lte": 70}}
+        assert body["collections"] == ["hls2-s30", "hls2-l30"]
+        assert body["intersects"] == FIELD
+        assert "assets.B04" in body["fields"]["include"]
+        calls.append(body)
+        if "token" not in body:
+            return {"features": acquisitions[:2], "links": [
+                {"rel": "next", "method": "POST", "href": url,
+                 "body": {"token": "next:hls2-l30:landsat", "intersects": {"type": "Point", "coordinates": [0, 0]}}},
+            ]}
+        assert body["token"] == "next:hls2-l30:landsat"
+        sentinel = acquisitions[2] | {"assets": {"B04": {
+            "href": "https://hls2euwest.blob.core.windows.net/hls2/test.tif?sig=redacted"}}}
+        return {"features": [sentinel, acquisitions[3]]}
+
+    monkeypatch.setattr(imagery, "_request_json", response)
+    scenes = imagery.search_hls_series(FIELD, "2025-07-01", "2025-07-15")["scenes"]
+    assert [row["scene_id"] for row in scenes] == ["hls2-s30:sentinel", "hls2-l30:landsat"]
+    assert scenes[1]["scene_cloud_percent"] == 70
+    assert len(calls) == 2
+    assert scenes[0]["catalog_item"]["assets"]["B04"]["href"].endswith("/test.tif")
+    monkeypatch.setattr(imagery, "_request_json", lambda *args, **kwargs: {
+        "features": acquisitions, "links": [{"rel": "next", "href": "https://fixture.invalid"}],
+    })
+    with pytest.raises(RuntimeError, match="invalid imagery catalog continuation"):
+        imagery.search_hls_series(FIELD, "2025-07-01", "2025-07-15")
+    monkeypatch.setattr(imagery, "MAX_SERIES_SCENES", 1)
+    monkeypatch.setattr(imagery, "_request_json", lambda *args, **kwargs: {"features": acquisitions})
+    assert imagery.search_hls_series(FIELD, "2025-07-01", "2025-07-15") == {"status": "range_too_large", "scenes": []}
+
+
 def test_redirects_are_rejected_and_range_receipt_has_no_sas(monkeypatch: pytest.MonkeyPatch) -> None:
     href = "https://hls2euwest.blob.core.windows.net/hls2/S30/example.B04.tif"
     scene = {"id": "hls2-s30:example", "collection": "hls2-s30", "assets": {"B04": {"href": href}}}

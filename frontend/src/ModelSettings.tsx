@@ -1,8 +1,10 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Settings2, X } from 'lucide-react'
+import { ChevronDown, Download, Settings2, X } from 'lucide-react'
 import type { RuntimeAccess } from './fieldRuntimeAvailability'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { apiGet, apiPost } from './api'
+import { readableError } from './farmTypes'
 
 export type ModelProfile = {
   id: string
@@ -13,20 +15,29 @@ export type ModelProfile = {
   local_ready?: boolean
   local_status?: string
   local_detail?: string
+  download_bytes?: number
+  download_allowed?: boolean
+  install_status?: 'downloading' | 'failed' | null
+  install_detail?: string | null
 }
 
 const modelName = (profile: ModelProfile) => (profile.label || profile.id).split(' · ')[0]
 
-export function ModelSettings({ profiles, modelId, onSelect, runtimeAccess, busy, mobile, viewKey }: {
+export function ModelSettings({ profiles, modelId, onSelect, onProfilesChange, runtimeAccess, busy, mobile, viewKey }: {
   profiles: ModelProfile[]
   modelId: string
   onSelect: (id: string) => void
+  onProfilesChange?: Dispatch<SetStateAction<ModelProfile[]>>
   runtimeAccess: RuntimeAccess
   busy: boolean
   mobile: boolean
   viewKey: string
 }) {
   const [open, setOpen] = useState(false)
+  const [requested, setRequested] = useState<string | null>(null)
+  const [installError, setInstallError] = useState('')
+  const installationSupported = profiles.some(profile => profile.download_bytes != null)
+  const downloading = profiles.some(profile => profile.install_status === 'downloading')
   const [position, setPosition] = useState<CSSProperties>({})
   const trigger = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLElement>(null)
@@ -68,18 +79,59 @@ export function ModelSettings({ profiles, modelId, onSelect, runtimeAccess, busy
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('focusin', outside); document.removeEventListener('keydown', escape) }
   }, [open, mobile])
 
+  useEffect(() => {
+    if (!installationSupported || !onProfilesChange || runtimeAccess !== 'available' || (!open && !downloading)) return
+    let active = true
+    let timer: ReturnType<typeof setTimeout>
+    const poll = async () => {
+      try {
+        const response = await apiGet<{ model_profiles: ModelProfile[] }>('/api/configs')
+        if (active) onProfilesChange(response.model_profiles)
+      } catch {
+        // Retain the last known download state while reconnecting.
+      }
+      if (active) timer = setTimeout(poll, 1800)
+    }
+    void poll()
+    return () => { active = false; clearTimeout(timer) }
+  }, [installationSupported, onProfilesChange, runtimeAccess, open, downloading])
+
+  async function download(profile: ModelProfile) {
+    setInstallError('')
+    setRequested(profile.id)
+    try {
+      await apiPost('/api/models/install', { model_id: profile.id })
+      const response = await apiGet<{ model_profiles: ModelProfile[] }>('/api/configs')
+      onProfilesChange?.(response.model_profiles)
+    } catch (cause) {
+      setInstallError(readableError(cause))
+    } finally {
+      setRequested(null)
+    }
+  }
+
   const availability = (profile: ModelProfile) => runtimeAccess === 'checking' ? 'Checking availability'
     : runtimeAccess === 'unavailable' ? 'Status unavailable'
-      : profile.local_ready === true ? 'Ready on this device'
-        : profile.local_ready === false ? 'Setup required' : 'Availability not reported'
+      : profile.install_status === 'downloading' || requested === profile.id ? 'Downloading and verifying…'
+        : profile.local_ready === true ? 'Ready on this device'
+          : profile.download_bytes != null ? profile.download_allowed ? `${(profile.download_bytes / 1e9).toFixed(1)} GB download` : 'Connect to download'
+            : profile.local_ready === false ? 'Setup required' : 'Availability not reported'
   const choices = <div className="answer-model-content">
     <p className="answer-model-note">Applies to your next question.</p>
     {runtimeAccess !== 'available' ? <p className="answer-model-warning" role="status">{runtimeAccess === 'checking' ? 'Checking the local runtime.' : 'Connect the local runtime to check available models.'} Your question draft is kept.</p> : null}
-    {profiles.length ? <fieldset className="answer-model-options"><legend className="sr-only">Choose an answer model</legend>{profiles.map(profile => <label key={profile.id} className="answer-model-option">
-      <input type="radio" aria-label={`${modelName(profile)} ${availability(profile)}`} name={radioName} value={profile.id} checked={modelId === profile.id} disabled={busy || runtimeAccess !== 'available' || profile.local_ready === false} onChange={() => onSelect(profile.id)} />
-      <span><strong>{modelName(profile)}</strong><small>{availability(profile)}</small></span>
-    </label>)}</fieldset> : <p className="answer-model-empty">No model profiles available. The local runtime supplies the selectable models.</p>}
-    {selected?.local_ready === false && selected.local_detail ? <p className="answer-model-warning">{selected.local_detail}</p> : null}
+    {profiles.length ? <fieldset className="answer-model-options"><legend className="sr-only">Choose an answer model</legend>{profiles.map(profile => <div key={profile.id} className="answer-model-option">
+      <label>
+        <input type="radio" aria-label={`${modelName(profile)} ${availability(profile)}`} name={radioName} value={profile.id} checked={modelId === profile.id} disabled={busy || runtimeAccess !== 'available' || profile.local_ready === false} onChange={() => onSelect(profile.id)} />
+        <span><strong>{modelName(profile)}</strong><small role="status">{availability(profile)}</small></span>
+      </label>
+      {profile.local_ready === false && profile.download_bytes != null ? <button type="button" className="answer-model-download"
+        aria-label={`Download ${modelName(profile)}`} title={`Download ${modelName(profile)}`}
+        disabled={!profile.download_allowed || runtimeAccess !== 'available' || Boolean(requested) || downloading}
+        onClick={() => void download(profile)}><Download size={17} aria-hidden="true" /></button> : null}
+      {profile.install_detail ? <small className="answer-model-install-error" role="alert">{profile.install_detail}</small> : null}
+    </div>)}</fieldset> : <p className="answer-model-empty">No model profiles available. The local runtime supplies the selectable models.</p>}
+    {installError ? <p className="answer-model-warning" role="alert">{installError}</p> : null}
+    {selected?.local_ready === false && selected.download_bytes == null && selected.local_detail ? <p className="answer-model-warning">{selected.local_detail}</p> : null}
     {selected ? <details className="answer-model-technical"><summary>Technical details<ChevronDown size={15} aria-hidden="true" /></summary><dl>
       <div><dt>Model ID</dt><dd>{selected.id}</dd></div>
       <div><dt>Configured answer limit</dt><dd>{Number.isSafeInteger(selected.max_tokens) && selected.max_tokens > 0 ? `${selected.max_tokens.toLocaleString()} tokens` : 'Not reported'}</dd></div>

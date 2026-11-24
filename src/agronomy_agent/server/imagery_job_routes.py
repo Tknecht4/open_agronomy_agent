@@ -2,19 +2,16 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 from uuid import UUID, uuid5, NAMESPACE_URL
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
-from fastapi.responses import Response
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from agronomy_agent.server.field_data_routes import FieldImageryAnalyzeRequest
 from agronomy_agent.server.storage import imagery_job_store as jobs
-from agronomy_agent.server.schemas import ImageryComparisonSelection
 from agronomy_agent.server.services import imagery_service
-from agronomy_agent.server.services.imagery_comparison_service import ComparisonConflict, bind_selection, compare_selection
-from agronomy_agent.imagery_comparison_presentation import COMPARISON_QUESTION
+from agronomy_agent.server.services import imagery_series
 
 _SLOT = threading.BoundedSemaphore(1)
 
@@ -29,6 +26,40 @@ class ImageryJobRequest(FieldImageryAnalyzeRequest):
     expected_geometry_revision_id: str = Field(min_length=1, max_length=80)
 
 
+class ImagerySeriesRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    operation_id: UUID
+    expected_geometry_revision_id: str = Field(min_length=1, max_length=80)
+    start_date: str = Field(min_length=10, max_length=10)
+    end_date: str = Field(min_length=10, max_length=10)
+
+
+class ScenePreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider_id: Literal["hls-s30-planetary-computer", "hls-l30-planetary-computer", "sentinel2-c1-earth-search"]
+    scene_id: str = Field(min_length=1, max_length=180)
+    start_date: str = Field(min_length=10, max_length=10)
+    end_date: str = Field(min_length=10, max_length=10)
+    expected_geometry_revision_id: str = Field(min_length=1, max_length=80)
+
+
+def _execute_single(store: Any, settings: Any, field: dict, job: dict) -> None:
+    job_id = job["id"]
+    jobs.set_status(store, job_id, "running")
+    try:
+        request = job["request"]
+        if job.get("catalog_item") is not None:
+            request = {**request, "catalog_item": job["catalog_item"]}
+        result = imagery_service.analyze(settings, field, job["geometry"], request)
+        current = jobs.current_geometry_revision(store, field["id"])
+        status = "completed" if result["status"] in {"available", "empty_valid_area"} else "failed"
+        if current != job["geometry_revision_id"]:
+            status = "superseded"
+        jobs.set_status(store, job_id, status, result)
+    except Exception:
+        jobs.set_status(store, job_id, "failed", {"status": "unavailable", "reason": "The bounded image worker failed. Review setup or retry."})
+
+
 def execute_job(store: Any, settings: Any, job_id: str) -> None:
     with _SLOT:
         job = jobs.get_job(store, job_id)
@@ -38,16 +69,17 @@ def execute_job(store: Any, settings: Any, job_id: str) -> None:
         if not field:
             jobs.set_status(store, job_id, "failed", {"status": "unavailable", "reason": "Field no longer available"})
             return
+        if job["request"].get("kind") != "series":
+            _execute_single(store, settings, field, job)
+            return
+        if jobs.current_geometry_revision(store, field["id"]) != job["geometry_revision_id"]:
+            jobs.set_status(store, job_id, "superseded", {"status": "boundary_changed", "scenes": [], "total": 0})
+            return
         jobs.set_status(store, job_id, "running")
         try:
-            result = imagery_service.analyze(settings, field, job["geometry"], job["request"])
-            current = jobs.current_geometry_revision(store, field["id"])
-            status = "completed" if result["status"] in {"available", "empty_valid_area"} else "failed"
-            if current != job["geometry_revision_id"]:
-                status = "superseded"
-            jobs.set_status(store, job_id, status, result)
+            imagery_series.execute_series(store, field, job, lambda child: _execute_single(store, settings, field, child))
         except Exception:
-            jobs.set_status(store, job_id, "failed", {"status": "unavailable", "reason": "The bounded image worker failed. Review setup or retry."})
+            jobs.set_status(store, job_id, "failed")
 
 
 def register_imagery_job_routes(app: FastAPI, *, store: Any, settings: Any, authorize: Callable) -> None:
@@ -68,8 +100,38 @@ def register_imagery_job_routes(app: FastAPI, *, store: Any, settings: Any, auth
         current = jobs.current_geometry_revision(store, job["field_id"])
         result = {**job, "current_geometry": current == job["geometry_revision_id"]}
         if job["result"]:
-            result["result"] = {**job["result"], "preview_url": f"/api/imagery-jobs/{job['id']}/preview.png" if job["result"].get("chip_hash") else None}
+            if job["request"].get("kind") == "series":
+                result["result"] = imagery_series.public_series_result(job["result"])
+            else:
+                result["result"] = dict(job["result"])
+                result["result"].update(
+                    field_quality=imagery_series.quality(job["result"]),
+                    preview_url=f"/api/imagery-jobs/{job['id']}/preview.png" if job["result"].get("chip_hash") else None,
+                )
         return result
+
+    @app.post("/api/fields/{field_id}/imagery-preview")
+    def scene_preview(field_id: str, payload: ScenePreviewRequest, request: Request, response: Response) -> dict:
+        from agronomy_agent.server.field_data_routes import _stored_geometry
+
+        field, _ = authorize(request, field_id, False)
+        local()
+        revision = payload.expected_geometry_revision_id
+        if jobs.current_geometry_revision(store, field_id) != revision:
+            raise HTTPException(409, "The saved boundary changed. Open the field again.")
+        try:
+            geometry = _stored_geometry(field)
+            current, _ = authorize(request, field_id, False)
+            if _stored_geometry(current) != geometry or jobs.current_geometry_revision(store, field_id) != revision:
+                raise HTTPException(409, "The saved boundary changed. Open the field again.")
+            image = imagery_service.scene_preview(settings, field, geometry, payload.model_dump(exclude={"expected_geometry_revision_id"}))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        authorize(request, field_id, False)
+        if jobs.current_geometry_revision(store, field_id) != revision:
+            raise HTTPException(409, "The saved boundary changed. Open the field again.")
+        response.headers["Cache-Control"] = "private, no-store"
+        return {**image, "geometry_revision_id": revision}
 
     @app.post("/api/fields/{field_id}/imagery-jobs", status_code=202)
     def create_job(field_id: str, payload: ImageryJobRequest, request: Request, background: BackgroundTasks) -> dict:
@@ -95,23 +157,42 @@ def register_imagery_job_routes(app: FastAPI, *, store: Any, settings: Any, auth
         local()
         return {"jobs": [public(job) for job in jobs.list_jobs(store, field_id)], "limit": 30}
 
-    @app.post("/api/fields/{field_id}/imagery-comparison")
-    def comparison(field_id: str, payload: ImageryComparisonSelection, request: Request, response: Response) -> dict:
-        field, _ = authorize(request, field_id, False)
+    @app.get("/api/fields/{field_id}/imagery-series")
+    def series_history(field_id: str, request: Request, response: Response) -> dict:
+        authorize(request, field_id, False)
         local()
-        try:
-            pair = bind_selection(store, field, payload)
-            result = compare_selection(store, settings, field, pair, maps=True)
-        except LookupError as exc:
-            raise HTTPException(404, str(exc)) from exc
-        except ComparisonConflict as exc:
-            raise HTTPException(409, str(exc)) from exc
         response.headers["Cache-Control"] = "private, no-store"
-        return {**result, "question": COMPARISON_QUESTION}
+        return {"jobs": [public(job) for job in jobs.list_jobs(store, field_id, limit=8, series=True)]}
+
+    @app.post("/api/fields/{field_id}/imagery-series", status_code=202)
+    def create_series(field_id: str, payload: ImagerySeriesRequest, request: Request, response: Response, background: BackgroundTasks) -> dict:
+        from agronomy_agent.field_imagery import _dates, _valid_search_geometry
+        from agronomy_agent.server.field_data_routes import _stored_geometry
+
+        field, _ = authorize(request, field_id, True)
+        local()
+        if settings.network_mode != "online":
+            raise HTTPException(409, "Connect to search for new imagery.")
+        if imagery_service.readiness(settings)["status"] != "ready":
+            raise HTTPException(409, "Set up the local imagery worker to analyze a date range.")
+        try:
+            _valid_search_geometry(_stored_geometry(field))
+            _dates(payload.start_date, payload.end_date)
+            values = {"kind": "series", "start_date": payload.start_date, "end_date": payload.end_date}
+            job, created = jobs.queue(store, field, values, str(payload.operation_id), payload.expected_geometry_revision_id)
+        except ValueError as exc:
+            raise HTTPException(409 if "changed" in str(exc) or "identity" in str(exc) else 422, str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(429, str(exc)) from exc
+        if created:
+            background.add_task(execute_job, store, settings, job["id"])
+        response.headers["Cache-Control"] = "private, no-store"
+        return public(job)
 
     @app.get("/api/imagery-jobs/{job_id}")
-    def status(job_id: str, request: Request) -> dict:
+    def status(job_id: str, request: Request, response: Response) -> dict:
         _, job = accessible(request, job_id)
+        response.headers["Cache-Control"] = "private, no-store"
         return public(job)
 
     @app.post("/api/imagery-jobs/{job_id}/cancel")
@@ -144,14 +225,18 @@ def register_imagery_job_routes(app: FastAPI, *, store: Any, settings: Any, auth
         return append_bundle(store, field, actor["id"], operation, [event])
 
     @app.get("/api/imagery-jobs/{job_id}/overlay")
-    def overlay(job_id: str, request: Request) -> dict:
+    def overlay(job_id: str, request: Request, response: Response, index: Literal["NDVI", "NDMI"] = "NDVI") -> dict:
         field, job = accessible(request, job_id)
         result = job.get("result") or {}
         if job["status"] not in {"completed", "superseded"} or not result.get("chip_hash"):
             raise HTTPException(404, "No verified map overlay for this analysis")
-        image = imagery_service.map_overlay(settings, field, job["geometry"], result["chip_hash"])
-        if image is None:
+        stats = (result.get("zonal_stats") or {}).get(index) or {}
+        if result.get("status") == "empty_valid_area" or stats.get("area_m2") == 0:
+            raise HTTPException(404, f"No usable {index} pixels for this date.")
+        image = imagery_service.map_overlay(settings, field, job["geometry"], result["chip_hash"], index=index)
+        if image is None or image.get("display_has_support") is False:
             raise HTTPException(404, "Verified map overlay is unavailable; use the native preview")
+        response.headers["Cache-Control"] = "private, no-store"
         return {**image, "geometry_revision_id": job["geometry_revision_id"], "current_geometry": public(job)["current_geometry"]}
 
     @app.get("/api/imagery-jobs/{job_id}/preview.png")

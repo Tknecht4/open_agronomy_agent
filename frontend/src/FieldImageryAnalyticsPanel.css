@@ -18,6 +18,12 @@
 .field-imagery-result figcaption { margin-top: 5px; font-size: 11px; color: #657653; }
 .field-imagery-legend { max-width: min(100%, 360px); margin-top: 8px; font-size: 11px; color: #52634b; }
 .field-imagery-legend-ramp { height: 10px; border: 1px solid #dce6d8; background: linear-gradient(to right, rgb(185, 60, 95), rgb(92, 145, 47), rgb(0, 230, 0)); }
+.image-color-legend { font-size: 11px; color: var(--muted); }
+.image-color-ramp { height: 9px; border: 1px solid #18251a24; border-radius: 3px; }
+.image-color-ticks { position: relative; min-height: 1.3em; margin-top: 3px; }
+.image-color-ticks span { position: absolute; transform: translateX(-50%); }
+.image-color-ticks span:first-child { transform: none; }
+.image-color-ticks span:last-child { transform: translateX(-100%); }
 .field-imagery-legend-labels { display: flex; justify-content: space-between; margin-top: 3px; }
 .field-imagery-legend-missing { display: inline-flex; align-items: center; gap: 6px; margin-top: 5px; }
 .field-imagery-legend-missing i { width: 11px; height: 11px; border: 1px solid #aeb8a7; background: repeating-conic-gradient(#f0f0ed 0% 25%, #c8d0c3 0% 50%) 50% / 6px 6px; }

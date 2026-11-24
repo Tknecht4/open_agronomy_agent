@@ -10,9 +10,9 @@ future work.
 
 ## Import and query
 
-1. In **Fields**, create and save a named field. A location is optional;
+1. In **Farms**, create and save a named field. A location is optional;
    leave it unknown when the source has no real geometry.
-2. In **Field data**, choose a table. Review columns, row counts and source
+2. Select the field and open **Data tables** to choose a table. Review columns, row counts and source
    locators. Choose Latin-1 explicitly if UTF-8 decoding fails.
 3. Review source title/license/citation, exact field/season filters, row key,
    units and column roles. Source claims remain user-supplied metadata, not
@@ -113,8 +113,8 @@ can be reused; online requests send point/polygon and dates to the public catalo
 and request the required raster byte ranges.
 The cache is private field-scoped state, not a public source or model profile.
 
-In **Fields**, save a point or polygon, then open **Observed satellite indices**
-to choose HLS S30 or L30 and a date interval. The panel reports missing setup, offline cache
+In **Farms**, save a point or polygon, then open the field's **Imagery** section
+to choose a provider and a date interval. The panel reports missing setup, offline cache
 misses, no scene, and unavailable data explicitly. The receipt shows valid
 area, excluded QA area, source item and band identities, dates and hashes;
 inspect these before comparing fields or seasons.

@@ -41,6 +41,33 @@ def test_shared_writer_lock_and_failed_job_release(tmp_path):
         pass
 
 
+def test_parallel_preparation_rechecks_capacity_under_writer_lock(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from agronomy_agent.geospatial.products import cached_product
+
+    prepared = Barrier(2)
+    root = tmp_path / "cache"
+
+    def process(index):
+        def prepare(path, publish):
+            prepared.wait(timeout=5)
+            with publish() as admission:
+                admission.ensure(128)
+                (path / f"chip-{index}").write_bytes(b"0" * 128)
+            return {"status": "available"}
+        return cached_product(request_hash=str(index), provider_id=PROVIDER, scene_id=None,
+                              cache_root=root, network_mode="online", budget_root=None,
+                              max_cache_bytes=budget.MAX_NEW_CHIP_BYTES + 100, min_free_bytes=0,
+                              process=prepare, concurrent_publication=True)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(process, range(2)))
+    assert sorted(result["status"] for result in results) == ["available", "storage_limit"]
+    assert len(list(root.glob("chip-*"))) == 1
+
+
 def test_final_write_recheck_and_symlink_rejection(tmp_path):
     root = tmp_path / "cache"
     with budget.reserve_cache(root, min_free_bytes=0, max_cache_bytes=budget.MAX_NEW_CHIP_BYTES + 100) as admission:

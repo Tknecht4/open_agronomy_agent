@@ -46,8 +46,15 @@ def verified_snapshot(row: Any) -> dict[str, Any] | None:
 
 def scope_identity(field: dict[str, Any]) -> str:
     entry = field.get("metadata", {}).get("open_agronomy_agent", {})
-    return hashlib.sha256(_json({"geometry": geometry_identity(entry.get("geometry") or {"kind": "none"}),
-        "country": field.get("country"), "province": field.get("province_state"), "policy": POLICY_VERSION}).encode()).hexdigest()
+    from agronomy_agent.server.services.field_location import mapped_location, routing_location
+
+    location = mapped_location(field)
+    country, province = routing_location(field, location)
+    scope = {"geometry": geometry_identity(entry.get("geometry") or {"kind": "none"}),
+             "country": country, "province": province, "policy": POLICY_VERSION}
+    if location["country"] or location["status"] == "ambiguous":
+        scope["location_sources"] = [(source["layer_id"], source["database_sha256"]) for source in location["sources"]]
+    return hashlib.sha256(_json(scope).encode()).hexdigest()
 
 
 def ensure_schema(cursor: Any) -> None:

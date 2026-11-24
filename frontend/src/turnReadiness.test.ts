@@ -14,23 +14,6 @@ describe('request-bound server readiness', () => {
     expect(isBoundTurnReadiness(view, 'request-a', 'session-a', { ...turn, mode: 'baseline' })).toBe(false)
   })
 
-  it('binds model-free comparison readiness to both jobs and the saved boundary', () => {
-    const comparison = { first_job_id: 'b', second_job_id: 'a', geometry_revision_id: 'revision-a' }
-    const selected = { ...turn, imagery_comparison: comparison }
-    const ready: TurnReadiness = {
-      ...view, calculator: null, reason: 'saved_imagery_comparison',
-      binding: { ...view.binding, imagery_comparison: { job_ids: ['a', 'b'], geometry_revision_id: 'revision-a' } },
-    }
-    expect(isBoundTurnReadiness(ready, 'request-a', 'session-a', selected)).toBe(true)
-    expect(isBoundTurnReadiness(ready, 'request-a', 'session-a', turn)).toBe(false)
-    expect(isBoundTurnReadiness(ready, 'request-a', 'session-a', {
-      ...selected, imagery_comparison: { ...comparison, second_job_id: 'c' },
-    })).toBe(false)
-    expect(isBoundTurnReadiness(ready, 'request-a', 'session-a', {
-      ...selected, imagery_comparison: { ...comparison, geometry_revision_id: 'revision-b' },
-    })).toBe(false)
-  })
-
   it.each(['checking', 'failed'] as const)('keeps %s preview unknown when the model is missing', status => {
     const key = turnReadinessKey('session-a', turn)
     expect(canAskWithReadiness(false, { key, status }, key)).toBe(false)

@@ -44,6 +44,7 @@ class ContextBoundarySpec:
     name_field: str
     property_fields: tuple[tuple[str, str], ...]
     dissolve_field: str | None = None
+    allow_invalid_exclusion: bool = False
 
 
 SPECS: dict[str, ContextBoundarySpec] = {
@@ -95,6 +96,30 @@ SPECS: dict[str, ContextBoundarySpec] = {
             ("ecoprovince_id", "ECOPROVINCE_ID"),
         ),
         dissolve_field="ECOREGION_ID",
+    ),
+    "ca_statcan_2021_census_subdivisions": ContextBoundarySpec(
+        source_id="ca_statcan_2021_census_subdivisions", layer_id="ca_statcan_2021_census_subdivisions",
+        input_kind="zipped_shapefile", expected_source_crs="EPSG:3347", source_layer='lcsd000a21a_e.shp',
+        code_prefix="CSD", code_field="CSDUID", name_field="CSDNAME",
+        property_fields=(('parent_code', 'PRUID'), ('area_type', 'CSDTYPE')), allow_invalid_exclusion=True,
+    ),
+    "ab_municipal_districts": ContextBoundarySpec(
+        source_id="ab_municipal_districts", layer_id="ab_municipal_districts",
+        input_kind="geojson", expected_source_crs="EPSG:4326", source_layer=None,
+        code_prefix="MD", code_field="MD_CODE", name_field="MD_NAME",
+        property_fields=(), allow_invalid_exclusion=False,
+    ),
+    "us_tiger_2026_states": ContextBoundarySpec(
+        source_id="us_tiger_2026_states", layer_id="us_tiger_2026_states",
+        input_kind="zipped_shapefile", expected_source_crs="EPSG:4269", source_layer='tl_2026_us_state.shp',
+        code_prefix="STATE", code_field="STATEFP", name_field="NAME",
+        property_fields=(('abbreviation', 'STUSPS'),), allow_invalid_exclusion=False,
+    ),
+    "us_tiger_2026_counties": ContextBoundarySpec(
+        source_id="us_tiger_2026_counties", layer_id="us_tiger_2026_counties",
+        input_kind="zipped_shapefile", expected_source_crs="EPSG:4269", source_layer='tl_2026_us_county.shp',
+        code_prefix="COUNTY", code_field="GEOID", name_field="NAMELSAD",
+        property_fields=(('parent_code', 'STATEFP'), ('area_type', 'LSAD')), allow_invalid_exclusion=False,
     ),
 }
 
@@ -227,7 +252,7 @@ def _prepared_rows(*, frame: Any, spec: ContextBoundarySpec, shapely: Any, mappi
     source_types = set(frame.geometry.geom_type)
     if source_types - {"Polygon", "MultiPolygon"}:
         raise ValueError(f"{spec.source_id} source contains non-polygon geometries: {sorted(source_types)}")
-    if not frame.geometry.is_valid.all():
+    if not spec.allow_invalid_exclusion and not frame.geometry.is_valid.all():
         raise ValueError(f"{spec.source_id} source contains invalid geometry; no automatic repair is allowed")
 
     source_vertex_count = int(shapely.get_num_coordinates(frame.geometry.array).sum())
@@ -251,6 +276,11 @@ def _prepared_rows(*, frame: Any, spec: ContextBoundarySpec, shapely: Any, mappi
     for item in raw_rows:
         row = item["row"]
         geometry = item["geometry"]
+        # Retain a conservative exclusion envelope for defective published subdivisions.
+        # A lookup touching the envelope stays unresolved instead of borrowing a neighbor.
+        invalid = not geometry.is_valid
+        if invalid:
+            geometry = geometry.envelope
         code_value = _clean(row.get(spec.code_field))
         name_value = _clean(row.get(spec.name_field))
         if code_value is None or name_value is None:
@@ -266,6 +296,8 @@ def _prepared_rows(*, frame: Any, spec: ContextBoundarySpec, shapely: Any, mappi
         properties = {key: value for key, value in properties.items() if value is not None}
         if set(properties) != {key for key, _ in spec.property_fields}:
             raise ValueError(f"{spec.source_id} contains an empty model-visible hierarchy field")
+        if invalid:
+            properties["invalid_source_boundary"] = True
         prepared.append(
             {
                 "code": code,
@@ -411,6 +443,7 @@ def build_layer(
             "source_crs": spec.expected_source_crs,
             "output_crs": OUTPUT_CRS,
             "source_feature_count": int(len(frame)),
+            "invalid_source_boundaries": [row["code"] for row in rows if row["properties"].get("invalid_source_boundary")],
             "feature_count": len(rows),
             "source_vertices": source_vertex_count,
             "derived_vertices": derived_vertex_count,
@@ -450,6 +483,7 @@ def build_layer(
         "output_sha256": _sha256(output),
         "output_bytes": output.stat().st_size,
         "source_feature_count": int(len(frame)),
+            "invalid_source_boundaries": [row["code"] for row in rows if row["properties"].get("invalid_source_boundary")],
         "feature_count": len(rows),
         "source_vertices": source_vertex_count,
         "derived_vertices": derived_vertex_count,

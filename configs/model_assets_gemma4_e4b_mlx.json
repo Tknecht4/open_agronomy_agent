@@ -1,0 +1,70 @@
+{
+  "files": [
+    {
+      "bytes": 1570,
+      "git_blob_id": "52373fe24473b1aa44333d318f578ae6bf04b49b",
+      "path": ".gitattributes",
+      "sha256": "34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930"
+    },
+    {
+      "bytes": 593,
+      "git_blob_id": "04f02899dc45b0d9deffa167305da20699790e0e",
+      "path": "README.md",
+      "sha256": "8e9717df49219943b8992eeccecd8050535318d34fffbbaeaac924ed01f27155"
+    },
+    {
+      "bytes": 17336,
+      "git_blob_id": "c19999a347da729cf62806a8ddb7eb8e315223b5",
+      "path": "chat_template.jinja",
+      "sha256": "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082"
+    },
+    {
+      "bytes": 6628,
+      "git_blob_id": "4ee08502c4f98810dd43800ec849bd69f94adc98",
+      "path": "config.json",
+      "sha256": "780ccb3a514a5f1ced161d383f948fc22eca9b84b752ca19494f625bd9bad7a6"
+    },
+    {
+      "bytes": 208,
+      "git_blob_id": "e605bb4523b1462ea9d9a3810b9e3ecf7ab7b1f6",
+      "path": "generation_config.json",
+      "sha256": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de"
+    },
+    {
+      "bytes": 5146800534,
+      "git_blob_id": "60cbe528b86802ec48c7a618c701482007623a03",
+      "lfs_sha256": "932b8271fc3fe65adcc78b96c10c6268bbfb13e8f67d1358727c0d6ee97e1eff",
+      "path": "model.safetensors",
+      "sha256": "932b8271fc3fe65adcc78b96c10c6268bbfb13e8f67d1358727c0d6ee97e1eff"
+    },
+    {
+      "bytes": 240961,
+      "git_blob_id": "c03ce5f7086b735345038501f731634de064493b",
+      "path": "model.safetensors.index.json",
+      "sha256": "f8accac59ee7efe87e0c298c854610b262c3cadd477407503147c71209ff0093"
+    },
+    {
+      "bytes": 1316,
+      "git_blob_id": "a086fb7e04b477c291a120b0a004abb78b11c6d2",
+      "path": "processor_config.json",
+      "sha256": "de3e580aebdc98272d4c4547daffe6525fcbae18a83a0e0bcf0d7444d4ee6f37"
+    },
+    {
+      "bytes": 32169626,
+      "git_blob_id": "1ff9f3e3439a939b971f9919e821bf87e835a503",
+      "lfs_sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "path": "tokenizer.json",
+      "sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f"
+    },
+    {
+      "bytes": 2740,
+      "git_blob_id": "cf6235aee46a24bf71f251c0a4e7a0379948f7d2",
+      "path": "tokenizer_config.json",
+      "sha256": "080d9e1aff284e2f6043889cd05367966f7c7b80e025fbc0b06745e218158656"
+    }
+  ],
+  "repo_id": "mlx-community/gemma-4-e4b-it-4bit",
+  "revision": "475b9088d29754a3379866cf5aeb6b41acd313c2",
+  "schema_version": "open_agronomy_agent.pinned_model_assets.v1",
+  "source": "huggingface_hub_model_info_files_metadata"
+}

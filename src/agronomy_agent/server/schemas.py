@@ -268,13 +268,6 @@ class TraceOptions(BaseModel):
     redaction_mode: RedactionMode = "none"
 
 
-class ImageryComparisonSelection(BaseModel):
-    model_config = {"extra": "forbid"}
-    first_job_id: UUID
-    second_job_id: UUID
-    geometry_revision_id: str = Field(min_length=1, max_length=80)
-
-
 class CreateTurnRequest(BaseModel):
     message: str
     mode: Mode
@@ -286,18 +279,11 @@ class CreateTurnRequest(BaseModel):
     trace_options: TraceOptions = Field(default_factory=TraceOptions)
     readiness_binding: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     imagery_job_id: UUID | None = None
-    imagery_comparison: ImageryComparisonSelection | None = None
 
     @model_validator(mode="after")
     def _validate_imagery_mode(self) -> CreateTurnRequest:
-        if self.imagery_job_id is not None and self.imagery_comparison is not None:
-            raise ValueError("Attach either one analysis or a comparison")
-        if (self.imagery_job_id is not None or self.imagery_comparison is not None) and self.mode != "agronomic_rag":
+        if self.imagery_job_id is not None and self.mode != "agronomic_rag":
             raise ValueError("Selected imagery requires agronomic mode")
-        if self.imagery_comparison is not None:
-            from agronomy_agent.imagery_comparison_presentation import COMPARISON_QUESTION
-            if self.message.strip() != COMPARISON_QUESTION:
-                raise ValueError("Remove the comparison attachment to ask a different question")
         return self
 
     @field_validator("message")
