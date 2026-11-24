@@ -85,7 +85,7 @@ The verifier checks the flat pack's hashes, SQLite/RTree integrity, source/deriv
 ## Administrative field location
 
 The field dossier looks up saved geometry locally using the `field-location-v1`
-pack. Install and configure it using [field location and imagery setup](native-setup.md#field-location-and-imagery).
+pack. Install and configure it using [field location and imagery setup](local-browser-setup.md#field-location-and-imagery).
 It operates independently of the soil pack and covers Canadian provinces and
 municipalities, Alberta municipal districts, and U.S. states and counties.
 

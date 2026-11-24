@@ -8,7 +8,7 @@
 
 | Group | Representative entry points | Boundary |
 |---|---|---|
-| User/native | `run_cockpit.py`, `download_model.py` | Local setup and launch; model download requires network |
+| Local browser | `run_cockpit.py`, `download_model.py` | Local setup and launch; model download requires network |
 | Operator readiness | `audit_runtime_corpus.py`, `audit_final_benchmark_readiness.py`, `audit_open_agronomy_benchmark_v3_readiness.py`, `run_offline_cold_start_audit.py` | Audits/preflights do not equal performance proof or human authorization |
 | Tools/data | `smoke_*`, `build_prairie_spatial_pack.py`, `verify_prairie_spatial_pack.py` | Fixture/provider and package contracts, not field truth |
 | Ingestion/build | `ingest_*`, `build_*corpus*`, geospatial builders | Require source, rights, hashes, deterministic outputs |

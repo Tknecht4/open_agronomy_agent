@@ -23,8 +23,8 @@ def _fixture(tmp_path: Path, monkeypatch) -> tuple[Path, str, dict]:
 
     files = {
         "README.md": b"source instructions\n",
-        "requirements/requirements-macos-app-runtime.txt": b"-r requirements-container.txt\n",
-        "requirements/requirements-container.txt": b"fastapi==0.1\n",
+        "requirements/requirements-geospatial.txt": b"-r requirements-imagery.txt\n",
+        "requirements/requirements-imagery.txt": b"rasterio==1.5.2\n",
         "scripts/run.sh": b"#!/bin/sh\necho ready\n",
         "configs/public_repository_manifest.json": b"{}",
         "data/derived/rag/context.jsonl": b'{"evidence":"retained"}\n',
@@ -105,11 +105,11 @@ def test_round_trip_is_deterministic_and_preserves_evidence(tmp_path, monkeypatc
     result = split.reconstruct(first, restored, digest)
     assert result["file_count"] == 9
     assert (restored / "scripts/run.sh").stat().st_mode & 0o111
-    runtime_requirements = restored / "requirements/requirements-macos-app-runtime.txt"
-    assert runtime_requirements.read_bytes() == b"-r requirements-container.txt\n"
+    runtime_requirements = restored / "requirements/requirements-geospatial.txt"
+    assert runtime_requirements.read_bytes() == b"-r requirements-imagery.txt\n"
     included = runtime_requirements.parent / runtime_requirements.read_text().strip().split()[1]
-    assert included.read_bytes() == b"fastapi==0.1\n"
-    assert not (restored / "requirements-container.txt").exists()
+    assert included.read_bytes() == b"rasterio==1.5.2\n"
+    assert not (restored / "requirements-imagery.txt").exists()
     assert (restored / "data/derived/rag/context.jsonl").read_bytes() == b'{"evidence":"retained"}\n'
     assert (restored / "docs/reviews/artifacts/probe.json").read_bytes() == b'{"status":"failed"}\n'
     assert (restored / ("data/derived/rag/" + "long-name-" * 19 + "receipt.json")).read_bytes() == b"long path\n"

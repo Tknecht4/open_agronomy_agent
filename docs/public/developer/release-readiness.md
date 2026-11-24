@@ -5,7 +5,7 @@ Run benchmark release candidates only from a clean committed checkout. The gate 
 ## Dependency boundary
 
 Dependency changes must pass the installed-environment advisory checks in
-backend and Mac candidate CI, plus the frontend npm audit. See the
+backend CI, plus the frontend npm audit. See the
 [maintainer workflow](maintaining.md) for their scope and the distinction
 between scanning, locked environments, and release qualification.
 

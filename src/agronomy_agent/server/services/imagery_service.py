@@ -47,7 +47,7 @@ _PUBLIC_KEYS = frozenset((
 ))
 
 
-def _run_process(command: list[str], *, standalone: bool = False, **kwargs: Any) -> subprocess.CompletedProcess:
+def _run_process(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess:
     """Avoid macOS fork handlers in a server with loaded native GIS libraries.
 
     CPython 3.11+ uses posix_spawn with an absolute executable, no cwd and
@@ -57,30 +57,13 @@ def _run_process(command: list[str], *, standalone: bool = False, **kwargs: Any)
     if sys.platform == "darwin":
         directory = str(kwargs.pop("cwd", REPO_ROOT))
         executable = os.path.abspath(command[0])
-        if standalone:
-            # Close inherited descriptors before the frozen app's bootloader
-            # creates its own guarded descriptors.
-            bootstrap = """
-                cd "$1" || exit 126
-                shift
-                for file in /dev/fd/[0-9]*; do
-                    fd="${file##*/}"
-                    case "$fd" in
-                        0|1|2|*[!0-9]*) continue ;;
-                    esac
-                    eval "exec $fd>&-"
-                done
-                exec "$@"
-            """
-            command = ["/bin/sh", "-c", bootstrap, "imagery-worker", directory, executable, *command[1:]]
-        else:
-            bootstrap = (
-                "import os,sys; "
-                "os.closerange(3, os.sysconf('SC_OPEN_MAX')); "
-                "os.chdir(sys.argv[1]); "
-                "os.execv(sys.argv[2], sys.argv[2:])"
-            )
-            command = [executable, "-I", "-c", bootstrap, directory, executable, *command[1:]]
+        bootstrap = (
+            "import os,sys; "
+            "os.closerange(3, os.sysconf('SC_OPEN_MAX')); "
+            "os.chdir(sys.argv[1]); "
+            "os.execv(sys.argv[2], sys.argv[2:])"
+        )
+        command = [executable, "-I", "-c", bootstrap, directory, executable, *command[1:]]
         kwargs["close_fds"] = False
     return subprocess.run(command, **kwargs)
 
@@ -91,7 +74,7 @@ def geometry_hash(geometry: dict[str, Any]) -> str:
 
 
 @lru_cache(maxsize=8)
-def _worker_health(executable: str, modified_ns: int, check_minute: int = 0, standalone: bool = False) -> dict[str, Any]:
+def _worker_health(executable: str, modified_ns: int, check_minute: int = 0) -> dict[str, Any]:
     try:
         code = """import json,numpy,rasterio,pyproj,shapely,PIL,httpx
 versions={'numpy':numpy.__version__,'rasterio':rasterio.__version__,'pyproj':pyproj.__version__,'shapely':shapely.__version__,'Pillow':PIL.__version__,'httpx':httpx.__version__}
@@ -101,8 +84,8 @@ try:
 except ImportError:
  pass
 print(json.dumps(versions))"""
-        command = [executable, "--health"] if standalone else [executable, "-I", "-c", code]
-        result = _run_process(command, standalone=standalone, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        command = [executable, "-I", "-c", code]
+        result = _run_process(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL, timeout=30, env={"PATH": os.defpath, "PYTHONNOUSERSITE": "1"}, check=False)
         if result.returncode == 0 and len(result.stdout) < 4096:
             return {"status": "healthy", "versions": json.loads(result.stdout)}
@@ -120,14 +103,13 @@ print(json.dumps(versions))"""
 
 
 def readiness(settings: Any) -> dict[str, Any]:
-    standalone = settings.imagery_worker_executable
-    executable = standalone or settings.imagery_worker_python
+    executable = settings.imagery_worker_python
     configured = bool(settings.imagery_cache_root and executable)
     health = {"status": "not_configured"}
     if configured:
         try:
             health = _worker_health(str(executable), Path(executable).stat().st_mtime_ns,
-                                    int(time.monotonic() // 60), bool(standalone))
+                                    int(time.monotonic() // 60))
         except OSError:
             health = {"status": "unavailable", "message": "The configured image worker is missing."}
     healthy = health["status"] == "healthy"
@@ -232,9 +214,7 @@ def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: d
         geometry_path = Path(temporary) / "geometry.json"
         geometry_path.write_text(json.dumps(geometry), encoding="utf-8")
         geometry_path.chmod(0o600)
-        standalone = settings.imagery_worker_executable
-        command = ([str(standalone)] if standalone else
-                   [str(settings.imagery_worker_python), "-m", "agronomy_agent.imagery_worker"])
+        command = [str(settings.imagery_worker_python), "-m", "agronomy_agent.imagery_worker"]
         command += ["--geometry", str(geometry_path), "--cache-root", str(cache),
                    "--provider", payload["provider_id"], "--buffer-m", str(payload.get("buffer_m", 0)),
                    "--budget-root", str(settings.imagery_cache_root),
@@ -264,7 +244,7 @@ def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: d
                 command.append("--access-token-stdin")
         limit = 3 * 1024 * 1024 if display_preview else 128 * 1024
         with tempfile.TemporaryFile() as output:
-            completed = _run_process(command, standalone=bool(standalone), cwd=REPO_ROOT, env=env,
+            completed = _run_process(command, cwd=REPO_ROOT, env=env,
                                      stdout=output, stderr=subprocess.DEVNULL, timeout=55 if display_preview else 150,
                                      check=False, **worker_input)
             output.seek(0)
@@ -281,7 +261,7 @@ def scene_preview(settings: Any, field: dict, geometry: dict, payload: dict) -> 
     from agronomy_agent.imagery_scene_preview import request_identity as preview_identity, valid_preview
 
     _, identity = preview_identity(geometry, payload["provider_id"], payload["scene_id"], payload["start_date"], payload["end_date"])
-    if not settings.imagery_cache_root or not (settings.imagery_worker_executable or settings.imagery_worker_python):
+    if not settings.imagery_cache_root or not settings.imagery_worker_python:
         return {"status": "not_configured", "message": "Set up the local imagery worker to view scenes."}
     try:
         result = _run_worker(settings, field_cache(settings, field), geometry, payload, display_preview=True)
@@ -321,7 +301,7 @@ def validate_receipt(receipt: dict, **kwargs: Any) -> None:
 def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     expected_geometry, expected_request = request_identity(geometry, payload)
     cache = field_cache(settings, field)
-    if cache is None or not (settings.imagery_worker_python or settings.imagery_worker_executable):
+    if cache is None or not settings.imagery_worker_python:
         return {"status": "not_configured"}
     try:
         cached = ImageryStore(cache, read_only=True).get(expected_request, scene_id=payload.get("scene_id")) if (cache / "imagery-v1.sqlite3").exists() else None
@@ -463,24 +443,19 @@ def preview(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip
 
 def map_overlay(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip_hash: str, *, index: str = "NDVI") -> dict[str, Any] | None:
     original = preview(settings, field, geometry, chip_hash)
-    standalone = settings.imagery_worker_executable
-    executable = standalone or settings.imagery_worker_python
+    executable = settings.imagery_worker_python
     if original is None or executable is None:
         return None
     cache = field_cache(settings, field)
-    command = [str(executable), "--overlay"] if standalone else [
-        str(executable), "-m", "agronomy_agent.imagery_overlay",
-    ]
+    command = [str(executable), "-m", "agronomy_agent.imagery_overlay"]
     command.extend(["--cache-root", str(cache), "--chip-hash", chip_hash])
     if index == "NDMI":
         command.extend(["--index", index])
-    env = {"PATH": os.defpath, "PYTHONNOUSERSITE": "1"}
-    if not standalone:
-        env["PYTHONPATH"] = str(REPO_ROOT / "src")
+    env = {"PATH": os.defpath, "PYTHONNOUSERSITE": "1", "PYTHONPATH": str(REPO_ROOT / "src")}
     try:
         with tempfile.TemporaryFile() as output, tempfile.TemporaryFile() as errors:
             completed = _run_process(
-                command, standalone=bool(standalone), cwd=REPO_ROOT, env=env,
+                command, cwd=REPO_ROOT, env=env,
                 stdin=subprocess.DEVNULL, stdout=output, stderr=errors, timeout=30, check=False,
             )
             if completed.returncode:

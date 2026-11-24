@@ -46,24 +46,17 @@ def authority_steps(config: dict, flag: str) -> list[dict]:
     ]
 
 
-@pytest.mark.parametrize(
-    "filename,flag,count",
-    [("docs.yml", "publish_docs", 2), ("macos-app.yml", "run_native_candidate", 6)],
-)
-def test_manual_authority_has_false_typed_default_and_no_extra_triggers(filename, flag, count):
-    config = workflow(filename)
+def test_manual_publication_has_false_typed_default_and_no_extra_triggers():
+    config = workflow("docs.yml")
     events = triggers(config)
-    assert set(events) == ({"pull_request", "push", "workflow_dispatch"} if filename == "docs.yml"
-                           else {"pull_request", "workflow_dispatch"})
-    assert events["workflow_dispatch"]["inputs"][flag]["type"] == "boolean"
-    assert events["workflow_dispatch"]["inputs"][flag]["default"] is False
-    assert len(authority_steps(config, flag)) == count
-    assert f"${{{{ inputs.{flag} == true }}}}" in config["concurrency"]["group"]
+    assert set(events) == {"pull_request", "push", "workflow_dispatch"}
+    assert events["workflow_dispatch"]["inputs"]["publish_docs"]["type"] == "boolean"
+    assert events["workflow_dispatch"]["inputs"]["publish_docs"]["default"] is False
+    assert len(authority_steps(config, "publish_docs")) == 2
+    assert "${{ inputs.publish_docs == true }}" in config["concurrency"]["group"]
     assert config["permissions"] == {"contents": "read"}
 
 
-@pytest.mark.parametrize("filename,flag", [("docs.yml", "publish_docs"),
-                                         ("macos-app.yml", "run_native_candidate")])
 @pytest.mark.parametrize(
     "event,ref,flag_value,expected",
     [
@@ -79,23 +72,19 @@ def test_manual_authority_has_false_typed_default_and_no_extra_triggers(filename
         ("workflow_dispatch", "refs/tags/main", True, False),
     ],
 )
-def test_real_authority_steps_require_dispatch_opt_in_and_main(filename, flag, event, ref,
-                                                              flag_value, expected):
-    config = workflow(filename)
-    conditions = [step["if"] for step in authority_steps(config, flag)]
-    if filename == "docs.yml":
-        conditions.append(config["jobs"]["deploy"]["if"])
-    expected_gate = (f"github.event_name == 'workflow_dispatch' && inputs.{flag} == true"
+def test_publication_steps_require_dispatch_opt_in_and_main(event, ref, flag_value, expected):
+    config = workflow("docs.yml")
+    conditions = [step["if"] for step in authority_steps(config, "publish_docs")]
+    conditions.append(config["jobs"]["deploy"]["if"])
+    expected_gate = ("github.event_name == 'workflow_dispatch' && inputs.publish_docs == true"
                      " && github.ref == 'refs/heads/main'")
     assert conditions and all(condition == expected_gate for condition in conditions)
     assert all(gate_matches(condition, event, ref, flag_value) is expected
                for condition in conditions)
 
 
-@pytest.mark.parametrize("filename,flag", [("docs.yml", "publish_docs"),
-                                         ("macos-app.yml", "run_native_candidate")])
-def test_wrong_branch_explicit_request_fails_before_setup(filename, flag):
-    config = workflow(filename)
+def test_wrong_branch_explicit_request_fails_before_setup():
+    config = workflow("docs.yml")
     steps = next(iter(config["jobs"].values()))["steps"]
     rejection = steps[1]
     assert "exit 1" in rejection["run"]
@@ -112,25 +101,9 @@ def test_ordinary_ci_and_source_contracts_are_still_automatic():
         assert "pull_request" in events
         assert events["push"]["branches"] == ["main"]
         assert all("if" not in config["jobs"][job] for job in jobs)
-    config = workflow("macos-app.yml")
-    assert "frontend/**" in triggers(config)["pull_request"]["paths"]
-    steps = config["jobs"]["build-and-smoke"]["steps"]
-    source = next(step for step in steps if step["name"] == "Verify desktop source contracts")
-    assert "if" not in source
-    assert "tests/test_macos_app_package.py" in source["run"]
-    assert "npm run typecheck" in source["run"] and "npm test" in source["run"]
-    assert "Mac source contracts" in config["jobs"]["build-and-smoke"]["name"]
 
 
-def test_all_packager_model_and_publication_entrypoints_are_gated():
-    mac = workflow("macos-app.yml")
-    sensitive = ("scripts/build_macos_app.py", "scripts.smoke_macos_first_run",
-                 "scripts/smoke_macos_app.py", "scripts/smoke_macos_launcher.py",
-                 "scripts.smoke_macos_offline", "codesign --verify", "ditto -c")
-    guarded = authority_steps(mac, "run_native_candidate")
-    for step in mac["jobs"]["build-and-smoke"]["steps"]:
-        if any(token in step.get("run", "") for token in sensitive):
-            assert step in guarded
+def test_pages_publication_entrypoints_are_gated():
     docs = workflow("docs.yml")
     guarded = authority_steps(docs, "publish_docs")
     for step in docs["jobs"]["build"]["steps"]:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import signal
 import subprocess
 
+import pytest
+
 from scripts.run_cockpit import _stop_frontend_process
 
 
@@ -51,14 +53,31 @@ def test_frontend_cleanup_escalates_boundedly() -> None:
     assert process.killed
 
 
-def test_custom_frontend_port_and_ipv6_proxy_use_the_validated_loopback_profile(tmp_path, monkeypatch):
+@pytest.mark.parametrize("custom_services_root", [False, True])
+def test_frontend_launch_discovers_field_services_and_uses_validated_ipv6_loopback(tmp_path, monkeypatch, custom_services_root):
     import sys
     from types import SimpleNamespace
     import scripts.run_cockpit as launcher
     observed = {}
-    monkeypatch.setattr(sys,'argv',['run_cockpit.py','--host','::1','--port','8123','--frontend',
-                                  '--frontend-port','6199','--db-path',str(tmp_path/'db.sqlite3'),
-                                  '--artifact-root',str(tmp_path/'artifacts')])
+    monkeypatch.setattr(launcher.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(launcher.os, "environ", launcher.os.environ.copy())
+    for name in ("AGRONOMY_AGENT_ADMINISTRATIVE_PACK_ROOT", "AGRONOMY_AGENT_IMAGERY_PYTHON",
+                 "AGRONOMY_AGENT_IMAGERY_CACHE_ROOT"):
+        monkeypatch.delenv(name, raising=False)
+    services = (tmp_path / "custom-services" if custom_services_root else
+                tmp_path / "Library/Application Support/OpenAgronomyAgent/field-services")
+    worker = services / "imagery/bin/python"
+    worker.parent.mkdir(parents=True)
+    worker.touch(mode=0o700)
+    pack = services / "spatial-pack/field-location-v1"
+    pack.mkdir(parents=True)
+    argv = ["run_cockpit.py", "--host", "::1", "--port", "8123", "--frontend",
+            "--frontend-port", "6199", "--db-path", str(tmp_path / "db.sqlite3"),
+            "--artifact-root", str(tmp_path / "artifacts")]
+    if custom_services_root:
+        argv.extend(["--field-services-root", str(services)])
+    monkeypatch.setattr(sys, "argv", argv)
     monkeypatch.setattr(launcher,'create_app',lambda settings: observed.update(settings=settings) or object())
     class Process(_FakeProcess):
         pass
@@ -78,3 +97,6 @@ def test_custom_frontend_port_and_ipv6_proxy_use_the_validated_loopback_profile(
     assert 'http://[::1]:6199' in observed['settings'].local_dev_origins
     assert 'http://localhost:6199' in observed['settings'].local_dev_origins
     assert observed['config']['proxy_headers'] is False
+    assert observed['settings'].imagery_worker_python == worker
+    assert observed['settings'].imagery_cache_root == services / 'cache/imagery'
+    assert launcher.os.environ['AGRONOMY_AGENT_ADMINISTRATIVE_PACK_ROOT'] == str(pack)

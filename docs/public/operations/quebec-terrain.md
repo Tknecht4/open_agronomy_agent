@@ -6,7 +6,7 @@ device running the server. The index is optional and is downloaded only by an
 explicit operator command.
 
 From the source checkout, using the environment configured in the
-[native setup guide](native-setup.md), run the following while connected.
+[local browser setup guide](local-browser-setup.md), run the following while connected.
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/manage_quebec_lidar_field_pack.py fetch-index --online

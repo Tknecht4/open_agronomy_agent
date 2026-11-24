@@ -21,7 +21,7 @@ Read the README beside each subsystem before modifying it.
 
 ## Development setup
 
-Use the repository [native setup](../operations/native-setup.md). For a Python-only focused change, activate the virtual environment and run the narrow test first. Before a system claim, run the full Python and frontend gates listed in the root README.
+Use the repository [local browser setup](../operations/local-browser-setup.md). For a Python-only focused change, activate the virtual environment and run the narrow test first. Before a system claim, run the full Python and frontend gates listed in the root README.
 
 ## Extension principles
 

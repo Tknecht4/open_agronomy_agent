@@ -8,7 +8,7 @@
 
 A synthetic demonstration field and a deterministic calculation in the desktop workspace. Geometry is illustrative; mapped context is not a field measurement.
 
-[Workspace guide](docs/public/operations/workspace.md) · [Setup](docs/public/operations/native-setup.md) · [Customize the agent](docs/public/developer/customizing-the-harness.md)
+[Workspace guide](docs/public/operations/workspace.md) · [Setup](docs/public/operations/local-browser-setup.md) · [Customize the agent](docs/public/developer/customizing-the-harness.md)
 
 ## Explore the workspace
 
@@ -19,7 +19,7 @@ A synthetic demonstration field and a deterministic calculation in the desktop w
 
 ## Get started
 
-The exercised source-checkout target is an Apple Silicon Mac with Python 3.11 or 3.12 and Node 24 LTS. Follow [native setup](docs/public/operations/native-setup.md) to install dependencies, then launch:
+The exercised source-checkout target is an Apple Silicon Mac with Python 3.11 or 3.12 and Node 24 LTS. Follow [local browser setup](docs/public/operations/local-browser-setup.md) to install dependencies, then launch:
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/run_cockpit.py \
@@ -28,11 +28,9 @@ PYTHONPATH=src .venv/bin/python scripts/run_cockpit.py \
   --model-config configs/model.yaml
 ```
 
-Open <http://127.0.0.1:5173> and go to **Questions → Model settings**. Use the download button beside Gemma 4 E2B or E4B, then select it when it is ready. Stop with **Ctrl+C**. See the [operator guide](docs/public/operations/native-setup.md) for setup, health checks, storage, and recovery.
+Open <http://127.0.0.1:5173> and go to **Questions → Model settings**. Use the download button beside Gemma 4 E2B or E4B, then select it when it is ready. Stop with **Ctrl+C**. See the [operator guide](docs/public/operations/local-browser-setup.md) for setup, health checks, storage, and recovery.
 
 The active document and graph corpus is included. Optional Prairie soil maps use a separately verified [offline spatial pack](docs/public/operations/offline-data-setup.md); unavailable coverage is reported explicitly.
-
-The [Mac app candidate](macos_app/README.md) bundles the workspace and runtime, but is not yet a notarized, downloadable release.
 
 ## Build and contribute
 

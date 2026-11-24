@@ -38,8 +38,7 @@ body:
     attributes:
       label: Environment
       options:
-        - Apple Silicon Mac source checkout
-        - Apple Silicon Mac app candidate
+        - Local browser on Apple Silicon
         - Other or unknown
     validations:
       required: true

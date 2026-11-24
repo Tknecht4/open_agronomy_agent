@@ -8,4 +8,4 @@ The maintainer will assess reports as capacity allows. There is no promised resp
 
 ## Scope
 
-The current default branch is a development target, and the Apple Silicon desktop app is a candidate rather than a qualified, notarized release. Historical artifacts, experimental profiles, and third-party packages are not promises of supported deployment. Security fixes should include a regression check where practical and distinguish a code defect from unverified agronomic behavior. See [SUPPORT.md](SUPPORT.md) for ordinary bugs and questions.
+The default branch is a development target for the browser workspace and API. Historical artifacts, experimental profiles, and third-party packages are not promises of supported deployment. Security fixes should include a regression check where practical and distinguish a code defect from unverified agronomic behavior. See [SUPPORT.md](SUPPORT.md) for ordinary bugs and questions.

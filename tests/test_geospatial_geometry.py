@@ -110,5 +110,3 @@ def test_supported_serving_installations_include_vector_drivers():
     for filename in ("requirements.txt", "requirements/requirements-container.txt"):
         lines = (root / filename).read_text().splitlines()
         assert required <= {Requirement(line).name for line in lines if line.strip() and not line.startswith("#")}
-    # Native app installs the serving list, with existing observed wheel pins.
-    assert "-r requirements-container.txt" in (root / "requirements/requirements-macos-app-runtime.txt").read_text().splitlines()

@@ -182,7 +182,7 @@ from agronomy_agent.server.services.tool_service import (
 from agronomy_agent.server.observability import build_telemetry, log_request, request_id
 from agronomy_agent.server.local_origin import FORWARDED_HEADERS, development_origin_error, loopback_origin
 from agronomy_agent.server.rate_limit import FixedWindowRateLimiter
-from agronomy_agent.server.settings import ServerSettings, build_settings, make_corpus_audit_id, validate_desktop_local_auth
+from agronomy_agent.server.settings import ServerSettings, build_settings, make_corpus_audit_id
 from agronomy_agent.server.storage.object_store import LocalObjectStore
 from agronomy_agent.server.storage.db import TraceStore
 from agronomy_agent.server.storage.runtime import build_trace_store, storage_db_path_for, storage_label_for
@@ -1259,7 +1259,7 @@ def _csrf_token_from_session_cookie(value: str, *, settings: ServerSettings) -> 
     return token
 
 
-def _requires_cookie_csrf(request: Request, *, desktop_local: bool = False) -> bool:
+def _requires_cookie_csrf(request: Request) -> bool:
     if request.method.upper() not in {"POST", "PUT", "PATCH", "DELETE"}:
         return False
     if request.url.path in {
@@ -1273,8 +1273,6 @@ def _requires_cookie_csrf(request: Request, *, desktop_local: bool = False) -> b
         return False
     if not request.cookies.get("agronomy_session"):
         return False
-    if desktop_local:
-        return True
     if request.headers.get("authorization"):
         return False
     if request.headers.get("x-agronomy-user-email"):
@@ -1307,8 +1305,6 @@ def _exchange_oidc_code(code: str, *, settings: ServerSettings) -> dict[str, Any
 
 
 def _cookie_secure(settings: ServerSettings) -> bool:
-    if settings.desktop_local_origin:
-        return False
     return bool(
         settings.local_pairing_token_sha256
         or (settings.oidc_redirect_uri and settings.oidc_redirect_uri.startswith("https://"))
@@ -2209,13 +2205,6 @@ class InstallAnswerModelRequest(BaseModel):
 
 def create_app(settings: ServerSettings | None = None) -> FastAPI:
     settings = settings or build_settings()
-    if settings.desktop_local_origin is not None:
-        validate_desktop_local_auth(
-            origin=settings.desktop_local_origin,
-            allow_local_dev_auth=settings.allow_local_dev_auth,
-            pairing_token_sha256=settings.local_pairing_token_sha256,
-            session_secret=settings.oidc_session_secret,
-        )
     runtime_profiles = load_runtime_profile_registry()
     signed_update_selected = settings.knowledge_update_root is not None
     if (
@@ -2274,7 +2263,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     if assistant_model_id:
         answer_model_revisions.setdefault(assistant_model_id, assistant_revision)
     model_installation = ModelInstallation()
-    model_installation_local = bool(settings.desktop_local_origin or settings.allow_local_dev_auth) and (
+    model_installation_local = settings.allow_local_dev_auth and (
         os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx").strip().lower() == "mlx"
     )
     operator_model_ids = {
@@ -2383,7 +2372,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     @app.middleware("http")
     async def enforce_cookie_csrf(request: Request, call_next: Any) -> Any:
-        if not _requires_cookie_csrf(request, desktop_local=bool(settings.desktop_local_origin)):
+        if not _requires_cookie_csrf(request):
             return await call_next(request)
         try:
             expected = _csrf_token_from_session_cookie(str(request.cookies.get("agronomy_session") or ""), settings=settings)
@@ -2395,30 +2384,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         return await call_next(request)
 
     @app.middleware("http")
-    async def enforce_desktop_local_origin(request: Request, call_next: Any) -> Any:
-        expected = settings.desktop_local_origin
-        if expected is None:
-            error = development_origin_error(request, settings.local_dev_origins) if settings.allow_local_dev_auth else None
+    async def enforce_development_origin(request: Request, call_next: Any) -> Any:
+        if settings.allow_local_dev_auth:
+            error = development_origin_error(request, settings.local_dev_origins)
             if error:
                 return JSONResponse(status_code=403, content={"detail": error})
-            return await call_next(request)
-        hosts = [value.decode("latin-1") for key, value in request.scope["headers"] if key.lower() == b"host"]
-        expected_host = urlparse(expected).netloc
-        if len(hosts) != 1 or hosts[0] != expected_host:
-            return JSONResponse(status_code=403, content={"detail": "desktop-local Host is invalid"})
-        if request.url.scheme != "http" or any(
-            name in request.headers
-            for name in FORWARDED_HEADERS
-        ):
-            return JSONResponse(status_code=403, content={"detail": "desktop-local transport is invalid"})
-        origins = request.headers.getlist("origin")
-        if len(origins) > 1:
-            return JSONResponse(status_code=403, content={"detail": "desktop-local Origin is invalid"})
-        origin = origins[0] if origins else None
-        if (origin is not None and origin != expected) or (
-            request.method.upper() not in {"GET", "HEAD"} and origin != expected
-        ):
-            return JSONResponse(status_code=403, content={"detail": "desktop-local Origin is invalid"})
         return await call_next(request)
 
     @app.middleware("http")
@@ -3880,8 +3850,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "local_pairing": {
                 "enabled": bool(settings.local_pairing_token_sha256),
                 "consumed": bool(app.state.local_pairing_consumed),
-                "transport_required": "http_loopback" if settings.desktop_local_origin else "https",
-                **({"launch_id": settings.local_pairing_token_sha256} if settings.desktop_local_origin else {}),
+                "transport_required": "https",
             },
             "network": {
                 "mode": settings.network_mode,
@@ -4185,8 +4154,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "local_pairing": {
                 "enabled": bool(settings.local_pairing_token_sha256),
                 "consumed": bool(app.state.local_pairing_consumed),
-                "transport_required": "http_loopback" if settings.desktop_local_origin else "https",
-                **({"launch_id": settings.local_pairing_token_sha256} if settings.desktop_local_origin else {}),
+                "transport_required": "https",
             },
             "network": {
                 "mode": settings.network_mode,
@@ -4665,9 +4633,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         expected = settings.local_pairing_token_sha256
         if not expected:
             raise HTTPException(status_code=404, detail="local pairing is not enabled")
-        if settings.desktop_local_origin is None and (
-            request.url.scheme != "https" or any(name in request.headers for name in FORWARDED_HEADERS)
-        ):
+        if request.url.scheme != "https" or any(name in request.headers for name in FORWARDED_HEADERS):
             raise HTTPException(status_code=403, detail="local pairing requires direct HTTPS")
         observed = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
         async with local_pairing_lock:

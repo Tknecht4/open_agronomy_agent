@@ -289,15 +289,14 @@ def test_runtime_readiness_does_not_treat_configuration_as_dependency_health(run
     assert not any(provider["analysis"] for provider in result["providers"])
 
 
-def test_standalone_worker_reuses_bounded_analysis_arguments(tmp_path, monkeypatch):
+def test_python_worker_reuses_bounded_analysis_arguments(tmp_path, monkeypatch):
     settings = build_settings(
         db_path=tmp_path / "db", artifact_root=tmp_path / "a", imagery_cache_root=tmp_path / "c",
-        imagery_worker_executable=sys.executable, network_mode="offline",
+        imagery_worker_python=sys.executable, network_mode="offline",
     )
 
     def run(command, **kwargs):
-        assert command[:2] == [sys.executable, "--geometry"]
-        assert kwargs["standalone"]
+        assert command[:4] == [sys.executable, "-m", "agronomy_agent.imagery_worker", "--geometry"]
         assert "--online" not in command
         assert command[command.index("--max-cache-bytes") + 1] == str(settings.imagery_cache_max_bytes)
         kwargs["stdout"].write(b'{"status":"blocked_offline"}')
@@ -307,8 +306,8 @@ def test_standalone_worker_reuses_bounded_analysis_arguments(tmp_path, monkeypat
     assert service._run_worker(settings, tmp_path / "c", {}, PAYLOAD)["status"] == "blocked_offline"
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="Darwin launches a standalone helper through posix_spawn")
-def test_standalone_spawn_closes_inheritable_parent_descriptors(tmp_path):
+@pytest.mark.skipif(sys.platform != "darwin", reason="Darwin launches the imagery worker through posix_spawn")
+def test_python_worker_closes_inheritable_parent_descriptors(tmp_path):
     import os
     import subprocess
 
@@ -326,12 +325,12 @@ sys.exit((observed.st_dev, observed.st_ino) == (int(sys.argv[2]), int(sys.argv[3
 """
         result = service._run_process(
             [sys.executable, "-c", check, str(descriptor), str(info.st_dev), str(info.st_ino)],
-            standalone=True, cwd=tmp_path, stdin=subprocess.DEVNULL, capture_output=True, timeout=10,
+            cwd=tmp_path, stdin=subprocess.DEVNULL, capture_output=True, timeout=10,
         )
     assert result.returncode == 0, result.stderr.decode()
 
 
-def test_mounted_app_uses_standalone_worker_for_health_and_overlay(tmp_path, monkeypatch):
+def test_mounted_app_uses_python_worker_for_health_and_overlay(tmp_path, monkeypatch):
     import base64
     import hashlib
     from subprocess import CompletedProcess
@@ -340,18 +339,18 @@ def test_mounted_app_uses_standalone_worker_for_health_and_overlay(tmp_path, mon
 
     settings = build_settings(
         db_path=tmp_path / "db", artifact_root=tmp_path / "a", imagery_cache_root=tmp_path / "c",
-        imagery_worker_executable=sys.executable, network_mode="online",
+        imagery_worker_python=sys.executable, network_mode="online",
     )
 
     def run(command, **kwargs):
-        assert kwargs["standalone"]
         assert command[0] == sys.executable
-        if command[1:] == ["--health"]:
+        if command[1:3] == ["-I", "-c"]:
+            assert "rasterio" in command[3]
             return CompletedProcess(command, 0, b'{"scipy":"synthetic"}', b"")
         chip = "a" * 64
-        assert command[1:3] == ["--overlay", "--cache-root"]
+        assert command[1:4] == ["-m", "agronomy_agent.imagery_overlay", "--cache-root"]
         assert command[-2:] == ["--chip-hash", chip]
-        assert "PYTHONPATH" not in kwargs["env"]
+        assert kwargs["env"]["PYTHONPATH"] == str(service.REPO_ROOT / "src")
         result = {
             "chip_hash": chip, "source_preview_sha256": hashlib.sha256(b"fixture PNG").hexdigest(),
             "display_crs": "EPSG:3857", "display_resampling": "nearest",
@@ -366,7 +365,7 @@ def test_mounted_app_uses_standalone_worker_for_health_and_overlay(tmp_path, mon
     try:
         with TestClient(create_app(settings)) as client:
             field_id = client.post("/api/demo/fields", headers=OWNER,
-                json={"name": "Standalone fixture", "field": {}, "geometry": GEOMETRY}).json()["field"]["field_context_id"]
+                json={"name": "Python worker fixture", "field": {}, "geometry": GEOMETRY}).json()["field"]["field_context_id"]
             ready = client.get(f"/api/demo/fields/{field_id}/imagery/analytics", headers=OWNER).json()
             assert ready["status"] == "ready"
             assert all(provider["analysis"] for provider in ready["providers"])

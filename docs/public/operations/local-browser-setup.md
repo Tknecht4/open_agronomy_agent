@@ -1,4 +1,4 @@
-# Native setup and operation
+# Local browser setup
 
 ## Prerequisites
 
@@ -93,7 +93,7 @@ municipality boundaries, Alberta municipal districts, and U.S. states and
 counties. The lookup runs locally after installation.
 
 ```bash
-FIELD_SERVICES="$HOME/Library/Application Support/OpenAgronomyAgent/desktop"
+FIELD_SERVICES="$HOME/Library/Application Support/OpenAgronomyAgent/field-services"
 .venv/bin/python -m pip install -r requirements/requirements-geospatial.txt
 PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
   --profile field-location-v1 --data-root "$FIELD_SERVICES" \
@@ -104,11 +104,13 @@ PYTHONPATH=src .venv/bin/python scripts/run_cockpit.py \
   --frontend --field-services-root "$FIELD_SERVICES"
 ```
 
-On macOS the source launcher discovers this directory on later launches. Pass
-`--field-services-root` for a custom directory. The packaged Mac app looks for
-the administrative pack in its state directory and starts the bundled imagery
-helper. `AGRONOMY_AGENT_ADMINISTRATIVE_PACK_ROOT` sets the pack location for a
-custom source launcher. Existing soil pack settings continue to work.
+On macOS the browser launcher discovers this directory on later launches. Pass
+`--field-services-root` for a custom directory. The spatial pack, worker and
+imagery cache use `spatial-pack/field-location-v1`, `imagery/bin/python` and
+`cache/imagery` under that root. Set `AGRONOMY_AGENT_ADMINISTRATIVE_PACK_ROOT`,
+`AGRONOMY_AGENT_IMAGERY_PYTHON`, or `AGRONOMY_AGENT_IMAGERY_CACHE_ROOT` to
+configure those locations individually. The Prairie soil pack has its own
+[setup instructions](offline-data-setup.md).
 
 In **Imagery**, choose **Analyze date range** to search Sentinel-2 and Landsat
 and calculate NDVI and NDMI. Select a chart point to load its index on the field
