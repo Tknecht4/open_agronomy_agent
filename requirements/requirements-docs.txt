@@ -1,8 +1,8 @@
 # Documentation build dependencies. Update intentionally and verify `mkdocs build --strict`.
 mkdocs==1.6.1
-mkdocs-material==9.8.1
+mkdocs-material==9.8.2
 # The docs audit imports the canonical capability catalog without executing it.
 httpx==0.28.1
-PyYAML==6.0.3
+PyYAML==6.0.4
 # The evaluation page reports the frozen Benchmark v2 design-audit status.
 jsonschema==4.26.0
