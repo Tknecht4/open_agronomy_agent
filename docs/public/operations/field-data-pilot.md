@@ -279,8 +279,3 @@ Onion laboratory measurements, Picketa model outputs and derived soybean yield
 remain separate evidence roles. Preparation does not grant redistribution or
 training rights; consult the source-specific catalog and original license.
 The prepared source-only development lane is separate from benchmark answers.
-
-The default Mac desktop launcher isolates inherited server environment
-variables. Its bundled application does not provision this optional EO worker
-or enable an imagery cache. The configured native server above is the exercised
-optional-imagery path.

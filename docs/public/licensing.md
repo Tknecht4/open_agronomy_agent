@@ -26,7 +26,7 @@ commercial-use permissions, when their conditions are met. The earlier text
 is preserved in
 [LICENSES/Apache-2.0.txt](https://github.com/Tknecht4/open_agronomy_agent/blob/main/LICENSES/Apache-2.0.txt).
 It is not an alternative licence for new PolyForm-licensed contributions.
-The desktop, edge and portable packages carry the project notice and earlier
+The edge and portable packages carry the project notice and earlier
 licence. Production browser builds include project attribution and full legal
 texts from the locked frontend dependencies.
 
@@ -50,5 +50,4 @@ permission to redistribute. Previously excluded sources remain excluded.
 Model configuration `license` fields describe upstream weights, so their
 existing Apache-2.0 declarations remain. Consult the
 [third-party notices](https://github.com/Tknecht4/open_agronomy_agent/blob/main/THIRD_PARTY_NOTICES.md)
-and each source's recorded terms. Review of compiled native app distributions
-is separate from this source-repository licensing change.
+and each source's recorded terms.

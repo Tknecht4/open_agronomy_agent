@@ -15,7 +15,7 @@ The source archive alone is incomplete. In particular, the active hash-bound
 corpus is in the evidence archive; do not run the app or claim corpus validity
 from the source archive alone. Both archives reconstruct the exact curated
 public tree, not the complete Git checkout. This packaging does not change
-runtime admission, evaluation separation, installed Mac app size, or Git history.
+runtime admission, evaluation separation, or Git history.
 
 First inspect the planned input split without creating archives:
 

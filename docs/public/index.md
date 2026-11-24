@@ -8,7 +8,7 @@ It is not an agronomist replacement or a regulatory, diagnostic, or field-outcom
 
 ![Compact general chat and calculator example, with no field selected](assets/workspace.png)
 
-*Compact general chat and calculator example with synthetic inputs; no field is selected or personal record shown.* [Use the workspace](operations/workspace.md) · [Run it locally](operations/native-setup.md) · [Customize the agent](developer/customizing-the-harness.md)
+*Compact general chat and calculator example with synthetic inputs; no field is selected or personal record shown.* [Use the workspace](operations/workspace.md) · [Run it locally](operations/local-browser-setup.md) · [Customize the agent](developer/customizing-the-harness.md)
 
 ## One workspace, three entry points
 
@@ -56,7 +56,7 @@ The [workspace guide](operations/workspace.md) covers field setup, offline draft
 - [Developer guide](developer/index.md): code map and how to add a graph, tool, source, or service.
 - [Customizing the harness](developer/customizing-the-harness.md): supported fork seams, data ingestion paths, profiling, and public packaging.
 - [Workspace guide](operations/workspace.md): questions, field records, private references, and offline recovery.
-- [Native setup](operations/native-setup.md), [offline operation](offline-operation.md), and [containers](operations/containers.md).
+- [Local browser setup](operations/local-browser-setup.md), [offline operation](offline-operation.md), and [containers](operations/containers.md).
 - [Governance](governance.md): privacy, egress, licensing, contribution, and publication boundaries.
 
 ## Safety and data boundary

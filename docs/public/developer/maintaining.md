@@ -24,8 +24,7 @@ The default branch requires a PR, current passing `python`, `frontend`, and
 documentation `build` checks from GitHub Actions, and resolved conversations.
 Administrators follow the same checks; force pushes and branch deletion are
 blocked. Documentation runs on every PR so its required check cannot disappear
-because of path filtering. Desktop qualification runs when its inputs change
-and must be reviewed when triggered.
+because of path filtering.
 
 While there is one maintainer, GitHub's mandatory approval count is zero;
 outside PRs require maintainer review by policy. This avoids an impossible
@@ -40,7 +39,7 @@ Dependabot proposes weekly Python, frontend, and GitHub Actions updates with
 bounded open-PR counts. Security updates are also enabled. These proposals
 receive the normal review and CI gates; there is no automatic merge.
 
-Backend and desktop CI audit the installed third-party dependency inventory
+Backend CI audits the installed third-party dependency inventory
 using the pinned scanner in `requirements/requirements-security.txt`. The scanner runs in
 its own environment. Only the editable project itself is excluded: local code
 is assessed by source review/tests, not by a package advisory lookup. A missing
@@ -48,8 +47,7 @@ or empty inventory, collection error, or reported advisory fails the job. The
 frontend retains its high-severity npm audit. An advisory lookup requires
 network access and does not prove the absence of undisclosed vulnerabilities.
 
-Python declarations are still ranges and the Mac constraints remain a specific
-candidate environment, not portable hash locks. Record newly resolved versions
+Python declarations use version ranges. Record newly resolved versions
 and rerun the affected checks when updating them. Do not suppress an advisory
 just to obtain a green build. If an exception is unavoidable, it requires a
 documented scope, evidence, expiry, and maintainer decision.
@@ -58,23 +56,14 @@ documented scope, evidence, expiry, and maintainer decision.
 
 Use the [split source distribution](source-distribution.md) when a contributor
 needs code separately from data/evidence. Both packs are required to reconstruct
-the runnable public tree. This does not reduce Git history or qualify a smaller
-desktop installer. Keep immutable, hash-bound replacements before removing any
-historical payload from the repository.
+the runnable public tree. Keep immutable, hash-bound replacements before
+removing historical payloads from the repository.
 
-Before a desktop release, complete the [release checks](release-readiness.md)
-and the [Mac candidate qualification](https://github.com/Tknecht4/open_agronomy_agent/blob/main/macos_app/README.md).
-The published release record must identify source, dependency inventory,
-archive checksums, compressed and installed sizes, required model bytes,
-supported OS/hardware, and known limitations.
-
-Upgrade qualification must exercise a representative existing workspace:
-stop the owned backend, create and verify a backup of the database and relevant
-private files, upgrade, check records and a real answer, and rehearse recovery
-to the prior version. Existing backup/restore primitives do not establish this
-installed-app workflow. Developer ID signing, notarization, downloaded-app
-launch, minimum-hardware testing, and update/rollback remain separate gates;
-do not publish the ad hoc candidate as if those gates had passed.
+Use the [release checks](release-readiness.md) to record source, dependencies,
+archive checksums, supported environments, and known limitations. For browser
+workspace upgrades, stop the server, verify a backup of the database and
+relevant private files, and check existing records and a local answer after
+restarting. Rehearse recovery to the prior version with representative state.
 
 As adoption grows, prefer small compatibility-preserving changes: documented
 schemas and API changes, bounded field-history queries, and extraction of

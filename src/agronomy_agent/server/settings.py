@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import hashlib
-import ipaddress
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from agronomy_agent.server.local_origin import DEFAULT_DEV_ORIGINS, loopback_origin
 from agronomy_agent.paths import repo_path
@@ -58,7 +56,6 @@ class ServerSettings:
     jwt_jwks_url: str | None = None
     allow_local_dev_auth: bool = True
     local_pairing_token_sha256: str | None = None
-    desktop_local_origin: str | None = None
     local_dev_origins: tuple[str, ...] = DEFAULT_DEV_ORIGINS
     oidc_authorization_endpoint: str | None = None
     oidc_token_endpoint: str | None = None
@@ -94,7 +91,6 @@ class ServerSettings:
     allow_model_id_override: bool = False
     imagery_cache_root: Path | None = None
     imagery_worker_python: Path | None = None
-    imagery_worker_executable: Path | None = None
     imagery_cache_max_bytes: int = 2 * 1024**3
     imagery_min_free_bytes: int = 1024**3
 
@@ -123,42 +119,6 @@ def _coerce_path(value: str) -> Path:
     return repo_path(value)
 
 
-def validate_desktop_local_auth(
-    *,
-    origin: str,
-    allow_local_dev_auth: bool,
-    pairing_token_sha256: str | None,
-    session_secret: str | None,
-) -> None:
-    parsed = urlsplit(origin)
-    try:
-        host = parsed.hostname
-        port = parsed.port
-        address = ipaddress.ip_address(host or "")
-    except ValueError as exc:
-        raise ValueError("desktop-local origin must use a numeric loopback HTTP host and explicit port") from exc
-    if (
-        parsed.scheme != "http"
-        or address not in (ipaddress.ip_address("127.0.0.1"), ipaddress.ip_address("::1"))
-        or port is None
-        or port < 1
-        or origin != f"http://{parsed.netloc}"
-        or parsed.username is not None
-        or parsed.password is not None
-    ):
-        raise ValueError("desktop-local origin must use a numeric loopback HTTP host and explicit port")
-    if allow_local_dev_auth:
-        raise ValueError("desktop-local mode requires local development authentication disabled")
-    if not pairing_token_sha256 or len(pairing_token_sha256) != 64:
-        raise ValueError("desktop-local mode requires a one-time pairing token hash")
-    try:
-        bytes.fromhex(pairing_token_sha256)
-    except ValueError as exc:
-        raise ValueError("desktop-local mode requires a valid pairing token hash") from exc
-    if not session_secret or len(session_secret) < 32:
-        raise ValueError("desktop-local mode requires a session secret of at least 32 characters")
-
-
 def build_settings(
     *,
     db_path: str | Path | None = None,
@@ -175,7 +135,6 @@ def build_settings(
     jwt_jwks_url: str | None = None,
     allow_local_dev_auth: bool | None = None,
     local_pairing_token_sha256: str | None = None,
-    desktop_local_origin: str | None = None,
     local_dev_origins: tuple[str, ...] | None = None,
     oidc_authorization_endpoint: str | None = None,
     oidc_token_endpoint: str | None = None,
@@ -214,7 +173,6 @@ def build_settings(
     allow_model_id_override: bool | None = None,
     imagery_cache_root: str | Path | None = None,
     imagery_worker_python: str | Path | None = None,
-    imagery_worker_executable: str | Path | None = None,
     imagery_cache_max_bytes: int | None = None,
     imagery_min_free_bytes: int | None = None,
 ) -> ServerSettings:
@@ -294,13 +252,6 @@ def build_settings(
             raise ValueError(
                 "local pairing requires AGRONOMY_AGENT_OIDC_SESSION_SECRET with at least 32 characters"
             )
-    if desktop_local_origin is not None:
-        validate_desktop_local_auth(
-            origin=desktop_local_origin,
-            allow_local_dev_auth=local_dev_auth_enabled,
-            pairing_token_sha256=pairing_token_sha256,
-            session_secret=resolved_session_secret,
-        )
     telemetry_enabled = (
         otel_enabled
         if otel_enabled is not None
@@ -471,12 +422,6 @@ def build_settings(
     imagery_python_value = imagery_worker_python or os.getenv("AGRONOMY_AGENT_IMAGERY_PYTHON")
     imagery_root = Path(imagery_root_value).expanduser().absolute() if imagery_root_value else None
     imagery_python = Path(imagery_python_value).expanduser().absolute() if imagery_python_value else None
-    imagery_executable_value = imagery_worker_executable or os.getenv("AGRONOMY_AGENT_IMAGERY_EXECUTABLE")
-    imagery_executable = Path(imagery_executable_value).expanduser().absolute() if imagery_executable_value else None
-    if imagery_python and imagery_executable:
-        raise ValueError("configure either imagery worker Python or a standalone imagery executable")
-    if imagery_executable and (not imagery_executable.is_file() or not os.access(imagery_executable, os.X_OK)):
-        raise ValueError("standalone imagery worker must be an existing executable")
     from agronomy_agent.imagery_budget import validate_policy
     maximum = imagery_cache_max_bytes if imagery_cache_max_bytes is not None else int(os.getenv("AGRONOMY_AGENT_IMAGERY_CACHE_MAX_BYTES", str(2 * 1024**3)))
     minimum_free = imagery_min_free_bytes if imagery_min_free_bytes is not None else int(os.getenv("AGRONOMY_AGENT_IMAGERY_MIN_FREE_BYTES", str(1024**3)))
@@ -492,7 +437,6 @@ def build_settings(
         artifact_root=artifact,
         imagery_cache_root=imagery_root,
         imagery_worker_python=imagery_python,
-        imagery_worker_executable=imagery_executable,
         imagery_cache_max_bytes=maximum,
         imagery_min_free_bytes=minimum_free,
         model_config_path=resolved_model_config_path,
@@ -507,7 +451,6 @@ def build_settings(
         jwt_jwks_url=jwt_jwks_url or os.getenv("AGRONOMY_AGENT_JWT_JWKS_URL"),
         allow_local_dev_auth=local_dev_auth_enabled,
         local_pairing_token_sha256=pairing_token_sha256 or None,
-        desktop_local_origin=desktop_local_origin,
         local_dev_origins=configured_dev_origins,
         oidc_authorization_endpoint=oidc_authorization_endpoint or os.getenv("AGRONOMY_AGENT_OIDC_AUTHORIZATION_ENDPOINT"),
         oidc_token_endpoint=oidc_token_endpoint or os.getenv("AGRONOMY_AGENT_OIDC_TOKEN_ENDPOINT"),

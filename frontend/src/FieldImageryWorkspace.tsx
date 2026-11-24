@@ -351,7 +351,7 @@ export default function FieldImageryWorkspace({ field, allowNetwork, onAsk, onSh
     </form>
     {setupError || setup?.status === 'not_configured' || setup?.status === 'worker_unavailable' ? <div className="farm-imagery-setup" role="status">
       <span>{setupError || setup?.worker?.message || 'Install the local imagery worker to analyze images.'}</span>
-      <a href="https://tknecht4.github.io/open_agronomy_agent/operations/native-setup/#field-location-and-imagery" target="_blank" rel="noreferrer">Imagery setup</a>
+      <a href="https://tknecht4.github.io/open_agronomy_agent/operations/field-data-pilot/#optional-isolated-hls-worker" target="_blank" rel="noreferrer">Imagery setup</a>
       <button type="button" onClick={() => setSetupAttempt(attempt => attempt + 1)}>Check again</button>
     </div> : null}
     {multipart ? <p role="status">Imagery analysis requires a single field polygon.</p> : null}

@@ -59,11 +59,6 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--desktop-local",
-        action="store_true",
-        help="serve a built frontend on numeric loopback HTTP with one-time local pairing",
-    )
-    parser.add_argument(
         "--advertise-host",
         default=None,
         help="LAN DNS name or IP covered by the TLS certificate and opened by the field client",
@@ -167,22 +162,6 @@ def _validate_bind_security(*, host: str, allow_local_dev_auth: bool) -> None:
         )
 
 
-def _validate_desktop_launch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> tuple[str, str]:
-    if args.field_lan or args.frontend or args.reload:
-        parser.error("--desktop-local cannot be combined with --field-lan, --frontend, or --reload")
-    if args.tls_certfile or args.tls_keyfile or args.advertise_host or args.advertise_port:
-        parser.error("--desktop-local does not accept TLS or LAN advertise options")
-    if args.host not in {"127.0.0.1", "::1"} or not 1 <= args.port <= 65535:
-        parser.error("--desktop-local requires a numeric loopback host and valid port")
-    if not args.static_dir or not (Path(args.static_dir) / "index.html").is_file():
-        parser.error("--desktop-local requires --static-dir with a built frontend index.html")
-    token = os.environ.pop("AGRONOMY_AGENT_DESKTOP_PAIRING_TOKEN", "")
-    secret = os.environ.pop("AGRONOMY_AGENT_DESKTOP_SESSION_SECRET", "")
-    if len(token) < 32 or len(secret) < 32:
-        parser.error("--desktop-local requires desktop pairing token and session secret in the environment")
-    return token, secret
-
-
 def _stop_frontend_process(
     process: subprocess.Popen[bytes] | subprocess.Popen[str] | None,
     *,
@@ -212,8 +191,6 @@ def main() -> int:
     args = parser.parse_args()
     pairing_token = None
     session_secret = None
-    if args.desktop_local:
-        pairing_token, session_secret = _validate_desktop_launch(args, parser)
     if args.field_lan:
         if args.frontend:
             parser.error("--field-lan serves a built static frontend; do not combine it with --frontend")
@@ -244,7 +221,7 @@ def main() -> int:
         session_secret = secrets.token_urlsafe(48)
     field_services = args.field_services_root.expanduser().resolve() if args.field_services_root else None
     if field_services is None and sys.platform == "darwin":
-        field_services = Path.home() / "Library/Application Support/OpenAgronomyAgent/desktop"
+        field_services = (Path.home() / "Library/Application Support/OpenAgronomyAgent/field-services").resolve()
     imagery_python = None
     imagery_cache = None
     if field_services:
@@ -267,7 +244,7 @@ def main() -> int:
         artifact_root=Path(args.artifact_root),
         static_dir=Path(args.static_dir) if args.static_dir else None,
         model_config_path=args.model_config,
-        allow_local_dev_auth=False if (args.field_lan or args.desktop_local) else None,
+        allow_local_dev_auth=False if args.field_lan else None,
         local_dev_origins=tuple(f"http://{host}:{args.frontend_port}" for host in ("127.0.0.1", "localhost", "[::1]")) if args.frontend else None,
         local_pairing_token_sha256=(
             hashlib.sha256(pairing_token.encode("utf-8")).hexdigest()
@@ -276,11 +253,6 @@ def main() -> int:
         ),
         oidc_session_secret=session_secret,
         network_mode="offline" if args.field_lan else None,
-        desktop_local_origin=(
-            f"http://{f'[{args.host}]' if ':' in args.host else args.host}:{args.port}"
-            if args.desktop_local
-            else None
-        ),
     )
     try:
         _validate_bind_security(

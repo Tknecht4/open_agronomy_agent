@@ -42,7 +42,7 @@ rejects requests that ask for this guarantee with HTTP 501
 
 - Inputs: validated request schemas, authenticated actor/workspace context, `ServerSettings`, and configured stores/services.
 - Outputs: versioned JSON or streaming events plus durable audit records where the operation mutates state.
-- `GET /api/health` reports readiness metadata without local database paths and must return `status: ok` for the native quick-start health gate. It does not prove model generation, corpus sufficiency, or external-provider health.
+- `GET /api/health` reports readiness metadata without local database paths and must return `status: ok` for the local browser quick-start health check. It does not prove model generation, corpus sufficiency, or external-provider health.
 
 ## Invariants
 

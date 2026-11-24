@@ -87,7 +87,7 @@ nav:
       - Release evaluation: operations/release-evaluation.md
       - Use the workspace: operations/workspace.md
       - Useful field observations: operations/field-observations.md
-      - Native setup: operations/native-setup.md
+      - Local browser setup: operations/local-browser-setup.md
       - Field uploads and imagery pilot: operations/field-data-pilot.md
       - Geospatial foundation and terrain: operations/geospatial-foundation.md
       - Compact offline data setup: operations/offline-data-setup.md

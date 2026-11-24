@@ -36,7 +36,6 @@ PUBLIC_SUBSYSTEM_READMES = (
     ROOT / "README.md",
     ROOT / "docs/public/developer/maintainer-architecture.md",
     ROOT / "AGENTS.md",
-    ROOT / "macos_app/README.md",
     ROOT / "src/agronomy_agent/geospatial/README.md",
     ROOT / "container/README.md",
     ROOT / "configs/README.md",
