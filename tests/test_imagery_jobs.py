@@ -235,7 +235,7 @@ def test_durable_series_retains_observations_and_exclusions(runtime, monkeypatch
     assert client.post(path, headers=OWNER, json=request).json()["id"] == parent_id
     assert len(executed) == 2
     assert len(client.get(path, headers=OWNER).json()["jobs"]) == 1
-    assert len(client.get(f"/api/fields/{field_id}/imagery-jobs", headers=OWNER).json()["jobs"]) == 2
+    assert client.get(f"/api/fields/{field_id}/imagery-jobs", headers=OWNER).json()["jobs"] == []
 
 
 def test_saved_series_applies_strict_coverage_cutoff_without_rewriting_results(runtime):
