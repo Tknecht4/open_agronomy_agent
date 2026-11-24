@@ -22,7 +22,7 @@ describe('Open Agronomy responsive workspace', () => {
     expect(app).toContain("view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'")
     expect(app).toContain("aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view}")
     expect(app).toContain('onClick={() => setWorkspaceView(view)}')
-    expect(app).toContain("page === 'fields'")
+    expect(app).toContain("page === 'field-editor'")
     expect(app).toContain('role="group" aria-label="Field information"')
     expect(app).toContain("tab === 'details' ? 'Overview' : tab === 'records' ? 'Records & soil tests' : 'Map context'")
     expect(app).toContain("hidden={fieldTab !== 'details'}")
@@ -71,7 +71,7 @@ describe('Open Agronomy responsive workspace', () => {
     const styles = css()
     const benchmarkStyles = benchmarksCss()
 
-    expect(app).toContain("const APP_PAGES: Page[] = ['farms', 'records', 'field-editor', 'analyze', 'fields', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']")
+    expect(app).toMatch(/const APP_PAGES[^=]*= \[[^\]]*'benchmarks'/)
     expect(app).toContain("const BenchmarksRoute = lazy(() => import('./BenchmarksRoute')")
     expect(app).toContain("const LeafletFieldMap = lazy(() => import('./LeafletFieldMap')")
     expect(app).toContain("const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel }))")

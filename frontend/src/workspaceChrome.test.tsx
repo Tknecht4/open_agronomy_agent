@@ -64,6 +64,40 @@ describe('workspace model settings', () => {
     expect(screen.getByText('Download the pinned model first.')).toBeVisible()
   })
 
+  it('downloads a missing profile and enables selecting it after verification', async () => {
+    const e4b = { id: 'mlx-community/gemma-4-e4b-it-4bit', label: 'Gemma 4 E4B', role: 'optional',
+      max_tokens: 640, local_ready: false, download_allowed: true, download_bytes: 5_179_241_512 }
+    let installed = false
+    const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async path => {
+      if (path === '/api/models/install') {
+        installed = true
+        return Response.json({ status: 'downloading' }, { status: 202 })
+      }
+      return Response.json({ model_profiles: [profiles[0], { ...e4b, local_ready: installed }] })
+    })
+    function DownloadHarness() {
+      const [available, setAvailable] = useState([profiles[0], e4b])
+      const [model, select] = useState(profiles[0].id)
+      return <form className="chat-composer"><ModelSettings profiles={available} onProfilesChange={setAvailable}
+        modelId={model} onSelect={select} runtimeAccess="available" mobile={false} busy={false} viewKey="workspace" /></form>
+    }
+    try {
+      render(<DownloadHarness />)
+      fireEvent.click(screen.getByRole('button', { name: 'Model settings' }))
+      expect(screen.getByRole('radio', { name: 'Gemma 4 E4B 5.2 GB download' })).toBeDisabled()
+      fireEvent.click(screen.getByRole('button', { name: 'Download Gemma 4 E4B' }))
+      const ready = await screen.findByRole('radio', { name: 'Gemma 4 E4B Ready on this device' })
+      expect(fetch).toHaveBeenCalledWith('/api/models/install', expect.objectContaining({
+        method: 'POST', body: JSON.stringify({ model_id: e4b.id }),
+      }))
+      fireEvent.click(ready)
+      expect(ready).toBeChecked()
+      expect(screen.queryByRole('button', { name: 'Download Gemma 4 E4B' })).toBeNull()
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+
   it('uses a mobile dialog with Done, native cancellation, and focus restoration', () => {
     render(<ModelHarness mobile />)
     const trigger = screen.getByRole('button', { name: 'Model settings' })
@@ -119,7 +153,7 @@ describe('workspace navigation', () => {
     fireEvent.click(trigger)
     const drawer = screen.getByRole('dialog', { name: 'Navigation' })
     expect(within(drawer).getByText('Runtime unavailable · notes only')).toBeVisible()
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Fields' }))
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Farms' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(trigger).toHaveFocus()
     expect(trigger).toHaveAttribute('aria-expanded', 'false')

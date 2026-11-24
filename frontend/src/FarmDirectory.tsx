@@ -1,43 +1,62 @@
-import { ArrowUpRight, Sprout } from 'lucide-react'
-import { displayDate } from './fieldLabels'
-import { fieldArea, type Farm, type FarmOverview } from './farmTypes'
+import { ChevronRight, Sprout } from 'lucide-react'
+import { FarmFieldList } from './FarmFieldList'
+import { fieldArea, type Farm, type FarmField, type FarmOverview } from './farmTypes'
 
-export function FarmDirectory({ farms, overview, season, unit, onOpen }: {
+export function FarmDirectory({ farms, overview, fields, unit, expandedFarm, selected, filtering, onToggle, onSelect, onManage }: {
   farms: Farm[]
   overview: FarmOverview
-  season: number
+  fields: FarmField[]
   unit: 'ac' | 'ha'
-  onOpen: (id: string) => void
+  expandedFarm: string
+  selected: string
+  filtering: boolean
+  onToggle: (id: string) => void
+  onSelect: (id: string) => void
+  onManage: (farm: Farm) => void
 }) {
-  const unassigned = overview.fields.filter(field => !field.farm_id)
-  return <div className="farm-directory">
-    <div className="farm-directory-columns" aria-hidden="true">
-      <span>Farm</span><span>Fields</span><span>Boundary area</span><span>Last record</span><span />
-    </div>
-    <ul aria-label="Farms">
-      {farms.filter(farm => !farm.archived).map(farm => {
-        const members = overview.fields.filter(field => field.farm_id === farm.id)
-        const coverage = overview.farm_coverage?.[farm.id]
-        const latest = members.map(field => field.last_record_at).filter((date): date is string => Boolean(date)).sort().pop()
-        const review = members.reduce((count, field) => count + (field.context_review_count || 0), 0)
-        return <li key={farm.id}>
-          <button type="button" className="farm-directory-row" onClick={() => onOpen(farm.id)}>
-            <span className="farm-directory-name"><span className="farm-icon"><Sprout size={20} aria-hidden="true" /></span><span><strong>{farm.name}</strong>{review > 0 ? <span className="farm-status caution">{review} source checks to review</span> : null}</span></span>
-            <span className="farm-directory-count">{members.length}<span className="mobile-only"> {members.length === 1 ? 'field' : 'fields'}</span></span>
-            <span className="farm-directory-area">{fieldArea(coverage?.boundary_area_m2, unit)}</span>
-            <span className="farm-directory-date">{latest ? <time dateTime={latest}>{displayDate(latest)}</time> : 'No records'}</span>
-            <ArrowUpRight size={16} aria-hidden="true" />
+  const groups = new Map<string, FarmField[]>()
+  for (const field of fields) {
+    const id = field.farm_id || 'unassigned'
+    const members = groups.get(id) || []
+    members.push(field)
+    groups.set(id, members)
+  }
+  const unassignedCount = overview.fields.filter(field => !field.farm_id).length
+  const entries = farms.map(farm => ({ id: farm.id, name: farm.name, farm }))
+  const showUnassigned = unassignedCount > 0 || expandedFarm === 'unassigned'
+  const directory = showUnassigned ? [...entries, { id: 'unassigned', name: 'Unassigned fields', farm: null }] : entries
+
+  return <>
+    {filtering && !fields.length ? <p className="farm-list-empty">No matching fields</p> : null}
+    <ul className="farm-directory" aria-label="Farms">
+      {directory.map(({ id, name, farm }) => {
+        const members = groups.get(id) || []
+        const expanded = expandedFarm === id
+        if (filtering && !members.length && !expanded) return null
+        const count = members.length
+        const coverage = overview.farm_coverage?.[id]
+        const groupId = `farm-fields-${id}`
+        return <li key={id}>
+          <button type="button" className="farm-directory-row" aria-expanded={expanded} aria-controls={groupId} onClick={() => onToggle(id)}>
+            <span className="farm-icon"><Sprout size={18} aria-hidden="true" /></span>
+            <span className="farm-directory-name"><strong>{name}</strong>
+              <small>{count} {count === 1 ? 'field' : 'fields'}{filtering ? ' matching' : ''}{farm?.archived ? ' · Archived' : ''}{coverage?.boundary_area_m2 != null ? ` · ${fieldArea(coverage.boundary_area_m2, unit)}` : ''}</small>
+            </span>
+            <ChevronRight className="farm-disclosure" size={17} aria-hidden="true" />
           </button>
+          <div id={groupId} className="farm-directory-fields" hidden={!expanded}>
+            {expanded ? <>
+              <FarmFieldList fields={members} unit={unit} selected={selected} onSelect={onSelect} />
+              {!count ? <p className="farm-list-empty">{filtering ? 'No matching fields in this farm' : 'No fields yet'}</p> : null}
+              {farm || coverage ? <div className="farm-group-footer">
+                {coverage?.unknown_area_count ? <small>{coverage.unknown_area_count} with unknown area</small> : null}
+                {(coverage?.overlapping_area_m2 || 0) > 1 ? <small>{fieldArea(coverage?.overlapping_area_m2, unit)} of overlapping area excluded</small> : null}
+                {farm ? <button type="button" onClick={() => onManage(farm)}>Manage farm</button> : null}
+              </div> : null}
+            </> : null}
+          </div>
         </li>
       })}
-      {unassigned.length > 0 ? <li>
-        <button type="button" className="farm-directory-row" onClick={() => onOpen('unassigned')}>
-          <span className="farm-directory-name"><span className="farm-icon"><Sprout size={20} aria-hidden="true" /></span><strong>Unassigned fields</strong></span>
-          <span className="farm-directory-count">{unassigned.length}<span className="mobile-only"> fields</span></span>
-          <span className="farm-directory-area">Not grouped</span><span className="farm-directory-date" /><ArrowUpRight size={16} aria-hidden="true" />
-        </button>
-      </li> : null}
     </ul>
-    {overview.fields.length ? <a className="farm-directory-link" href={`#fields?season=${season}`}>{overview.fields.length === 1 ? 'View field' : `View all ${overview.fields.length} fields`} <ArrowUpRight size={14} aria-hidden="true" /></a> : null}
-  </div>
+  </>
 }

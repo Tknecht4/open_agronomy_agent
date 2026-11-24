@@ -431,7 +431,14 @@ def _download_source(
         headers={"User-Agent": "OpenAgronomyAgent/offline-spatial-setup"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response, part_path.open("xb") as handle:
+        try:
+            opened = urllib.request.urlopen(request, timeout=60)
+        except urllib.error.HTTPError as exc:
+            mirror = profile_source.get("download_mirror")
+            if not mirror or exc.code not in {403, 404, 503}:
+                raise
+            opened = urllib.request.urlopen(urllib.request.Request(mirror, headers=dict(request.headers)), timeout=60)
+        with opened as response, part_path.open("xb") as handle:
             content_length = response.headers.get("Content-Length")
             if content_length and int(content_length) != int(profile_source["expected_raw_bytes"]):
                 raise ValueError(
@@ -649,6 +656,9 @@ def _run_setup_under_lock(
                 profile_id=profile_id,
                 profile_manifest_path=profile_manifest_path,
             )
+        elif profile_id == "field-location-v1":
+            from agronomy_agent.server.services.field_location import probe_pack
+            probe = probe_pack(pack_root)
         else:
             raise ValueError(f"no offline runtime probe is registered for {profile_id}")
         report["runtime_probe"] = probe
@@ -770,7 +780,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", default=DEFAULT_PROFILE_ID)
     parser.add_argument("--data-root", type=Path, required=True)
-    parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY)
+    parser.add_argument("--registry", type=Path)
     parser.add_argument("--profile-manifest", type=Path, default=DEFAULT_PROFILE_MANIFEST)
     parser.add_argument("--download", action="store_true", help="allow the explicit official-source downloads")
     parser.add_argument("--build", action="store_true", help="derive local profile layers and assemble the pack")
@@ -803,7 +813,7 @@ def main() -> int:
             verify=args.verify,
             dry_run=args.dry_run,
             retain_raw=not args.discard_raw_after_build,
-            registry_path=args.registry,
+            registry_path=args.registry or (ROOT / load_profile(args.profile_manifest, args.profile)["source_registry_path"]),
             profile_manifest_path=args.profile_manifest,
         )
     except (OSError, ValueError, urllib.error.URLError) as exc:

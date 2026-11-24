@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import shutil
 import stat
+import time
 from typing import Iterator
 
 DEFAULT_MAX_CACHE_BYTES = 2 * 1024**3
@@ -72,7 +73,7 @@ class CacheAdmission:
 
 @contextmanager
 def reserve_cache(root: Path, *, max_cache_bytes: int = DEFAULT_MAX_CACHE_BYTES,
-                  min_free_bytes: int = DEFAULT_MIN_FREE_BYTES) -> Iterator[CacheAdmission]:
+                  min_free_bytes: int = DEFAULT_MIN_FREE_BYTES, wait_seconds: float = 0) -> Iterator[CacheAdmission]:
     validate_policy(max_cache_bytes, min_free_bytes)
     supplied = Path(root).expanduser()
     if supplied.is_symlink():
@@ -95,10 +96,15 @@ def reserve_cache(root: Path, *, max_cache_bytes: int = DEFAULT_MAX_CACHE_BYTES,
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             raise StorageRefusal("storage_unavailable", "invalid_cache_lock")
         os.fchmod(fd, 0o600)
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
-            raise StorageRefusal("busy", "imagery_cache_writer_busy") from exc
+        deadline = time.monotonic() + wait_seconds
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError as exc:
+                if time.monotonic() >= deadline:
+                    raise StorageRefusal("busy", "imagery_cache_writer_busy") from exc
+                time.sleep(.05)
         admission = CacheAdmission(root, max_cache_bytes, min_free_bytes)
         admission.ensure()
         yield admission

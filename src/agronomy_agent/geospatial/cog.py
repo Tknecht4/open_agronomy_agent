@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
+from http.cookiejar import CookieJar, DefaultCookiePolicy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import re
 import threading
@@ -106,6 +107,10 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
     transfer_limit = min(MAX_COG_TRANSFER_BYTES, batch.per_scene) if batch else MAX_COG_TRANSFER_BYTES
 
     class Handler(BaseHTTPRequestHandler):
+        def setup(self) -> None:
+            super().setup()
+            self.connection.settimeout(35)
+
         def log_message(self, *args: Any) -> None:
             pass
 
@@ -137,134 +142,141 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
                 self._reject(429)
                 return
             try:
-                with httpx.Client(timeout=30, follow_redirects=False) as client:
-                    with client.stream("HEAD" if head else "GET", hrefs[key],
-                                       headers={"Accept-Encoding": "identity", **({"Range": requested} if requested else {})}) as upstream:
-                        if upstream.status_code != (200 if head else 206):
+                with client.stream("HEAD" if head else "GET", hrefs[key],
+                                   headers={"Accept-Encoding": "identity", **({"Range": requested} if requested else {})}) as upstream:
+                    if upstream.status_code != (200 if head else 206):
+                        self._reject(502)
+                        return
+                    if upstream.headers.get("Content-Encoding", "identity").lower() != "identity":
+                        self._reject(502)
+                        return
+                    # This proxy requires fixed-length identity bodies. HTTPX
+                    # honors chunked framing over a simultaneous Content-Length;
+                    # accepting both would invalidate our reservation bound.
+                    if "Transfer-Encoding" in upstream.headers:
+                        with lock:
+                            state["protocol_errors"] += 1
+                        self._reject(502)
+                        return
+                    length_text = upstream.headers.get("Content-Length")
+                    if not length_text or not length_text.isdigit():
+                        self._reject(502)
+                        return
+                    length = int(length_text)
+                    if not head:
+                        content_range = upstream.headers.get("Content-Range", "")
+                        returned = re.fullmatch(r"bytes (\d+)-(\d+)/(\d+)", content_range)
+                        if (not returned or int(returned[1]) != int(match[1]) or
+                                int(returned[2]) != int(match[2]) or
+                                int(returned[2]) - int(returned[1]) + 1 != length or
+                                length > MAX_SINGLE_RANGE_BYTES):
                             self._reject(502)
                             return
-                        if upstream.headers.get("Content-Encoding", "identity").lower() != "identity":
-                            self._reject(502)
-                            return
-                        # This proxy requires fixed-length identity bodies. HTTPX
-                        # honors chunked framing over a simultaneous Content-Length;
-                        # accepting both would invalidate our reservation bound.
-                        if "Transfer-Encoding" in upstream.headers:
+                    reserved = 0
+                    if not head:
+                        with lock:
+                            # Reserve the advertised body plus one raw chunk.
+                            # A malformed Content-Length can overdeliver at
+                            # most that chunk before we stop forwarding.
+                            allowance = length + _PROXY_CHUNK_BYTES
+                            if (state["bytes"] + state["reserved"] + allowance <= transfer_limit and
+                                    (batch is None or batch.reserve(allowance))):
+                                state["reserved"] += allowance
+                                reserved = allowance
+                        if not reserved:
                             with lock:
-                                state["protocol_errors"] += 1
-                            self._reject(502)
+                                state["budget_rejected"] += 1
+                                if batch is not None and state["bytes"] + state["reserved"] + allowance > transfer_limit:
+                                    batch.reject_scene()
+                            self._reject(429)
                             return
-                        length_text = upstream.headers.get("Content-Length")
-                        if not length_text or not length_text.isdigit():
-                            self._reject(502)
-                            return
-                        length = int(length_text)
+                    accounted = 0
+                    try:
+                        self.send_response(200 if head else 206)
+                        self.send_header("Content-Length", str(length))
+                        self.send_header("Content-Type", "image/tiff")
+                        self.send_header("Accept-Ranges", "bytes")
                         if not head:
-                            content_range = upstream.headers.get("Content-Range", "")
-                            returned = re.fullmatch(r"bytes (\d+)-(\d+)/(\d+)", content_range)
-                            if (not returned or int(returned[1]) != int(match[1]) or
-                                    int(returned[2]) != int(match[2]) or
-                                    int(returned[2]) - int(returned[1]) + 1 != length or
-                                    length > MAX_SINGLE_RANGE_BYTES):
-                                self._reject(502)
-                                return
-                        reserved = 0
-                        if not head:
+                            self.send_header("Content-Range", content_range)
+                        self.end_headers()
+                        if head:
+                            return
+                        with lock:
+                            state["requests"] += 1
+                        remaining_declared = length
+                        for chunk in upstream.iter_raw(_PROXY_CHUNK_BYTES):
+                            if not chunk:
+                                continue
                             with lock:
-                                # Reserve the advertised body plus one raw chunk.
-                                # A malformed Content-Length can overdeliver at
-                                # most that chunk before we stop forwarding.
-                                allowance = length + _PROXY_CHUNK_BYTES
-                                if (state["bytes"] + state["reserved"] + allowance <= transfer_limit and
-                                        (batch is None or batch.reserve(allowance))):
-                                    state["reserved"] += allowance
-                                    reserved = allowance
-                            if not reserved:
-                                with lock:
-                                    state["budget_rejected"] += 1
-                                    if batch is not None and state["bytes"] + state["reserved"] + allowance > transfer_limit:
-                                        batch.reject_scene()
-                                self._reject(429)
-                                return
-                        accounted = 0
-                        try:
-                            self.send_response(200 if head else 206)
-                            self.send_header("Content-Length", str(length))
-                            self.send_header("Content-Type", "image/tiff")
-                            self.send_header("Accept-Ranges", "bytes")
-                            if not head:
-                                self.send_header("Content-Range", content_range)
-                            self.end_headers()
-                            if head:
-                                return
-                            with lock:
-                                state["requests"] += 1
-                            remaining_declared = length
-                            for chunk in upstream.iter_raw(_PROXY_CHUNK_BYTES):
-                                if not chunk:
-                                    continue
-                                with lock:
-                                    state["bytes"] += len(chunk)
-                                    accounted += len(chunk)
-                                    if batch is not None:
-                                        batch.consume(len(chunk), min(len(chunk), reserved))
-                                    if len(chunk) > reserved or len(chunk) > remaining_declared:
-                                        # A provider violated Content-Length. Count the bytes
-                                        # already fetched, stop forwarding, and fail the chip.
-                                        state["reserved"] -= min(len(chunk), reserved)
-                                        reserved -= min(len(chunk), reserved)
-                                        state["protocol_errors"] += 1
-                                        overrun = True
-                                    else:
-                                        state["reserved"] -= len(chunk)
-                                        reserved -= len(chunk)
-                                        overrun = False
-                                remaining_declared -= len(chunk)
-                                if overrun:
-                                    self.close_connection = True
-                                    return
-                                self.wfile.write(chunk)
-                        finally:
-                            # HTTPX may buffer a short raw chunk and then raise
-                            # before yielding it (or we may stop forwarding while
-                            # more data is already buffered). Those consumed bytes
-                            # still spend quota. Reconcile before releasing capacity.
-                            unreported = upstream.num_bytes_downloaded - accounted
-                            if unreported > 0:
-                                with lock:
-                                    state["bytes"] += unreported
-                                    released = min(unreported, reserved)
-                                    state["reserved"] -= released
-                                    reserved -= released
-                                    if batch is not None:
-                                        batch.consume(unreported, released)
-                            with lock:
-                                if upstream.num_bytes_downloaded > length:
+                                state["bytes"] += len(chunk)
+                                accounted += len(chunk)
+                                if batch is not None:
+                                    batch.consume(len(chunk), min(len(chunk), reserved))
+                                if len(chunk) > reserved or len(chunk) > remaining_declared:
+                                    # A provider violated Content-Length. Count the bytes
+                                    # already fetched, stop forwarding, and fail the chip.
+                                    state["reserved"] -= min(len(chunk), reserved)
+                                    reserved -= min(len(chunk), reserved)
                                     state["protocol_errors"] += 1
-                                if state["bytes"] > transfer_limit:
-                                    state["budget_rejected"] += 1
-                                    if batch is not None:
-                                        batch.reject_scene()
-                            if reserved:
-                                with lock:
-                                    state["reserved"] -= reserved
-                                    if batch is not None:
-                                        batch.release(reserved)
+                                    overrun = True
+                                else:
+                                    state["reserved"] -= len(chunk)
+                                    reserved -= len(chunk)
+                                    overrun = False
+                            remaining_declared -= len(chunk)
+                            if overrun:
+                                self.close_connection = True
+                                return
+                            self.wfile.write(chunk)
+                    finally:
+                        # HTTPX may buffer a short raw chunk and then raise
+                        # before yielding it (or we may stop forwarding while
+                        # more data is already buffered). Those consumed bytes
+                        # still spend quota. Reconcile before releasing capacity.
+                        unreported = upstream.num_bytes_downloaded - accounted
+                        if unreported > 0:
+                            with lock:
+                                state["bytes"] += unreported
+                                released = min(unreported, reserved)
+                                state["reserved"] -= released
+                                reserved -= released
+                                if batch is not None:
+                                    batch.consume(unreported, released)
+                        with lock:
+                            if upstream.num_bytes_downloaded > length:
+                                state["protocol_errors"] += 1
+                            if state["bytes"] > transfer_limit:
+                                state["budget_rejected"] += 1
+                                if batch is not None:
+                                    batch.reject_scene()
+                        if reserved:
+                            with lock:
+                                state["reserved"] -= reserved
+                                if batch is not None:
+                                    batch.release(reserved)
             except (httpx.HTTPError, OSError, BrokenPipeError):
                 self.close_connection = True
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    try:
-        local = {key: f"http://127.0.0.1:{server.server_port}/{key}.tif" for key in hrefs}
-        yield local, state
+    class RangeServer(ThreadingHTTPServer):
+        # Finish stream accounting before closing the shared upstream client.
+        daemon_threads = False
+
+    # The pool is scoped to these admitted assets. The original per-request
+    # client did not carry cookies from one request into the next.
+    cookies = CookieJar(policy=DefaultCookiePolicy(allowed_domains=()))
+    with httpx.Client(timeout=30, follow_redirects=False, cookies=cookies,
+                      limits=httpx.Limits(max_connections=8, max_keepalive_connections=8)) as client:
+        server = RangeServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": .05}, daemon=True)
+        thread.start()
+        try:
+            local = {key: f"http://127.0.0.1:{server.server_port}/{key}.tif" for key in hrefs}
+            yield local, state
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
         if state["protocol_errors"]:
             raise RuntimeError("COG response framing rejected")
         if batch is not None and state["budget_rejected"]:
             raise RuntimeError("COG transfer budget exceeded")
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
-

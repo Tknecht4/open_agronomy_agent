@@ -6,6 +6,8 @@ ImageryStore owns indexed integrity; no second cache or eviction policy is added
 from __future__ import annotations
 
 import json
+from contextlib import nullcontext
+from functools import partial
 import os
 from pathlib import Path
 import sqlite3
@@ -19,7 +21,8 @@ def cached_product(*, request_hash: str, provider_id: str, scene_id: str | None,
                    cache_root: str | Path, network_mode: str,
                    budget_root: str | Path | None, max_cache_bytes: int,
                    min_free_bytes: int,
-                   process: Callable[[Path, Any], dict[str, Any]]) -> dict[str, Any]:
+                   process: Callable[[Path, Any], dict[str, Any]],
+                   concurrent_publication: bool = False) -> dict[str, Any]:
     """Reuse an intact exact identity before optional dependencies or network."""
     from agronomy_agent.imagery_budget import reserve_cache, StorageRefusal, validate_policy
     validate_policy(max_cache_bytes, min_free_bytes)
@@ -44,8 +47,14 @@ def cached_product(*, request_hash: str, provider_id: str, scene_id: str | None,
             return {"status": "blocked_offline", "provider_id": provider_id,
                     "scene_id": scene_id, "request_hash": request_hash,
                     "reason": "no matching local chip"}
-        with reserve_cache(budget, max_cache_bytes=max_cache_bytes, min_free_bytes=min_free_bytes) as admission:
-            return process(root, admission)
+        reserve = partial(reserve_cache, budget, max_cache_bytes=max_cache_bytes, min_free_bytes=min_free_bytes,
+                          wait_seconds=35 if concurrent_publication else 0)
+        with reserve() as admission:
+            if not concurrent_publication:
+                return process(root, lambda: nullcontext(admission))
+        # Concurrent workers can read and prepare in memory. All cache writes
+        # still take the same interprocess lock and recheck available space.
+        return process(root, reserve)
     except StorageRefusal as exc:
         return {"status": exc.status, "reason": exc.reason, "request_hash": request_hash}
     except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:

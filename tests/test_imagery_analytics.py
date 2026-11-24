@@ -217,7 +217,7 @@ def test_cog_proxy_reserves_concurrent_ranges_before_streaming(monkeypatch):
         server_port = 1
         def __init__(self, address, handler):
             captured["handler"] = handler
-        def serve_forever(self):
+        def serve_forever(self, **kwargs):
             pass
         def shutdown(self):
             pass
@@ -287,7 +287,7 @@ def test_cog_proxy_rejects_encoding_and_stops_declared_length_overrun(monkeypatc
         server_port = 1
         def __init__(self, address, handler):
             captured["handler"] = handler
-        def serve_forever(self):
+        def serve_forever(self, **kwargs):
             pass
         def shutdown(self):
             pass

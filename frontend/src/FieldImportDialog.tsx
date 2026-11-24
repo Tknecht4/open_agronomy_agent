@@ -17,7 +17,6 @@ export default function FieldImportDialog({ farms, initialFarm, allowNetwork, on
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [names, setNames] = useState<Record<string, string>>({})
   const [farmId, setFarmId] = useState(initialFarm === 'unassigned' ? '' : initialFarm)
-  const [jurisdiction, setJurisdiction] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState<Receipt | null>(null)
@@ -39,7 +38,7 @@ export default function FieldImportDialog({ farms, initialFarm, allowNetwork, on
     setBusy(true); setError('')
     try {
       // Preserve the exact request on a failed transport; never silently create twice.
-      attempted.current ||= { operation_id: operation.current, farm_id: farmId || null, jurisdiction,
+      attempted.current ||= { operation_id: operation.current, farm_id: farmId || null,
         features: preview.features.filter(item => selected[item.id]).map(item => ({ feature_id: item.id, name: names[item.id].trim() })) }
       setReceipt(await apiPost<Receipt>(`/api/field-imports/${preview.id}/commit`, attempted.current))
       onSaved()
@@ -55,7 +54,6 @@ export default function FieldImportDialog({ farms, initialFarm, allowNetwork, on
       {busy ? <p role="status">{preview ? 'Saving reviewed fields…' : 'Reading boundaries…'}</p> : null}
       {preview ? <>
         <label>Assign to farm<select value={farmId} disabled={locked} onChange={event => setFarmId(event.target.value)}><option value="">Unassigned</option>{farms.filter(item => !item.archived).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label>Province / jurisdiction (optional)<input value={jurisdiction} disabled={locked} onChange={event => setJurisdiction(event.target.value)} placeholder="Confirm if known, e.g. Alberta" maxLength={120} /></label>
         <p>{preview.filename} · {preview.features.length} features. Identical saved boundaries are skipped on commit.</p>
         {preview.warnings.filter(warning => !warning.includes('selected by default')).map(warning => <p key={warning}>{warning}</p>)}
         <div className="farm-table-scroll"><table className="farm-field-table"><thead><tr><th>Include</th><th>Field name</th><th>Boundary</th><th>Source attributes</th></tr></thead><tbody>{preview.features.map(item => <tr key={item.id}><td><input type="checkbox" aria-label={`Import ${item.label}`} checked={Boolean(selected[item.id])} disabled={locked || item.duplicate} onChange={event => setSelected({ ...selected, [item.id]: event.target.checked })} />{item.duplicate ? <small>Duplicate</small> : null}</td><td><input aria-label={`Name for ${item.label}`} value={names[item.id]} maxLength={160} disabled={locked} onChange={event => setNames({ ...names, [item.id]: event.target.value })} /></td><td>{item.geometry_type}<small>{fieldArea(item.acres == null ? null : item.acres * 4046.8564224)}</small></td><td><details><summary>Review attributes</summary><pre>{JSON.stringify(item.properties, null, 2)}</pre></details></td></tr>)}</tbody></table></div>

@@ -44,6 +44,7 @@ describe('new field setup', () => {
     expect(screen.getByText(/map context and imagery require a valid location/i)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     expect(screen.getByText('Unknown · data only')).toBeInTheDocument()
+    expect(screen.getByText(/Region & province/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: 'North field', geometry: { kind: 'none' }, acres: '' })))
   })
@@ -58,14 +59,12 @@ describe('new field setup', () => {
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
   })
 
-  it('requires a name, retains free-form crop and jurisdiction, and accepts zero coordinates', async () => {
+  it('requires a name, retains free-form crop, and accepts zero coordinates without a jurisdiction prompt', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined)
     openWizard(onSave)
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
     fireEvent.change(screen.getByLabelText('Field name'), { target: { value: 'Equator plot' } })
     fireEvent.change(screen.getByLabelText(/Crop/), { target: { value: 'Experimental crop' } })
-    fireEvent.click(screen.getByText(/Region & province/))
-    fireEvent.change(screen.getByLabelText('Province / jurisdiction'), { target: { value: 'Unconfirmed jurisdiction' } })
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByText('Enter coordinates instead'))
     fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '0' } })
@@ -74,10 +73,10 @@ describe('new field setup', () => {
     expect(await screen.findByTestId('mock-map')).toHaveAttribute('data-kind', 'point')
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     expect(screen.getByText('Experimental crop')).toBeInTheDocument()
-    expect(screen.getByText('Unconfirmed jurisdiction')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Province / jurisdiction')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
-    expect(onSave.mock.calls[0][0]).toMatchObject({ name: 'Equator plot', crop: 'Experimental crop', jurisdiction: 'Unconfirmed jurisdiction', geometry: { kind: 'point', point: { lat: 0, lon: 0 } } })
+    expect(onSave.mock.calls[0][0]).toMatchObject({ name: 'Equator plot', crop: 'Experimental crop', jurisdiction: '', geometry: { kind: 'point', point: { lat: 0, lon: 0 } } })
   })
 
   it('rejects blank, ambiguous, and out-of-range coordinates without advancing', () => {

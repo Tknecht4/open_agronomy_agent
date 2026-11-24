@@ -377,3 +377,33 @@ def test_mounted_app_uses_standalone_worker_for_health_and_overlay(tmp_path, mon
             assert result.json()["current_geometry"] is True
     finally:
         service._worker_health.cache_clear()
+
+
+def test_ndvi_map_reprojects_the_original_preview(monkeypatch, capsys):
+    from types import SimpleNamespace
+
+    from agronomy_agent import imagery_overlay, imagery_store
+
+    png = b"verified native preview"
+    grid = {"height": 1, "width": 1}
+    store = SimpleNamespace(
+        get_by_chip_hash=lambda chip_hash: {"grid": grid},
+        preview_bytes=lambda chip_hash: png,
+    )
+
+    def reproject(image, source_grid):
+        assert image == png
+        assert source_grid == grid
+        return {"display_crs": "EPSG:3857"}
+
+    monkeypatch.setattr(imagery_store, "ImageryStore", lambda *args, **kwargs: store)
+    monkeypatch.setattr(imagery_overlay, "reproject_preview", reproject)
+    monkeypatch.setattr(sys, "argv", ["imagery_overlay", "--cache-root", "fixture", "--chip-hash", "a" * 64])
+    imagery_overlay.main()
+    overlay = json.loads(capsys.readouterr().out)
+    assert overlay["index"] == "NDVI"
+    assert overlay["color_scale"]["stops"] == [
+        {"value": -1, "color": "#b93c5f"},
+        {"value": 0, "color": "#5c912f"},
+        {"value": 1, "color": "#00e600"},
+    ]

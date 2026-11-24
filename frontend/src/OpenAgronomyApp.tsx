@@ -34,7 +34,7 @@ import { selectedConversation, rememberConversation } from './conversationSelect
 import { powerCoverage } from './weatherPresentation'
 import { useWorkspaceMenus } from './useWorkspaceMenus'
 import { WorkspaceDialog } from './WorkspaceDialog'
-import { WorkspaceNavigation } from './WorkspaceNavigation'
+import { WorkspaceNavigation, type WorkspacePage as Page } from './WorkspaceNavigation'
 import { ModelSettings, type ModelProfile } from './ModelSettings'
 import { recoverableLazy as lazy, WorkspaceSectionBoundary } from './WorkspaceSectionBoundary'
 import './FieldRecords.css'
@@ -85,7 +85,6 @@ import {
 } from './types'
 import type { PrivateKnowledgeDoc, PrivateKnowledgeInspection } from './PrivateKnowledgePanel'
 
-type Page = 'farms' | 'fields' | 'records' | 'field-editor' | 'analyze' | 'evidence' | 'benchmarks' | 'sources' | 'privacy' | 'about'
 type DemoMode = 'mock' | 'agronomic_rag' | 'baseline'
 
 type AgroclimateIndicator = {
@@ -145,7 +144,7 @@ type NasaPowerState = {
   message?: string
 }
 
-const APP_PAGES: Page[] = ['farms', 'records', 'field-editor', 'analyze', 'fields', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']
+const APP_PAGES: Page[] = ['farms', 'records', 'field-editor', 'analyze', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']
 const CANADIAN_JURISDICTIONS = new Set([
   'alberta',
   'british columbia',
@@ -183,7 +182,10 @@ const OpenAgronomyInfoPages = lazy(() => import('./OpenAgronomyInfoPages'), 'Inf
 const pageHash = (page: Page): string => `#${page}`
 
 const pageFromHash = (hash: string): Page => {
-  const candidate = hash.replace(/^#\/?/, '').split(/[/?&]/)[0]
+  const [path, params] = hash.replace(/^#\/?/, '').split('?')
+  const candidate = path.split(/[/&]/)[0]
+  // Preserve saved field links while routing their detail sections through Farms.
+  if (candidate === 'fields' || (candidate === 'records' && new URLSearchParams(params).get('field'))) return 'farms'
   return APP_PAGES.includes(candidate as Page) ? (candidate as Page) : 'farms'
 }
 
@@ -1844,12 +1846,14 @@ export function OpenAgronomyApp() {
 
   const openActiveFieldDetails = () => {
     if (!hasSavedFieldDetails) {
-      navigateToPage('fields')
+      navigateToPage('farms')
       return
     }
-    const scope = new URLSearchParams({ field: activeFieldContextId })
-    if (questionSeason) scope.set('season', String(questionSeason))
-    navigateToPage('fields', scope)
+    const scope = page === 'field-editor' ? new URLSearchParams(window.location.hash.split('?')[1]) : new URLSearchParams()
+    scope.delete('view')
+    scope.set('field', activeFieldContextId)
+    if (!scope.has('season') && questionSeason) scope.set('season', String(questionSeason))
+    navigateToPage('farms', scope)
   }
 
   const contextCompleteness = useMemo(() => {
@@ -1976,10 +1980,7 @@ export function OpenAgronomyApp() {
     const saved = loadPhase6ChatDraft(activeFieldConversationKey)
     setMessage(saved?.message || '')
     const imagery = saved?.imagery
-    const pair = imagery?.comparison
-    const hasPair = pair && typeof pair.first_job_id === 'string' && typeof pair.second_job_id === 'string'
-      && typeof pair.geometry_revision_id === 'string'
-    setDraftImagery(typeof imagery?.jobId === 'string' || hasPair ? imagery : undefined)
+    setDraftImagery(typeof imagery?.jobId === 'string' ? { jobId: imagery.jobId, season: imagery.season } : undefined)
     setDraftHydratedFor(activeFieldConversationKey)
   }, [activeFieldConversationKey])
 
@@ -2198,7 +2199,6 @@ export function OpenAgronomyApp() {
     message,
     mode,
     imagery_job_id: selectedImagery?.jobId,
-    imagery_comparison: selectedImagery?.comparison,
     model_id: mode === 'mock' || modelId === 'mock' ? undefined : modelId,
     rag_config: mode === 'baseline' ? undefined : ragConfig,
     max_tokens: selectedModelProfile?.max_tokens || 240,
@@ -3469,11 +3469,14 @@ export function OpenAgronomyApp() {
       <WorkspacePerformancePanel />
       <WorkspaceNavigation page={page} onNavigate={navigateToPage} answerCapability={answerCapability} mobile={!wideWorkspace} />
       <div className="workspace-content">
-      {!['farms', 'fields', 'records'].includes(page) ? <header className="workspace-topbar">
+      {page !== 'farms' && page !== 'records' ? <header className="workspace-topbar">
         <div>
           <h1>{page === 'analyze' ? (fieldName ? `Questions · ${fieldName}` : 'Questions') : page === 'field-editor' ? 'Edit field' : page === 'sources' ? 'Data management' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
-        {page === 'analyze' || page === 'field-editor' ? <button className="primary-button" type="button" onClick={() => { setNewFieldFarmId(null); setNewFieldOpen(true) }} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button> : null}
+        {page === 'analyze' || page === 'field-editor' ? <div className="farm-actions">
+          {page === 'field-editor' && hasSavedFieldDetails ? <button type="button" onClick={openActiveFieldDetails}>Back to field</button> : null}
+          <button className="primary-button" type="button" onClick={() => { setNewFieldFarmId(null); setNewFieldOpen(true) }} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button>
+        </div> : null}
       </header> : null}
       {page === 'analyze' ? <div className="workspace-context-toolbar">
         <label className="active-field-select"><MapPin size={16} /><span className="sr-only">Active field</span><select aria-label="Active field" value={activeFieldContextId || (scenarioId ? `sample:${scenarioId}` : '')} disabled={!fieldsHydrated || savingField} onChange={event => {
@@ -3489,12 +3492,18 @@ export function OpenAgronomyApp() {
       {error ? <div className="demo-alert" role="alert">{error}</div> : null}
 
       <WorkspaceSectionBoundary key={page} label="This page">
-      {page === 'farms' || page === 'fields' || page === 'records' ? <Suspense fallback={<p role="status">Opening farm workspace…</p>}><FarmWorkspace mode={page} allowNetwork={networkMode === 'online'} refreshKey={storedFields.map(item => `${item.id}:${item.updatedAt || ''}`).join('|')}
+      {page === 'farms' || page === 'records' ? <Suspense fallback={<p role="status">Opening farm workspace…</p>}><FarmWorkspace mode={page} allowNetwork={networkMode === 'online'} refreshKey={storedFields.map(item => `${item.id}:${item.updatedAt || ''}`).join('|')}
         onFieldsImported={() => { void apiGet<DemoFieldsResponse>('/api/demo/fields').then(result => setStoredFields(result.fields)).catch(cause => setError(String(cause))) }}
         onAddField={farmId => { setNewFieldFarmId(farmId); setNewFieldOpen(true) }}
         onGeneralQuestion={() => { startNewField(); setQuestionSeason(null); navigateToPage('analyze') }}
-        onEditField={id => { const selected = storedFields.find(item => (item.field_context_id || item.id) === id); if (selected) { loadStoredField(selected); setFieldTab('details'); navigateToPage('field-editor') } else setError('Reload the workspace to load this field before editing.') }}
-        onAsk={(id, question, season, imageryJobId, comparison) => {
+        onEditField={id => {
+          const selected = storedFields.find(item => (item.field_context_id || item.id) === id)
+          if (!selected) { setError('Reload the workspace to load this field before editing.'); return }
+          loadStoredField(selected)
+          setFieldTab('details')
+          navigateToPage('field-editor', new URLSearchParams(window.location.hash.split('?')[1]))
+        }}
+        onAsk={(id, question, season, imageryJobId) => {
           const selected = storedFields.find(item => (item.field_context_id || item.id) === id)
           if (!selected) {
             setError('Reload the workspace to load this field before asking.')
@@ -3504,7 +3513,7 @@ export function OpenAgronomyApp() {
           setQuestionSeason(season ?? null)
           const fieldKey = storedFieldConversationKey(id)
           const key = freshConversationKey(fieldKey)
-          if (question) savePhase6ChatDraft(key, question, { imagery: comparison ? { comparison, season } : imageryJobId ? { jobId: imageryJobId, season } : undefined })
+          if (question) savePhase6ChatDraft(key, question, { imagery: imageryJobId ? { jobId: imageryJobId, season } : undefined })
           rememberConversation(fieldKey, key)
           setActiveFieldConversationKey(key)
           setSessionId('')
@@ -4425,10 +4434,7 @@ export function OpenAgronomyApp() {
                 {!selectedModelReady && currentReadiness?.requires_model !== false && selectedModelProfile?.local_detail ? <p>{selectedModelProfile.local_detail}</p> : null}
               </details>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
-              {showModelReadinessNotice && selectedImagery?.comparison ? <div className="model-setup-notice" role="status">
-                {currentReadiness?.requires_model === false ? 'The saved imagery comparison can run locally without a model.' : 'Checking the two saved analyses.'}
-              </div> : null}
-              {showModelReadinessNotice && !selectedImagery?.comparison ? <div className="model-setup-notice" role="status"><strong>{!message.trim() ? 'Model optional for calculations' : checkingTurnReadiness ? 'Checking calculation support' : currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{!message.trim() ? 'Enter a question to check local calculation support, or install a model for generated answers.' : currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : checkingTurnReadiness ? 'Checking whether this question can use a local calculation.' : 'Choose an installed model in Model settings.'}</p></div> : null}
+              {showModelReadinessNotice ? <div className="model-setup-notice" role="status"><strong>{!message.trim() ? 'Model optional for calculations' : checkingTurnReadiness ? 'Checking calculation support' : currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{!message.trim() ? 'Enter a question to check local calculation support, or install a model for generated answers.' : currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : checkingTurnReadiness ? 'Checking whether this question can use a local calculation.' : 'Download or select a model in Model settings.'}</p></div> : null}
               {runtimeAccess === 'unavailable' ? <button type="button" onClick={() => void recoverRuntime()}>Retry local runtime</button> : null}
             </div>
 
@@ -4501,16 +4507,15 @@ export function OpenAgronomyApp() {
                   ? 'Describe an observation or ask about this field…'
                   : 'What would you like to understand?'}
                 rows={2}
-                readOnly={Boolean(selectedImagery?.comparison)}
               />
               {selectedImagery ? <div className="composer-actions">
-                <span>{selectedImagery.comparison ? 'Satellite comparison attached' : 'Satellite analysis attached'}</span>
+                <span>Satellite analysis attached</span>
                 <button type="button" className="composer-reference" disabled={isAnalyzing} onClick={() => setDraftImagery(undefined)}>Remove analysis</button>
               </div> : null}
               <div className="composer-actions">
                 <button type="button" className="composer-reference" onClick={() => navigateToPage('sources')}><Upload size={16} /> Add reference{privateKnowledge.length ? ` (${privateKnowledge.length})` : ''}</button>
                 {sessionId ? <button type="button" className="icon-button" aria-label="Refresh conversation" disabled={isAnalyzing} onClick={() => void refreshConversation()}><RefreshCw size={15} /></button> : null}
-                <ModelSettings profiles={modelProfiles} modelId={modelId} onSelect={setModelId} runtimeAccess={runtimeAccess} busy={isAnalyzing} mobile={!wideWorkspace} viewKey={`${page}:${workspaceView}:${activeFieldContextId}`} />
+                <ModelSettings profiles={modelProfiles} modelId={modelId} onSelect={setModelId} onProfilesChange={setModelProfiles} runtimeAccess={runtimeAccess} busy={isAnalyzing} mobile={!wideWorkspace} viewKey={`${page}:${workspaceView}:${activeFieldContextId}`} />
                 <button type="submit" disabled={isAnalyzing || savingField || loadingConversation || !fieldsHydrated || questionContextRequiresSave || !message.trim() || !answerCapability.canGenerateAnswer || !questionModelReady}>
                   <Send size={17} /> {isAnalyzing ? 'Working' : 'Ask'}
                 </button>
@@ -4647,7 +4652,6 @@ function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknow
   const liveContext = Array.isArray(receipt?.live_context) ? receipt.live_context : []
   const retainedContext = Array.isArray(receipt?.retained_context) ? receipt.retained_context : []
   const imagery = receipt?.imagery_observation as Record<string, unknown> | undefined
-  const comparison = receipt?.imagery_comparison as { overview?: string } | undefined
   const imageryLocation = imagery?.support_kind === 'field_polygon' ? 'boundary' : 'saved location'
   const indices = imagery?.indices as Record<string, { mean: number | null; valid_area_m2: number }> | undefined
   const field = receipt?.field && typeof receipt.field === 'object' ? receipt.field as Record<string, unknown> : {}
@@ -4658,9 +4662,6 @@ function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknow
   return (
     <section className="compiled-field-context" data-testid="compiled-field-context">
       <p>{fieldLabel || 'No bounded field details were supplied for this turn.'}</p>
-      {typeof comparison?.overview === 'string' ? <article>
-        <strong>Two-date satellite comparison</strong><p>{comparison.overview}</p>
-      </article> : null}
       {imagery ? <article>
         <strong>Selected satellite analysis</strong>
         <p>{String(imagery.scene_id)} · {String(imagery.acquired_at).slice(0, 10)} · {String(imagery.resolution_m)} m grid</p>

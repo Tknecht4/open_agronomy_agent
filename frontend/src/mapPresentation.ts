@@ -5,7 +5,8 @@ export type MapLayerChoice = {
 }
 export type MapPreferences = { style: BasemapStyle; layers: string[]; opacity: number }
 export const MAP_PREFERENCES_KEY = 'open-agronomy-agent.map-presentation.v1'
-export const DEFAULT_MAP_LAYERS = ['canada_ecozones', 'nrcs_mlra', 'epa_l3_us']
+export const DEFAULT_MAP_LAYERS: string[] = []
+const LEGACY_DEFAULT_MAP_LAYERS = ['canada_ecozones', 'nrcs_mlra', 'epa_l3_us']
 export const BASEMAPS = {
   satellite: { label: 'Satellite', description: 'See field edges and land cover.',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -21,15 +22,21 @@ export function readMapPreferences(): MapPreferences {
   try {
     const value = JSON.parse(localStorage.getItem(MAP_PREFERENCES_KEY) || 'null')
     if (!value || typeof value !== 'object') return defaults
+    const layerIds = Array.isArray(value.layers)
+      ? [...new Set<string>(value.layers.filter((id: unknown) => typeof id === 'string' && /^[a-z0-9_]+$/.test(id)))].slice(0, 4)
+      : defaults.layers
+    const hasLegacyDefaults = value.layerSelectionVersion === undefined
+      && layerIds.length === LEGACY_DEFAULT_MAP_LAYERS.length
+      && LEGACY_DEFAULT_MAP_LAYERS.every(id => layerIds.includes(id))
     return {
       style: ['satellite', 'streets', 'simple'].includes(value.style) ? value.style : defaults.style,
-      layers: Array.isArray(value.layers) ? [...new Set(value.layers.filter((id: unknown) => typeof id === 'string' && /^[a-z0-9_]+$/.test(id)))].slice(0, 4) as string[] : defaults.layers,
+      layers: hasLegacyDefaults ? defaults.layers : layerIds,
       opacity: typeof value.opacity === 'number' && Number.isFinite(value.opacity) ? Math.max(10, Math.min(70, value.opacity)) : defaults.opacity,
     }
   } catch { return defaults }
 }
 export function saveMapPreferences(value: MapPreferences) {
-  try { localStorage.setItem(MAP_PREFERENCES_KEY, JSON.stringify(value)) } catch { /* View controls still work without browser storage. */ }
+  try { localStorage.setItem(MAP_PREFERENCES_KEY, JSON.stringify({ ...value, layerSelectionVersion: 2 })) } catch { /* View controls still work without browser storage. */ }
 }
 export function mapLayerLabel(layer: Pick<MapLayerChoice, 'id' | 'label'>): string {
   const names: Record<string, string> = {

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LeafletFieldMap } from './LeafletFieldMap'
+import { MAP_PREFERENCES_KEY } from './mapPresentation'
 import { estimatePolygonAcres, type FieldGeometry, type MapMode } from './fieldGeometry'
 
 const leaf = vi.hoisted(() => ({
@@ -167,6 +168,23 @@ describe('field map interactions', () => {
     expect(leaf.maps[1].fitBounds).toHaveBeenCalledOnce()
   })
 
+  it('fits a field from the farm overview and refits it on another selection', () => {
+    const base = { ...props, mode: 'inspect' as const, collectionKey: 'farm-a', collectionMaxZoom: 13, onGeometryChange: vi.fn(),
+      fieldCollection: [{ id: 'field-a', name: 'Field A', geometry: polygon }] }
+    const { rerender } = render(<LeafletFieldMap {...base} fieldKey="farm" geometry={empty} />)
+    const map = leaf.maps[0]
+    expect(map.fitBounds).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ maxZoom: 13 }))
+    rerender(<LeafletFieldMap {...base} fieldKey="field-a" geometry={polygon} focusRequest={1} />)
+    expect(map.fitBounds).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ maxZoom: 16 }))
+    fireEvent.click(screen.getByRole('button', { name: 'Fit farm' }))
+    expect(map.fitBounds).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ maxZoom: 13 }))
+    rerender(<LeafletFieldMap {...base} fieldKey="field-a" geometry={polygon} focusRequest={2} />)
+    expect(map.fitBounds).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ maxZoom: 16 }))
+    rerender(<LeafletFieldMap {...base} fieldKey="farm" geometry={empty} />)
+    expect(map.fitBounds).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ maxZoom: 13 }))
+    expect(leaf.maps).toHaveLength(1)
+  })
+
   it('renders an untrusted field name as text in the point tooltip', () => {
     const fieldLabel = '<img src=x onerror=alert(1)> Field'
     render(<LeafletFieldMap {...props} fieldLabel={fieldLabel} mode="inspect" geometry={{ kind: 'point', point: points[0] }} onGeometryChange={vi.fn()} />)
@@ -212,6 +230,7 @@ describe('field map interactions', () => {
       ? Promise.resolve({ ok: true, json: async () => catalog }) : regionFetch(url))
     vi.stubGlobal('fetch', fetchMock)
     render(<LeafletFieldMap {...props} mode="inspect" geometry={empty} onGeometryChange={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Canada ecozones' }))
     await waitFor(() => expect(regionFetch).toHaveBeenCalledTimes(1))
     act(() => {
       leaf.maps[0].fire('moveend')
@@ -231,6 +250,7 @@ describe('field map interactions', () => {
     const map = leaf.maps[0]
     const closeBounds = map.getBounds
     map.getBounds = () => ({ getWest: () => -130, getEast: () => -70, getSouth: () => 37, getNorth: () => 65 })
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Canada ecozones' }))
     await screen.findByText('Zoom in for detailed context')
     expect(request.mock.calls.some(([url]) => String(url).includes('/api/geo/regions'))).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Retry sources' }))
@@ -277,8 +297,13 @@ describe('field map interactions', () => {
     vi.stubGlobal('fetch', vi.fn((url) => String(url) === '/api/geo/layers'
       ? Promise.resolve({ ok: true, json: async () => catalog }) : regionFetch()))
     render(<LeafletFieldMap {...props} mode="inspect" geometry={empty} onGeometryChange={vi.fn()} />)
+    const layer = await screen.findByRole('checkbox', { name: 'Canada ecozones' })
+    expect(layer).not.toBeChecked()
+    expect(regionFetch).not.toHaveBeenCalled()
+    fireEvent.click(layer)
     await waitFor(() => expect(regionFetch).toHaveBeenCalledOnce())
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Canada ecozones' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reset map display' }))
+    expect(layer).not.toBeChecked()
     act(() => leaf.maps[0].fire('moveend'))
     await act(async () => { release({ ok: true, json: async () => ({ feature_collection: { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Polygon', coordinates: [] }, properties: { layer_id: 'canada_ecozones' } }] } }) }); await request })
     expect(regionFetch).toHaveBeenCalledOnce()
@@ -298,10 +323,26 @@ describe('field map interactions', () => {
     expect(cancel).toHaveBeenCalledOnce()
   })
 
+  it('clears saved legacy defaults on upgrade and retains subsequent explicit layer selections', async () => {
+    window.localStorage.setItem(MAP_PREFERENCES_KEY, JSON.stringify({
+      style: 'streets', layers: ['canada_ecozones', 'nrcs_mlra', 'epa_l3_us'], opacity: 55,
+    }))
+    const mapProps = { ...props, mode: 'inspect' as const, geometry: empty, onGeometryChange: vi.fn() }
+    const first = render(<LeafletFieldMap {...mapProps} />)
+    const layer = await screen.findByRole('checkbox', { name: 'Canada ecozones' })
+    expect(layer).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Streets' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(layer)
+    first.unmount()
+    render(<LeafletFieldMap {...mapProps} />)
+    expect(await screen.findByRole('checkbox', { name: 'Canada ecozones' })).toBeChecked()
+  })
+
   it('changes layer shading without rebuilding source geometry', async () => {
     const features = [{ type: 'Feature', geometry: { type: 'Polygon', coordinates: [] }, properties: { layer_id: 'canada_ecozones', name: 'Zone' } }]
     vi.stubGlobal('fetch', vi.fn(async (url) => ({ ok: true, json: async () => String(url) === '/api/geo/layers' ? catalog : { feature_collection: { type: 'FeatureCollection', features } } })))
     render(<LeafletFieldMap {...props} mode="inspect" geometry={polygon} onGeometryChange={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Canada ecozones' }))
     await waitFor(() => expect(leaf.regions).toHaveLength(1))
     fireEvent.change(screen.getByRole('slider', { name: 'Layer shading' }), { target: { value: '60' } })
     expect(leaf.regions).toHaveLength(1)

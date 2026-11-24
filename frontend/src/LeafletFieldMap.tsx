@@ -33,6 +33,7 @@ type LeafletFieldMapProps = {
   analyticalOverlay?: { url: string; bounds: [[number, number], [number, number]]; opacity: number }
   fieldCollection?: MapField[]
   collectionKey?: string
+  collectionMaxZoom?: number
   onSelectField?: (id: string) => void
   viewportKey?: string
   mode: MapMode
@@ -45,6 +46,8 @@ type LeafletFieldMapProps = {
   onStatusChange: (status: string) => void
   /** Stable identity of the selected field. Changing it fits that field once. */
   fieldKey?: string
+  /** Changing this also fits the field when its identity stays the same. */
+  focusRequest?: number
   onFinishBoundary?: () => void
   onCancelDrawing?: () => void
   allowNetwork?: boolean
@@ -80,7 +83,7 @@ export function LeafletFieldMap({
   onCancelDrawing,
   allowNetwork = true,
   onLayerSelectionChange,
-  fieldCollection = noFields, collectionKey, onSelectField, viewportKey, analyticalOverlay,
+  fieldCollection = noFields, collectionKey, collectionMaxZoom = 16, onSelectField, viewportKey, analyticalOverlay, focusRequest,
 }: LeafletFieldMapProps) {
   const [viewportFeatures, setViewportFeatures] = useState<GeoJsonFeatureCollection | null>(null)
   const [drawingFinished, setDrawingFinished] = useState(false)
@@ -136,6 +139,7 @@ export function LeafletFieldMap({
   const onGeometryChangeRef = useRef(onGeometryChange)
   const onStatusChangeRef = useRef(onStatusChange)
   const fittedFieldKeyRef = useRef<string | null>(null)
+  const lastFocusRequestRef = useRef(focusRequest)
   const selectedFieldKeyRef = useRef(fieldKey ?? scenarioId)
   const previousModeRef = useRef(mode)
   const drawingFinishedRef = useRef(false)
@@ -325,6 +329,7 @@ export function LeafletFieldMap({
       mapRef.current = null
       drawLayerRef.current = null
       collectionLayerRef.current = null
+      collectionFitRef.current = null
       regionLayersRef.current.clear()
       regionStyleTargetsRef.current = []
       basemapLayersRef.current.clear()
@@ -436,9 +441,7 @@ export function LeafletFieldMap({
           heading.textContent = name
           const caption = document.createElement('small')
           caption.textContent = `${system}${code ? ` · ${code}` : ''}`
-          const note = document.createElement('p')
-          note.textContent = 'Mapped context, not a field measurement.'
-          popup.append(heading, caption, note)
+          popup.append(heading, caption)
           const source = safeSourceUrl(String(properties.source_url || ''))
           if (source) {
             const link = document.createElement('a')
@@ -539,7 +542,7 @@ export function LeafletFieldMap({
     const positions = fieldCollection.flatMap(field => field.geometry.kind === 'point' ? [field.geometry.point] : boundaryPoints(field.geometry))
     if (!positions.length) return
     const bounds = L.latLngBounds(positions.map(toLatLng))
-    if (bounds.isValid()) map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 16, padding: [28, 28] })
+    if (bounds.isValid()) map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: collectionMaxZoom, padding: [28, 28] })
   }
 
   useEffect(() => {
@@ -549,18 +552,18 @@ export function LeafletFieldMap({
     for (const field of fieldCollection) {
       const value = fieldGeometryGeoJson(field.geometry)
       if (!value) continue
-      const label = document.createElement('span')
-      label.textContent = field.name
       L.geoJSON(value as GeoJSON.Geometry, {
         style: { color: field.id === fieldKey ? '#ffdf77' : '#bbd7bd', weight: field.id === fieldKey ? 3 : 2, fillOpacity: field.id === fieldKey ? 0.22 : 0.07 },
         pointToLayer: (_feature, point) => L.circleMarker(point, { radius: 7, color: '#ffdf77', fillOpacity: 0.8 }),
-      }).bindTooltip(label, { permanent: fieldCollection.length <= 50, direction: 'center', className: 'farm-field-label' }).on('click', () => selectFieldRef.current?.(field.id)).addTo(layer)
+      }).on('click', () => selectFieldRef.current?.(field.id)).addTo(layer)
     }
-    if (collectionKey && collectionFitRef.current !== collectionKey && fieldCollection.length) {
+    if (geometryRef.current.kind !== 'none') {
+      collectionFitRef.current = null
+    } else if (collectionKey && collectionFitRef.current !== collectionKey && fieldCollection.length) {
       collectionFitRef.current = collectionKey
       fitAllFields()
     }
-  }, [fieldCollection, fieldKey, collectionKey])
+  }, [fieldCollection, fieldKey, collectionKey, collectionMaxZoom, geometry.kind])
 
   useEffect(() => {
     const map = mapRef.current
@@ -590,11 +593,16 @@ export function LeafletFieldMap({
 
   useEffect(() => {
     const key = fieldKey ?? scenarioId
-    if (geometry.kind === 'none' || fittedFieldKeyRef.current === key) return
+    if (geometry.kind === 'none') {
+      if (fittedFieldKeyRef.current !== key) fittedFieldKeyRef.current = null
+      return
+    }
+    if (fittedFieldKeyRef.current === key && lastFocusRequestRef.current === focusRequest) return
     fittedFieldKeyRef.current = key
+    lastFocusRequestRef.current = focusRequest
     fitField()
     // Geometry edits must not recenter the map. A new field identity may.
-  }, [fieldKey, scenarioId, geometry.kind])
+  }, [fieldKey, scenarioId, geometry.kind, focusRequest])
 
   const undoLastVertex = () => {
     const field = geometryRef.current

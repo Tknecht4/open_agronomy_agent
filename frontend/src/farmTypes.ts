@@ -19,6 +19,7 @@ export type FarmOverview = {
 }
 export type SourceState = { freshness?: string; refresh_status?: string; last_success?: SourceState; availability: string; fetched_at?: string; observed_at?: string; message?: string; values?: unknown }
 export type FieldSummary = FarmField & {
+  mapped_location?: { status: string; label: string; message?: string; country?: string; province_state?: string; county_rm?: string }
   latest_image?: { job_id: string; acquired_at: string | null; provider_id: string; scene_id: string; current_geometry: boolean; completed_at: string } | null
   location_confirmation?: unknown
   confirmed_facts?: { province_state?: string | null }

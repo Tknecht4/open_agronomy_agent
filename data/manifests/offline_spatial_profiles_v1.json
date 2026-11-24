@@ -133,6 +133,99 @@
         }
       ],
       "boundary": "These official boundary and ecological-classification layers organize geographic and source-routing context only. Their IDs, names, and hierarchy fields may help retrieve appropriately scoped documents, but they are not field truth, legal location proof, crop-production evidence, a diagnosis, or management authority."
+    },
+    {
+      "id": "field-location-v1",
+      "title": "Canadian and U.S. administrative boundaries",
+      "status": "candidate_local_install",
+      "source_registry_path": "data/manifests/administrative_geospatial_sources.json",
+      "pack": {
+        "directory": "spatial-pack/field-location-v1",
+        "manifest": "field_location_pack_manifest.json",
+        "install_receipt": "install_receipt.json",
+        "minimum_free_bytes": 1200000000,
+        "estimated_raw_bytes": 147627433,
+        "estimated_runtime_database_bytes": 220000000
+      },
+      "sources": [
+        {
+          "source_id": "ca_statcan_2021_provinces_territories",
+          "layer_id": "ca_statcan_2021_provinces_territories",
+          "source_record_id": "92-160-X2021001",
+          "download_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lpr_000a21a_e.zip",
+          "source_entry_sha256": "b97c42ca79bfbebed9f34e73a68addd084ac4ba176b3eeebced6c8f7f47404ae",
+          "expected_raw_bytes": 2777186,
+          "expected_raw_sha256": "c4dd830f8a6e9b4a1d80e71bc830ae319aaab37785cc92185e830f5e3da4714e",
+          "state_paths": {
+            "raw": "raw/canada_context_boundaries/ca_statcan_2021_provinces_territories/source.zip",
+            "lineage": "raw/canada_context_boundaries/ca_statcan_2021_provinces_territories/source.zip.lineage.json",
+            "derived": "derived/geo_layers/ca_statcan_2021_provinces_territories.sqlite3",
+            "derived_manifest": "derived/geo_layers/ca_statcan_2021_provinces_territories_manifest.json"
+          },
+          "download_mirror": "https://data.source.coop/dataforcanada/d4c-datapkg-statistical/archive/statcan/boundaries/2021/lpr_000a21a_e.zip"
+        },
+        {
+          "source_id": "ca_statcan_2021_census_subdivisions",
+          "layer_id": "ca_statcan_2021_census_subdivisions",
+          "source_record_id": "92-160-X2021001",
+          "download_url": "https://data.source.coop/dataforcanada/d4c-datapkg-statistical/archive/statcan/boundaries/2021/lcsd000a21a_e.zip",
+          "source_entry_sha256": "3fcf6186e87333cdf00282741daecdabff95505cdd424a2fd264569dd0f53948",
+          "expected_raw_bytes": 40389252,
+          "expected_raw_sha256": "79a6b5022e33f2c89ead0356bf9b51c645b47684f643e916700e97842a69dbb2",
+          "state_paths": {
+            "raw": "raw/administrative/ca_statcan_2021_census_subdivisions/source.zip",
+            "lineage": "raw/administrative/ca_statcan_2021_census_subdivisions/source.zip.lineage.json",
+            "derived": "derived/geo_layers/ca_statcan_2021_census_subdivisions.sqlite3",
+            "derived_manifest": "derived/geo_layers/ca_statcan_2021_census_subdivisions_manifest.json"
+          }
+        },
+        {
+          "source_id": "ab_municipal_districts",
+          "layer_id": "ab_municipal_districts",
+          "source_record_id": "1d1376c6-8bf8-4c3a-a87e-6b176d8c6a39",
+          "download_url": "https://geospatial.alberta.ca/titan/rest/services/boundaries/municipal_boundary_public/MapServer/3/query?where=1%3D1&outFields=*&outSR=4326&f=geojson",
+          "source_entry_sha256": "c0606262ddaf75d66397377bd6d4213b9aa30a9da46e1db1d35a7e0ef43d8b99",
+          "expected_raw_bytes": 11125484,
+          "expected_raw_sha256": "8963ecdd208efe2f8f3e3f8a015cf70b7746b6d000e95f6f379139aeec29d43a",
+          "state_paths": {
+            "raw": "raw/administrative/ab_municipal_districts/source.geojson",
+            "lineage": "raw/administrative/ab_municipal_districts/source.geojson.lineage.json",
+            "derived": "derived/geo_layers/ab_municipal_districts.sqlite3",
+            "derived_manifest": "derived/geo_layers/ab_municipal_districts_manifest.json"
+          }
+        },
+        {
+          "source_id": "us_tiger_2026_states",
+          "layer_id": "us_tiger_2026_states",
+          "source_record_id": "TIGER2026/STATE",
+          "download_url": "https://www2.census.gov/geo/tiger/TIGER2026/STATE/tl_2026_us_state.zip",
+          "source_entry_sha256": "7c8817608d7c94f258d2a93b1137aeec51bd0e567b8d7e827c06c64de0181515",
+          "expected_raw_bytes": 9957057,
+          "expected_raw_sha256": "2e17ea40dff3e00163eec87a26efa0b0ff7e8fe364a191bf1a7754dcb49ea326",
+          "state_paths": {
+            "raw": "raw/administrative/us_tiger_2026_states/source.zip",
+            "lineage": "raw/administrative/us_tiger_2026_states/source.zip.lineage.json",
+            "derived": "derived/geo_layers/us_tiger_2026_states.sqlite3",
+            "derived_manifest": "derived/geo_layers/us_tiger_2026_states_manifest.json"
+          }
+        },
+        {
+          "source_id": "us_tiger_2026_counties",
+          "layer_id": "us_tiger_2026_counties",
+          "source_record_id": "TIGER2026/COUNTY",
+          "download_url": "https://www2.census.gov/geo/tiger/TIGER2026/COUNTY/tl_2026_us_county.zip",
+          "source_entry_sha256": "b0c1913c1fa7cf3ce43d20a9f87aa5dad4c71b526429247f3675698e38cde224",
+          "expected_raw_bytes": 83378454,
+          "expected_raw_sha256": "b527c9ba7aeb8f17ef118f026eae5e5a938aa1d00b873bc32342d0dce59321c0",
+          "state_paths": {
+            "raw": "raw/administrative/us_tiger_2026_counties/source.zip",
+            "lineage": "raw/administrative/us_tiger_2026_counties/source.zip.lineage.json",
+            "derived": "derived/geo_layers/us_tiger_2026_counties.sqlite3",
+            "derived_manifest": "derived/geo_layers/us_tiger_2026_counties_manifest.json"
+          }
+        }
+      ],
+      "boundary": "Offline administrative labels and routing for saved geometry."
     }
   ]
 }

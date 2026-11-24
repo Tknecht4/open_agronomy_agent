@@ -7,8 +7,9 @@ signed URLs and tokens are never returned or logged.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 import math
+import re
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -24,6 +25,113 @@ _EARTH_ASSET_HOST = "e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com"
 _PC_ASSET_HOST = "hls2euwest.blob.core.windows.net"
 _MAX_JSON_BYTES = 2 * 1024 * 1024
 _MAX_RANGE_BYTES = 16 * 1024
+MAX_SCENE_CLOUD_PERCENT = 70
+MAX_SERIES_SCENES = 320
+_SERIES_PAGE_SIZE = 64
+_MAX_SERIES_PAGES = 8
+HLS_SERIES_PROVIDERS = {
+    "hls2-s30": "hls-s30-planetary-computer",
+    "hls2-l30": "hls-l30-planetary-computer",
+}
+
+
+def scene_cloud_percent(value: Any) -> float | None:
+    return float(value) if type(value) in (int, float) and 0 <= value <= 100 else None
+
+
+def scene_cloud_exceeds_limit(value: Any) -> bool:
+    cloud = scene_cloud_percent(value)
+    return cloud is not None and cloud > MAX_SCENE_CLOUD_PERCENT
+
+
+_SERIES_BANDS = ("B02", "B03", "B04", "B05", "B06", "B07", "B8A", "B11", "B12", "Fmask")
+
+
+def _series_features(body: dict[str, Any]) -> list[dict[str, Any]] | None:
+    features = []
+    tokens = set()
+    for _ in range(_MAX_SERIES_PAGES):
+        payload = _request_json(_PLANETARY_COMPUTER, body=body)
+        page, links = payload.get("features"), payload.get("links", [])
+        if not isinstance(page, list) or len(page) > _SERIES_PAGE_SIZE or not isinstance(links, list):
+            raise RuntimeError("invalid imagery catalog response")
+        features.extend(page)
+        if len(features) > MAX_SERIES_SCENES:
+            return None
+        following = [link for link in links if isinstance(link, dict) and link.get("rel") == "next"]
+        if not following:
+            return features
+        if len(following) != 1:
+            raise RuntimeError("invalid imagery catalog continuation")
+        link = following[0]
+        values = link.get("body")
+        token = values.get("token") if isinstance(values, dict) else None
+        if (link.get("href") != _PLANETARY_COMPUTER or link.get("method") != "POST"
+                or not isinstance(token, str) or not re.fullmatch(r"next:[A-Za-z0-9_.:-]{1,256}", token)
+                or token in tokens or not page):
+            raise RuntimeError("invalid imagery catalog continuation")
+        # Only the cursor comes from the link. Keep the original geometry,
+        # dates, cloud filter and endpoint on every page.
+        tokens.add(token)
+        body = {**body, "token": token}
+    return None
+
+
+def search_hls_series(geometry: dict, start_date: str, end_date: str) -> dict[str, Any]:
+    polygon, _ = _valid_search_geometry(geometry)
+    start, end = _dates(start_date, end_date)
+    features = _series_features({
+        "collections": list(HLS_SERIES_PROVIDERS),
+        "intersects": polygon,
+        "datetime": f"{start}/{end}",
+        "query": {"eo:cloud_cover": {"lte": MAX_SCENE_CLOUD_PERCENT}},
+        "fields": {"include": ["id", "collection", "properties.datetime", "properties.created",
+                               "properties.eo:cloud_cover", *(f"assets.{key}" for key in _SERIES_BANDS)],
+                   "exclude": ["geometry", "bbox", "links"]},
+        "limit": _SERIES_PAGE_SIZE,
+    })
+    if features is None:
+        return {"status": "range_too_large", "scenes": []}
+    scenes = {}
+    for item in features:
+        if not isinstance(item, dict) or not isinstance(item.get("properties"), dict):
+            raise RuntimeError("invalid imagery catalog item")
+        collection = item.get("collection")
+        item_id = item.get("id")
+        if not isinstance(collection, str) or collection not in HLS_SERIES_PROVIDERS or not isinstance(item_id, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,160}", item_id):
+            raise RuntimeError("invalid HLS scene identity")
+        props = item["properties"]
+        cloud = scene_cloud_percent(props.get("eo:cloud_cover"))
+        if cloud is None or cloud > MAX_SCENE_CLOUD_PERCENT:
+            continue
+        acquired = props.get("datetime")
+        if not isinstance(acquired, str) or len(acquired) > 40:
+            raise RuntimeError("invalid HLS acquisition time")
+        instant = datetime.fromisoformat(acquired.replace("Z", "+00:00"))
+        if instant.tzinfo is None:
+            raise RuntimeError("invalid HLS acquisition timezone")
+        utc = instant.astimezone(timezone.utc)
+        if not start_date <= utc.date().isoformat() <= end_date:
+            raise RuntimeError("imagery catalog returned dates outside the requested range")
+        scene_id = f"{collection}:{item_id}"
+        scene = {"scene_id": scene_id, "provider_id": HLS_SERIES_PROVIDERS[collection],
+                 "acquired_at": utc.isoformat(timespec="microseconds"), "scene_cloud_percent": cloud}
+        # Retain only unsigned asset metadata for the internal worker handoff.
+        assets = {}
+        raw_assets = item.get("assets")
+        for key, asset in (raw_assets if isinstance(raw_assets, dict) else {}).items():
+            if not isinstance(asset, dict):
+                continue
+            href = _clean_asset(asset.get("href"), scene["provider_id"])
+            if href and key in _SERIES_BANDS:
+                assets[key] = {k: asset.get(k) for k in ("type", "raster:bands")} | {"href": href}
+        if assets:
+            scene["catalog_item"] = {"id": item_id, "collection": collection, "assets": assets,
+                                     "properties": {k: props.get(k) for k in ("datetime", "created", "eo:cloud_cover")}}
+        if scenes.setdefault(scene_id, scene) != scene:
+            raise RuntimeError("imagery catalog returned conflicting scene metadata")
+    return {"status": "available", "scenes": sorted(scenes.values(), key=lambda scene: (scene["acquired_at"], scene["scene_id"]))}
+
 
 def provider_catalog() -> list[dict[str, Any]]:
     """Credential-free legacy imagery view of the shared source catalog."""
@@ -160,9 +268,9 @@ def search_field_imagery(
         return result
     endpoint = _EARTH_SEARCH if provider_id == "sentinel2-c1-earth-search" else _PLANETARY_COMPUTER
     body = {"collections": [provider["collection"]], "intersects": polygon,
-            "bbox": bbox, "datetime": f"{start}/{end}", "limit": limit}
-    # STAC does not permit intersects and bbox simultaneously in a search.
-    del body["bbox"]
+            "datetime": f"{start}/{end}", "limit": limit}
+    if endpoint == _PLANETARY_COMPUTER:
+        body["query"] = {"eo:cloud_cover": {"lte": MAX_SCENE_CLOUD_PERCENT}}
     try:
         payload = _request_json(endpoint, body=body)
         features = payload.get("features")
@@ -179,6 +287,9 @@ def search_field_imagery(
             properties = item.get("properties") or {}
             if not isinstance(item_id, str) or len(item_id) > 160 or not isinstance(properties, dict):
                 continue
+            cloud = scene_cloud_percent(properties.get("eo:cloud_cover"))
+            if scene_cloud_exceeds_limit(cloud):
+                continue
             assets: dict[str, dict[str, str]] = {}
             item_assets = item.get("assets") or {}
             if not isinstance(item_assets, dict):
@@ -191,7 +302,7 @@ def search_field_imagery(
             scenes.append({
                 "id": f"{provider['collection']}:{item_id}", "source_item_id": item_id,
                 "collection": provider["collection"], "acquired_at": properties.get("datetime"),
-                "scene_cloud_percent": properties.get("eo:cloud_cover"),
+                "scene_cloud_percent": cloud,
                 "assets": assets, "evidence_role": "observation_metadata",
                 "field_clear_fraction": None,
             })

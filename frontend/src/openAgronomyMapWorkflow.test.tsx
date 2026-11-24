@@ -1016,7 +1016,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     const navigation = screen.getByRole('navigation', { name: 'Primary' })
     const primaryButtons = Array.from(navigation.querySelectorAll(':scope > button'))
-    expect(primaryButtons.map(button => button.textContent)).toEqual(['Farms', 'Fields', 'Records', 'Questions'])
+    expect(primaryButtons.map(button => button.textContent)).toEqual(['Farms', 'Records', 'Questions'])
     expect(within(navigation).getByRole('button', { name: 'Questions' })).toHaveAttribute('aria-current', 'page')
     const review = screen.getByRole('navigation', { name: 'Review' })
     expect(within(review).getByRole('button', { name: 'Benchmarks' })).toBeVisible()
@@ -1146,7 +1146,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(weatherBody.lon).toBeCloseTo(-113.6, 6)
   })
 
-  it('keeps regional evidence available but collapsed by default on the Fields page', async () => {
+  it('keeps regional evidence available but collapsed by default in the field editor', async () => {
     installFetchMock()
     render(<OpenAgronomyApp />)
 
@@ -1508,7 +1508,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(new URL(String(uploadCall?.[0]), 'http://localhost').searchParams.get('jurisdiction')).toBe('Alberta')
   })
 
-  it('checks saved Quebec offline context from the Fields tab without starting a download', async () => {
+  it('checks saved Quebec offline context from the field editor without starting a download', async () => {
     const quebecField = {
       id: 'field-quebec',
       field_context_id: 'field-quebec',
@@ -1702,7 +1702,8 @@ describe('Open Agronomy map upload workflow', () => {
     fireEvent.click(await within(setup).findByRole('button', { name: 'Mock draw boundary' }))
     fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
     expect(within(setup).getByText('Step 3 of 3')).toBeInTheDocument()
-    expect(within(setup).getByText(/calculated from boundary/i)).toBeInTheDocument()
+    expect(within(setup).getByText(/^[\d,]+ acres$/)).toBeInTheDocument()
+    expect(within(setup).queryByLabelText('Province / jurisdiction')).not.toBeInTheDocument()
     fireEvent.click(within(setup).getByRole('button', { name: 'Save field' }))
     await waitFor(() => expect(fetchMock.mock.calls.some(
       ([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST'
@@ -2355,7 +2356,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('button', { name: 'Edit boundary vertices' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Start over' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Browse saved fields' })).toBeEnabled()
-    expect(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Fields' })).toBeEnabled()
+    expect(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Farms' })).toBeEnabled()
 
     const userText = await screen.findByText('Should I add nitrogen after this wet spring?')
     expect(userText.closest('article')).toHaveClass('user-message')

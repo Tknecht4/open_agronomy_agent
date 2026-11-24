@@ -27,6 +27,8 @@ ALLOWED_OPEN_LICENCES = {
     "Open Government Licence - British Columbia",
     "Open Government Licence - Canada",
     "Statistics Canada Open Licence",
+    "Open Government Licence - Alberta",
+    "U.S. Government public domain",
 }
 REQUIRED_SOURCE_FIELDS = {
     "id",
@@ -101,20 +103,24 @@ def validate(
             if isinstance(row, dict)
         }
         errors.extend(validate_profile_registry_contract(profile, manifest))
-    if manifest.get("schema_version") != SCHEMA_VERSION:
+    if manifest.get("schema_version") not in {SCHEMA_VERSION, "open_agronomy_agent.administrative_geospatial_sources.v1"}:
         errors.append(f"schema_version must be {SCHEMA_VERSION}")
-    soil_gate = manifest.get("national_soil_context_gate")
-    if not isinstance(soil_gate, dict):
-        errors.append("national_soil_context_gate is missing")
-        soil_gate = {}
-    required_provinces = soil_gate.get("required_provinces") or []
-    if len(set(str(value) for value in required_provinces)) != 10:
-        errors.append("national soil gate must enumerate the ten crop-producing provinces")
-    if soil_gate.get("release_eligible") is not False:
-        errors.append("national soil gate must remain fail-closed until the national prior passes")
-    national_candidate = soil_gate.get("candidate_national_prior") or {}
-    if not national_candidate.get("required_layers") or not national_candidate.get("promotion_gates"):
-        errors.append("national soil candidate is missing required layers or promotion gates")
+    soil_gate = {}
+    required_provinces = []
+    national_candidate = {}
+    if manifest.get("schema_version") == SCHEMA_VERSION:
+        soil_gate = manifest.get("national_soil_context_gate")
+        if not isinstance(soil_gate, dict):
+            errors.append("national_soil_context_gate is missing")
+            soil_gate = {}
+        required_provinces = soil_gate.get("required_provinces") or []
+        if len(set(str(value) for value in required_provinces)) != 10:
+            errors.append("national soil gate must enumerate the ten crop-producing provinces")
+        if soil_gate.get("release_eligible") is not False:
+            errors.append("national soil gate must remain fail-closed until the national prior passes")
+        national_candidate = soil_gate.get("candidate_national_prior") or {}
+        if not national_candidate.get("required_layers") or not national_candidate.get("promotion_gates"):
+            errors.append("national soil candidate is missing required layers or promotion gates")
     sources = manifest.get("sources")
     if not isinstance(sources, list) or not sources:
         errors.append("sources must be a non-empty list")
@@ -141,7 +147,7 @@ def validate(
             errors.append(f"{source_id} catalogue API URL does not identify the exact record")
         license_record = source.get("license") if isinstance(source.get("license"), dict) else {}
         if license_record.get("identifier") not in ALLOWED_OPEN_LICENCES:
-            errors.append(f"{source_id} does not identify an allowed Canadian open-government licence")
+            errors.append(f"{source_id} does not identify an recognized open-use licence")
         for permission in ("permits_modification", "permits_commercial", "permits_redistribution"):
             if license_record.get(permission) is not True:
                 errors.append(f"{source_id} missing licence permission: {permission}")

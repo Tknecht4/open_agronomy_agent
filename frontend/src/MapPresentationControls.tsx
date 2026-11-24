@@ -14,7 +14,7 @@ export function MapPresentationControls({ preferences, onChange, layers, allowNe
     ? activeSelected.filter(item => item !== id) : [...activeSelected, id].slice(0, 4) })
   return <details className="map-presentation" data-workspace-menu>
     <summary aria-label="Map appearance and layers" title="Choose a basemap and mapped context"><Layers3 size={17} /><span>Map & layers</span></summary>
-    <section className="map-presentation-panel" aria-label="Map appearance">
+    <aside className="map-presentation-panel" aria-label="Map appearance">
       <header><strong>Map display</strong><button type="button" className="map-small-action" title="Reset map display preferences" aria-label="Reset map display" onClick={() => onChange({ style: 'satellite', layers: DEFAULT_MAP_LAYERS, opacity: 35 })}><RotateCcw size={15} /></button></header>
       <div className="basemap-options" role="group" aria-label="Map style">
         {(Object.keys(BASEMAPS) as BasemapStyle[]).map(id => <button type="button" key={id} aria-pressed={(allowNetwork ? preferences.style : 'simple') === id} disabled={!allowNetwork && id !== 'simple'}
@@ -24,14 +24,14 @@ export function MapPresentationControls({ preferences, onChange, layers, allowNe
       </div>
       {tileError ? <p className="map-control-notice" role="status">Basemap tiles unavailable. Try Simple or retry.</p> : null}
       {!allowNetwork ? <p className="map-control-note">Offline · boundary and installed layers only.</p> : null}
-      <div className="map-layer-heading"><strong>Mapped context</strong><span title="Show up to four layers. Mapped context is not a field measurement."><Info size={14} aria-label="Up to four context layers" /></span></div>
+      <div className="map-layer-heading"><strong>Mapped context</strong><span title="Show up to four layers."><Info size={14} aria-label="Up to four context layers" /></span></div>
       {catalogStatus === 'loading' ? <p role="status">Loading layers…</p> : catalogStatus === 'error' ? <p role="status">Layer list unavailable.</p> : null}
       <div className="map-layer-choices">
         {available.map(layer => <div className="map-layer-option" key={layer.id}>
           <label><input type="checkbox" checked={preferences.layers.includes(layer.id)} disabled={!preferences.layers.includes(layer.id) && activeSelected.length >= 4}
             onChange={() => toggleLayer(layer.id)} /><i style={{ background: layer.color }} aria-hidden="true" /><span>{mapLayerLabel(layer)}</span></label>
           <details className="map-layer-source"><summary aria-label={`About ${mapLayerLabel(layer)}`} title={`About ${mapLayerLabel(layer)}`}><Info size={14} /></summary>
-            <div><strong>{layer.label}</strong><p>{layer.boundary || 'Mapped context; not a field measurement.'}</p>{safeSourceUrl(layer.source_url) ? <a href={layer.source_url} target="_blank" rel="noreferrer">Source ↗</a> : null}</div>
+            <div><strong>{layer.label}</strong>{layer.boundary ? <details><summary>Layer details</summary><p>{layer.boundary}</p></details> : null}{safeSourceUrl(layer.source_url) ? <a href={layer.source_url} target="_blank" rel="noreferrer">Source ↗</a> : null}</div>
           </details>
           {preferences.layers.includes(layer.id) ? <small className={layerErrors[layer.id] ? 'map-layer-error' : ''}>{layerErrors[layer.id] ? layerErrors[layer.id] : zoomRequired ? 'Zoom in for detailed context' : loading ? 'Loading…' : (visibleCounts[layer.id] || 0) > 0 ? `${visibleCounts[layer.id]} in view` : 'No match in view'}</small> : null}
         </div>)}
@@ -39,6 +39,6 @@ export function MapPresentationControls({ preferences, onChange, layers, allowNe
       {unavailable.length ? <details className="map-unavailable-layers"><summary>{unavailable.length} other layers</summary><ul>{unavailable.map(layer => <li key={layer.id}><span>{mapLayerLabel(layer)}</span><small>{layer.installation_status === 'integrity_failed' ? 'Source integrity failed · repair installation' : layer.installation_status === 'not_installed' ? 'Not installed' : !allowNetwork && layer.source_mode !== 'local_sqlite' ? 'Offline · connection required' : 'Source unavailable'}</small></li>)}</ul></details> : null}
       {preferences.layers.length ? <label className="map-opacity">Layer shading <input type="range" min="10" max="70" value={preferences.opacity} onChange={event => onChange({ ...preferences, opacity: Number(event.target.value) })} /></label> : null}
       <footer><span>Context, not field measurements.</span><button type="button" className="map-small-action" onClick={onRetry}>Retry sources</button></footer>
-    </section>
+    </aside>
   </details>
 }

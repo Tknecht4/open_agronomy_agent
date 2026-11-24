@@ -100,14 +100,14 @@ export function FieldMapInsights({ geometry, fieldKey, fieldName, layerIds, allo
     {!metrics && measurements.state === 'error' ? <p className="insights-message" role="alert">{measurements.error}</p> : null}
     {metrics ? <>
       {point ? <div className="insight-pin"><MapPin size={18} /><div><strong>{location}</strong><span>Pin only · no boundary supplied</span></div></div> : <dl className="insight-metrics" aria-label="Geometry measurements">
-        <div><dt>Area <span>· estimate</span></dt><dd>{unit === 'ha' ? area(metrics.area_ha) : metrics.area_ac === null ? '—' : `${number(metrics.area_ac)} ac`}</dd></div>
+        <div><dt>Area</dt><dd>{unit === 'ha' ? area(metrics.area_ha) : metrics.area_ac === null ? '—' : `${number(metrics.area_ac)} ac`}</dd></div>
         <div><dt>Boundary length</dt><dd>{metrics.perimeter_m === null ? '—' : metrics.perimeter_m >= 1000 ? `${number(metrics.perimeter_m / 1000, 2)} km` : `${number(metrics.perimeter_m, 0)} m`}</dd></div>
       </dl>}
       {discrepantArea ? <p className="insight-record-note"><strong>{number(recordedAcres)} ac recorded</strong><span>{number(metrics.area_ac)} ac from boundary</span></p> : null}
       {metrics.status !== 'complete' ? <p className="insights-message">Spatial analysis is not enabled on this installation. <a href="https://tknecht4.github.io/open_agronomy_agent/operations/workspace/" target="_blank" rel="noreferrer">Setup guide ↗</a></p> : null}
     </> : null}
     <section className="insight-coverage" aria-label="Mapped context">
-      <header><h4>{point ? 'At this location' : 'Mapped zones'}</h4><span>Context, not measurements</span></header>
+      <header><h4>{point ? 'At this location' : 'Mapped zones'}</h4></header>
       {!layerIds.length ? <p className="insights-message">Choose context layers in Map & layers to compare this field with official mapping.</p> : mapping.state === 'loading' ? <p className="insights-loading" role="status"><RefreshCw size={15} className="spin" /> Reading {layerIds.length} map {layerIds.length === 1 ? 'source' : 'sources'}…</p> : mapping.state === 'error' ? <p className="insights-message" role="alert">{mapping.error} {metrics ? 'Boundary measurements remain available above.' : ''}</p> : <>
         {layers.filter(layer => layer.status !== 'complete' || layer.zones.length > 0).map(layer => <article className="insight-layer" key={layer.layer_id}>
           <details>

@@ -515,12 +515,16 @@
 .answer-model-close { display: inline-grid; place-items: center; min-width: 36px; min-height: 36px; padding: 6px; border: 0; border-radius: 6px; background: transparent; color: #5f7266; cursor: pointer; }
 .answer-model-note { margin: 4px 0 16px; color: #5f7266; font-size: 12px; }
 .answer-model-options { display: grid; gap: 8px; border: 0; padding: 0; margin: 0; min-width: 0; }
-.answer-model-option, .workspace-dialog .answer-model-option { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid #dce4d9; border-radius: 8px; background: #fff; color: #203d36; cursor: pointer; }
+.answer-model-option { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 6px 8px; padding: 12px; border: 1px solid #dce4d9; border-radius: 8px; background: #fff; color: #203d36; }
+.answer-model-option label, .workspace-dialog .answer-model-option label { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; min-width: 0; cursor: pointer; }
+.answer-model-option label:has(input:disabled) { cursor: default; }
+.answer-model-option .answer-model-download { display: grid; place-items: center; width: 34px; min-height: 34px; padding: 0; border: 1px solid #dce4d9; border-radius: 7px; background: #fff; color: #285546; }
+.answer-model-option .answer-model-download:disabled { opacity: .45; }
+.answer-model-option .answer-model-install-error { grid-column: 1 / -1; color: #78551c; }
 .answer-model-option:has(input:checked) { background: #e3ebe1; border-color: #285546; }
 .answer-model-option input, .workspace-dialog .answer-model-option input { width: 16px; height: 16px; min-height: 16px; flex: 0 0 16px; padding: 0; margin: 3px 0 0; accent-color: #285546; }
 .answer-model-option strong { display: block; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
 .answer-model-option small { display: block; margin-top: 3px; color: #5f7266; font-size: 12px; font-weight: 400; }
-.answer-model-option:has(input:disabled) { cursor: default; }
 .answer-model-technical { margin-top: 16px; padding-top: 12px; border-top: 1px solid #dce4d9; font-size: 12px; }
 .answer-model-technical summary, .workspace-dialog .answer-model-technical summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0; list-style: none; color: #203d36; cursor: pointer; }
 .answer-model-technical summary::-webkit-details-marker { display: none; }
@@ -575,8 +579,8 @@
 .geometry-coordinate-controls { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
 .geometry-coordinate-controls label { display:flex; flex-direction:column; gap:4px; font-size:12px; }
 .geometry-coordinate-controls input { max-width:150px; }
-.workspace-shell[data-page=farms] .workspace-header h1,.workspace-shell[data-page=fields] .workspace-header h1,.workspace-shell[data-page=records] .workspace-header h1 { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:28px; }
-@media(max-width:650px) { .farm-workspace button { min-height:44px; }.farm-workspace .field-on-map,.farm-workspace button.field-open { min-height:44px; } }
+.workspace-shell[data-page=farms] .workspace-header h1,.workspace-shell[data-page=records] .workspace-header h1 { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:28px; }
+@media(max-width:650px) { .farm-workspace button { min-height:44px; }.farm-workspace button.field-open { min-height:44px; } }
 
 .answer-limit-note { color: #70470b; background: #fff4db; padding: 8px 10px; border-radius: 6px; }
 .answer-origin-details { margin: 12px 0; font-size: 12px; color: var(--muted); }

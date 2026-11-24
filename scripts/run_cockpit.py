@@ -47,6 +47,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--frontend", action="store_true", help="launch npm dev server for the frontend")
     parser.add_argument("--frontend-dir", default="frontend")
+    parser.add_argument("--field-services-root", type=Path, help="private state directory containing the installed administrative pack and imagery environment")
     parser.add_argument("--frontend-port", type=int, default=5173)
     parser.add_argument(
         "--field-lan",
@@ -241,8 +242,28 @@ def main() -> int:
             args.host = "0.0.0.0"
         pairing_token = secrets.token_urlsafe(32)
         session_secret = secrets.token_urlsafe(48)
+    field_services = args.field_services_root.expanduser().resolve() if args.field_services_root else None
+    if field_services is None and sys.platform == "darwin":
+        field_services = Path.home() / "Library/Application Support/OpenAgronomyAgent/desktop"
+    imagery_python = None
+    imagery_cache = None
+    if field_services:
+        if field_services.is_relative_to(ROOT_DIR.resolve()):
+            raise SystemExit("Field services state must be outside the checkout.")
+        administrative_pack = field_services / "spatial-pack" / "field-location-v1"
+        if args.field_services_root or administrative_pack.is_dir():
+            os.environ.setdefault("AGRONOMY_AGENT_ADMINISTRATIVE_PACK_ROOT", str(administrative_pack))
+        imagery_environment = field_services / "imagery" / "bin" / "python"
+        if imagery_environment.is_file():
+            if not os.getenv("AGRONOMY_AGENT_IMAGERY_PYTHON"):
+                imagery_python = imagery_environment
+            if not os.getenv("AGRONOMY_AGENT_IMAGERY_CACHE_ROOT"):
+                imagery_cache = field_services / "cache" / "imagery"
+
     settings = build_settings(
         db_path=Path(args.db_path),
+        imagery_worker_python=imagery_python,
+        imagery_cache_root=imagery_cache,
         artifact_root=Path(args.artifact_root),
         static_dir=Path(args.static_dir) if args.static_dir else None,
         model_config_path=args.model_config,

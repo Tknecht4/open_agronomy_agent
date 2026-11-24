@@ -24,6 +24,7 @@ RUNTIME_MANIFEST_SCHEMA = "open_agronomy_agent.macos_app_runtime.v1"
 MODEL_ASSET_MANIFEST = "configs/model_assets_gemma4_e2b_mlx.json"
 MODEL_ASSET_MANIFEST_SHA256 = "20eb23b66581b7d61ea66cb9d79f84a9f18de95844b96089a64ff814b06ee238"
 MIN_DOWNLOAD_FREE_BYTES = 6 * 1024**3
+_PRE_E4B_MODEL_CONFIG_SHA256 = "02311ba0dca40e33abf0efa396c7f17593d87b42a4f01d8c2e0af786f1fa8946"
 
 
 def _sha256(path: Path) -> str:
@@ -85,6 +86,7 @@ def _configure_runtime(args: argparse.Namespace) -> tuple[Path, Path, Path]:
             os.environ["AGRONOMY_AGENT_IMAGERY_EXECUTABLE"] = str(worker)
             os.environ["AGRONOMY_AGENT_IMAGERY_CACHE_ROOT"] = str(state_root / "cache/imagery")
     os.environ["AGRONOMY_AGENT_SPATIAL_PACK_ROOT"] = str(state_root / "spatial-pack")
+    os.environ["AGRONOMY_AGENT_ADMINISTRATIVE_PACK_ROOT"] = str(state_root / "spatial-pack" / "field-location-v1")
     os.environ["HF_HOME"] = str(model_cache.parent)
     os.environ["HF_HUB_CACHE"] = str(model_cache)
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
@@ -308,10 +310,12 @@ def verify_model_receipt(runtime_root: Path, state_root: Path, model_cache: Path
         "schema_version": MODEL_RECEIPT_SCHEMA,
         "model_id": model_id,
         "revision": revision,
-        "model_config_sha256": config_sha256,
         "model_asset_manifest_sha256": MODEL_ASSET_MANIFEST_SHA256,
         "files": expected_files,
     }
+    # The optional E4B slot does not change the previously installed E2B assets.
+    if receipt.get("model_config_sha256") not in {config_sha256, _PRE_E4B_MODEL_CONFIG_SHA256}:
+        raise ValueError("model install receipt does not match the active model contract")
     if any(receipt.get(key) != value for key, value in expected.items()):
         raise ValueError("model install receipt does not match the active model contract")
     actual_files = _snapshot_files(_snapshot(model_id, revision), model_cache)

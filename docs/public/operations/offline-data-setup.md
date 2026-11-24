@@ -82,24 +82,17 @@ PYTHONPATH=src .venv/bin/python scripts/verify_prairie_spatial_pack.py \
 
 The verifier checks the flat pack's hashes, SQLite/RTree integrity, source/derived lineage, and three fixed offline application-path probes. It is evidence of package and map-query integrity, not confirmation of soil conditions at those sample locations.
 
-## Optional administrative location suggestions
+## Administrative field location
 
-The farm dossier can query an explicitly installed Canadian cartographic pack for location suggestions. It is separate from the default soil pack and is never downloaded on application startup. To prepare it outside the checkout:
+The field dossier looks up saved geometry locally using the `field-location-v1`
+pack. Install and configure it using [field location and imagery setup](native-setup.md#field-location-and-imagery).
+It operates independently of the soil pack and covers Canadian provinces and
+municipalities, Alberta municipal districts, and U.S. states and counties.
 
-```bash
-PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
-  --profile canada-context-boundaries-v1 \
-  --data-root /absolute/path/to/open-agronomy-state \
-  --download --build --verify
-```
-
-The installer pins source bytes and lineage. A publisher denial or browser challenge is a failed installation, not an empty map result. Preserve the failure receipt; do not replace the expected hash to accept changed content. After a successful verification, configure the province database explicitly if the default pack root is already used for soils:
-
-```bash
-export AGRONOMY_AGENT_CA_STATCAN_2021_PR_DB_PATH=/absolute/path/to/open-agronomy-state/spatial-pack/canada-context-boundaries-v1/ca_statcan_2021_provinces_territories.sqlite3
-```
-
-A match suggests a location for grower confirmation. It cannot establish legal jurisdiction, cadastral boundaries or source availability outside the installed Canadian coverage.
+The installer pins source bytes and lineage. A publisher denial or browser
+challenge is an installation failure. Preserve the receipt and existing source
+pins. The older `canada-context-boundaries-v1` profile supplies province and
+territory context only.
 
 ## Record offline readiness
 
