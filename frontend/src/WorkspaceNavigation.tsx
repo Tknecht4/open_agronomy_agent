@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { BookOpen, ChartNoAxesCombined, Database, Menu, MessageSquareText, Sprout } from 'lucide-react'
+import { BookOpen, Database, Menu, MessageSquareText, Sprout } from 'lucide-react'
 import type { FieldAnswerCapability } from './fieldRuntimeAvailability'
 import { WorkspaceDialog } from './WorkspaceDialog'
 
-export type WorkspacePage = 'farms' | 'records' | 'field-editor' | 'analyze' | 'evidence' | 'benchmarks' | 'sources' | 'privacy' | 'about'
+export type WorkspacePage = 'farms' | 'records' | 'field-editor' | 'analyze' | 'evidence' | 'sources' | 'privacy' | 'about'
 
 export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile }: {
   page: WorkspacePage
@@ -20,10 +20,6 @@ export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile
     ['records', 'Records', BookOpen],
     ['analyze', 'Questions', MessageSquareText],
   ] as const
-  const reviewItems = [
-    ['evidence', 'Evidence', BookOpen],
-    ['benchmarks', 'Benchmarks', ChartNoAxesCombined],
-  ] as const
   const choose = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
   const brand = <div className="workspace-brand"><span className="workspace-brand-symbol"><Sprout size={22} aria-hidden="true" /></span><span>Open Agronomy</span></div>
   const navigation = <>
@@ -33,7 +29,7 @@ export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile
     <div className="workspace-navigation-divider" />
     <nav className="workspace-navigation" aria-label="Review">
       <button type="button" aria-current={page === 'sources' ? 'page' : undefined} onClick={() => choose('sources')}><Database size={18} aria-hidden="true" />Data management</button>
-      {reviewItems.map(([id, label, Icon]) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined} onClick={() => choose(id)}><Icon size={18} aria-hidden="true" />{label}</button>)}
+      <button type="button" aria-current={page === 'evidence' ? 'page' : undefined} onClick={() => choose('evidence')}><BookOpen size={18} aria-hidden="true" />Evidence</button>
     </nav>
     <footer className="workspace-navigation-footer">
       <div className={`workspace-runtime-state ${answerCapability.state}`}><span className="runtime-state-dot" aria-hidden="true" /><span>{answerCapability.badge}</span></div>

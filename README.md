@@ -4,9 +4,9 @@
 
 **Source-available for non-commercial use, including research and evaluation, under [PolyForm Noncommercial 1.0.0](LICENSE).** Its standard institutional permissions also apply. See [licensing and permitted use](docs/public/licensing.md).
 
-![Desktop workspace with a demonstration field, conversation, and full map](docs/public/assets/workspace-desktop.jpg)
+![Questions workspace with the current sidebar, a unit conversion, and a demonstration field on the offline map](docs/public/assets/workspace-desktop.jpg)
 
-A synthetic demonstration field and a deterministic calculation in the desktop workspace. Geometry is illustrative; mapped context is not a field measurement.
+A synthetic demonstration field and a deterministic calculation in the desktop workspace. The offline map shows an illustrative field boundary.
 
 [Workspace guide](docs/public/operations/workspace.md) · [Setup](docs/public/operations/local-browser-setup.md) · [Customize the agent](docs/public/developer/customizing-the-harness.md)
 

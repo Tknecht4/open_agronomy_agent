@@ -144,7 +144,7 @@ type NasaPowerState = {
   message?: string
 }
 
-const APP_PAGES: Page[] = ['farms', 'records', 'field-editor', 'analyze', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']
+const APP_PAGES: Page[] = ['farms', 'records', 'field-editor', 'analyze', 'evidence', 'sources', 'privacy', 'about']
 const CANADIAN_JURISDICTIONS = new Set([
   'alberta',
   'british columbia',
@@ -166,7 +166,6 @@ const AGROCLIMATE_METRICS = [
 
 const FieldMapInsights = lazy(() => import('./FieldMapInsights').then(module => ({ default: module.FieldMapInsights })), 'Field insights')
 const FieldSetupDialog = lazy(() => import('./FieldSetupDialog').then(module => ({ default: module.FieldSetupDialog })), 'Field setup')
-const BenchmarksRoute = lazy(() => import('./BenchmarksRoute').then((module) => ({ default: module.BenchmarksRoute })), 'Benchmarks')
 const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => ({ default: module.LeafletFieldMap })), 'Field map')
 const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel })), 'Field record transfer')
 const SoilTestEntryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.SoilTestEntryPanel })), 'Soil test entry')
@@ -3471,7 +3470,7 @@ export function OpenAgronomyApp() {
       <div className="workspace-content">
       {page !== 'farms' && page !== 'records' ? <header className="workspace-topbar">
         <div>
-          <h1>{page === 'analyze' ? (fieldName ? `Questions · ${fieldName}` : 'Questions') : page === 'field-editor' ? 'Edit field' : page === 'sources' ? 'Data management' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
+          <h1>{page === 'analyze' ? (fieldName ? `Questions · ${fieldName}` : 'Questions') : page === 'field-editor' ? 'Edit field' : page === 'sources' ? 'Data management' : page === 'evidence' ? 'Behind the answer' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
         {page === 'analyze' || page === 'field-editor' ? <div className="farm-actions">
           {page === 'field-editor' && hasSavedFieldDetails ? <button type="button" onClick={openActiveFieldDetails}>Back to field</button> : null}
@@ -4540,12 +4539,6 @@ export function OpenAgronomyApp() {
           onCopyReport={() => void copyReviewerReport()}
           onDownloadReport={downloadReviewerReport}
         />
-      ) : null}
-
-      {page === 'benchmarks' ? (
-        <Suspense fallback={<section className="route-loading-panel">Loading benchmark readiness...</section>}>
-          <BenchmarksRoute />
-        </Suspense>
       ) : null}
 
       {page === 'sources' ? (

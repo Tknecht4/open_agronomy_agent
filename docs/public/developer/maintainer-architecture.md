@@ -45,7 +45,7 @@ path observed; it is not a second agent implementation.
 | Persistence | `server/storage/db.py`, `server/storage/runtime.py` | SQLite serializes cursor scopes on its shared connection, with outermost commit/rollback ownership and atomic personal workspace creation; Postgres remains a separate schema-checked boundary |
 | Local runtime services | `server/rate_limit.py`, `server/storage/object_store.py` | In-memory rate limits and filesystem artifacts only; Redis/S3 selection was removed |
 | Training helpers | `training/` | Offline maintainer tooling only; no current Canadian source is training-authorized |
-| UI | `frontend/src/` | React cockpit, map, field state, source cards, benchmark viewer |
+| UI | `frontend/src/` | React cockpit, map, field state, and answer evidence |
 | Reviewed field tables | `field_data.py`, `server/storage/field_data_store.py`, `server/storage/field_source_blobs.py`, `field_data_capability.py` | Bounded intake, workspace-scoped compressed original bytes, immutable mappings, private field queries and registered result lineage; explicit reversible SQLite migration |
 | Source preparation | `field_source_preparation.py` | Pinned research-source adapters, row dispositions and reviewable mappings; separate from runtime and benchmark gold |
 | Anonymous imagery | `field_imagery.py`, `imagery_analytics.py`, `imagery_sampling.py`, `imagery_receipts.py`, `imagery_store.py`, `imagery_budget.py`, `imagery_worker.py`, `server/services/imagery_service.py`, `server/field_data_routes.py` | Saved input geometry is distinct from statistical support: native point pixel, explicit point buffer, or field polygon. Optional isolated worker, storage admission, private source-bound chips, QA/NDVI/NDMI and authenticated previews; no operational yield prediction |
@@ -61,6 +61,8 @@ holdout safety gate and was removed. The ordinary generation, verification,
 safety, and high-consequence paths handle the entire request.
 
 ## Harnesses and what they prove
+
+The FastAPI benchmark endpoints under `/api/benchmarks/` serve retained summaries and review packets. `/api/benchmarks/artifacts/{artifact_id}` serves allowlisted reviewer downloads when the requested file is present.
 
 Evaluation surfaces retain distinct execution and evidence contracts. The
 source-bound catalog is `scripts/analyze_release_evaluation.py --inventory`;

@@ -1239,7 +1239,6 @@ pre {
 .chat-panel,
 .map-stage,
 .evidence-page section,
-.performance-page section,
 .sources-page section,
 .privacy-page section,
 .about-page section {
@@ -1275,7 +1274,6 @@ pre {
 .chat-panel h2,
 .map-stage h2,
 .evidence-page h2,
-.performance-page h2,
 .sources-page h2,
 .privacy-page h2,
 .about-page h2 {
@@ -3381,7 +3379,6 @@ pre {
 }
 
 .evidence-page,
-.performance-page,
 .sources-page,
 .privacy-page,
 .about-page {
@@ -3393,17 +3390,7 @@ pre {
   padding: 24px;
 }
 
-.route-loading-panel {
-  max-width: 1180px;
-  margin: 24px auto;
-  padding: 20px;
-  border: 1px solid #d6dfd8;
-  background: #f7faf7;
-  color: #526056;
-}
-
 .evidence-page section,
-.performance-page section,
 .sources-page section,
 .privacy-page section,
 .about-page section {
@@ -3411,7 +3398,6 @@ pre {
 }
 
 .evidence-summary,
-.performance-hero,
 .sources-page section:first-child,
 .privacy-page section:first-child,
 .about-page section:first-child {
@@ -3564,7 +3550,6 @@ pre {
 
 .source-row p,
 .kg-panel p,
-.performance-hero p,
 .sources-page p,
 .privacy-page p,
 .about-page p {
@@ -3659,33 +3644,6 @@ pre {
   font-weight: 760;
 }
 
-.acceptance-gate-no-go {
-  border-color: #e7c6b2;
-  background: #fff8f2;
-}
-
-.acceptance-gate-needs-review {
-  border-color: #ddd3a8;
-  background: #fffdf1;
-}
-
-.acceptance-gate-go,
-.acceptance-gate-pass {
-  border-color: #bdd9c5;
-  background: #f3fbf4;
-}
-
-.review-batch-blocked span,
-.review-blocker-list span {
-  color: #653919;
-  background: #fbebd8;
-}
-
-.review-batch-pass span {
-  color: #1f5a3b;
-  background: #e5f4ea;
-}
-
 .manifest-link {
   display: inline-flex;
   align-items: center;
@@ -3700,18 +3658,6 @@ pre {
   font-weight: 780;
   text-decoration: none;
   white-space: nowrap;
-}
-
-.freeze-check-needs-review span,
-.freeze-check-pending span,
-.freeze-check-manual span {
-  color: #684a19;
-  background: #fbefd8;
-}
-
-.freeze-check-fail span {
-  color: #7a2525;
-  background: #f8dddd;
 }
 
 .source-coverage-hero,
@@ -3781,7 +3727,6 @@ pre {
 
   .map-workspace,
   .evidence-page,
-  .performance-page,
   .sources-page,
   .privacy-page,
   .about-page {

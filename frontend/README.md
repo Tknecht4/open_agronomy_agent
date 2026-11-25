@@ -47,7 +47,7 @@ the exception when an upstream fix is available or reassess before expiry.
 
 ## Navigation and model settings
 
-Farms, Records, and Questions are primary. Data management, Evidence, and Benchmarks form the second navigation group. Runtime status, Privacy, and About live in the navigation footer. Small windows use the same hierarchy in a navigation drawer.
+Farms, Records, and Questions are primary. Data management and Evidence form the second navigation group. Runtime status, Privacy, and About live in the navigation footer. Small windows use the same hierarchy in a navigation drawer.
 
 Questions opens in Together on desktop and Conversation on smaller screens. A workspace without a field still has a browsable regional overview; it does not create field geometry or infer a location. Map-only and conversation-only views remain available. On mobile, the explicit Map control preserves the question draft while giving GIS the full content width.
 

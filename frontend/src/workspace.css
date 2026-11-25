@@ -243,11 +243,7 @@
 .workspace-shell .source-private-knowledge p { font-size: 13px; max-width: 680px; line-height: 1.7; color: #73816b; }
 .workspace-shell .source-coverage-hero { order: -1; box-shadow: none; background: #edf3e7; border: 0; padding: 20px 25px; }
 .workspace-shell .source-coverage-hero h2 { font-size: 18px; }
-.workspace-shell .performance-page, .workspace-shell .privacy-page, .workspace-shell .about-page { width: 100%; max-width: 1180px; margin: 0; padding: 0; align-items: start; }
-.workspace-shell .performance-page { display: flex; flex-direction: column; align-items: stretch; }
-.workspace-shell .historical-benchmark-disclosure { width: 100%; margin: 0; }
-.workspace-shell .benchmark-cards article { grid-template-rows: auto auto 1fr; align-content: start; align-items: start; }
-.workspace-shell .benchmark-cards strong { margin: 6px 0; }
+.workspace-shell .privacy-page, .workspace-shell .about-page { width: 100%; max-width: 1180px; margin: 0; padding: 0; align-items: start; }
 .workspace-shell .privacy-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); padding: 0; border: 0; box-shadow: none; }
 .workspace-shell .privacy-flow > div { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .workspace-shell .source-private-knowledge { grid-template-columns: minmax(0, 1fr) minmax(230px, .6fr); }
@@ -363,9 +359,7 @@
 }
 @media (max-width: 680px) {
  .workspace-shell[data-page="analyze"] .workspace-content { height: calc(100dvh - 108px); min-height: 600px; }
- .workspace-shell .performance-page, .workspace-shell .privacy-page, .workspace-shell .about-page { grid-template-columns: minmax(0, 1fr); }
- .workspace-shell .historical-benchmark-disclosure > summary { flex-direction: column; align-items: flex-start; }
- .workspace-shell .historical-benchmark-disclosure > summary span { text-align: left; }
+ .workspace-shell .privacy-page, .workspace-shell .about-page { grid-template-columns: minmax(0, 1fr); }
  .workspace-shell .source-private-knowledge { grid-template-columns: 1fr; }
 }
 @media (max-width: 1050px) {
@@ -417,7 +411,6 @@
 .workspace-shell .privacy-grid article { grid-template-rows: auto 1fr; align-content: start; }
 .workspace-shell .privacy-flow article { grid-template-rows: auto auto 1fr; align-content: start; }
 .workspace-shell .privacy-flow article > span { justify-self: start; }
-.workspace-shell .route-loading-panel { width: 100%; margin: 0; }
 
 /* Field insights remain on demand; the map keeps only an entry point. */
 .workspace-shell .map-context-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; }
