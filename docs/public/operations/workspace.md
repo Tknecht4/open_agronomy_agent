@@ -1,6 +1,6 @@
 # Use the field workspace
 
-The workspace opens in **Farms**. Expand a farm or **Unassigned fields**, then select a field to zoom the map to its saved boundary or pin. Choose **Open field** to replace the farm list with the field details and keep the same map on the right. **Back to farms** restores the selected field and your filters. **Records** shows dated activity, and **Questions** keeps general or single-field conversations. Data management, evidence and benchmarks are in the side navigation. A loaded page does not establish model or provider readiness.
+The workspace opens in **Farms**. Expand a farm or **Unassigned fields**, then select a field to zoom the map to its saved boundary or pin. Choose **Open field** to replace the farm list with the field details and keep the same map on the right. **Back to farms** restores the selected field and your filters. **Records** shows dated activity, and **Questions** keeps general or single-field conversations. **Data management** and **Evidence** are in the side navigation. A loaded page does not establish model or provider readiness.
 
 ## Farms, seasons and field summaries
 

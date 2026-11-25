@@ -153,6 +153,8 @@ describe('workspace navigation', () => {
     fireEvent.click(trigger)
     const drawer = screen.getByRole('dialog', { name: 'Navigation' })
     expect(within(drawer).getByText('Runtime unavailable · notes only')).toBeVisible()
+    const review = within(drawer).getByRole('navigation', { name: 'Review' })
+    expect(within(review).getAllByRole('button').map(button => button.textContent)).toEqual(['Data management', 'Evidence'])
     fireEvent.click(within(drawer).getByRole('button', { name: 'Farms' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(trigger).toHaveFocus()

@@ -1019,13 +1019,24 @@ describe('Open Agronomy map upload workflow', () => {
     expect(primaryButtons.map(button => button.textContent)).toEqual(['Farms', 'Records', 'Questions'])
     expect(within(navigation).getByRole('button', { name: 'Questions' })).toHaveAttribute('aria-current', 'page')
     const review = screen.getByRole('navigation', { name: 'Review' })
-    expect(within(review).getByRole('button', { name: 'Benchmarks' })).toBeVisible()
+    const reviewButtons = within(review).getAllByRole('button')
+    expect(reviewButtons.map(button => button.textContent)).toEqual(['Data management', 'Evidence'])
     const information = screen.getByRole('navigation', { name: 'Information' })
     expect(within(information).getByRole('button', { name: 'Privacy' })).toBeVisible()
     expect(within(information).getByRole('button', { name: 'About' })).toBeVisible()
     fireEvent.click(within(review).getByRole('button', { name: 'Evidence' }))
     expect(await screen.findByRole('heading', { name: 'Behind the answer' })).toBeInTheDocument()
     expect(within(review).getByRole('button', { name: 'Evidence' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('opens Farms from an old Benchmarks bookmark without requesting benchmark data', async () => {
+    window.location.hash = '#benchmarks'
+    const fetchMock = installFetchMock()
+    render(<OpenAgronomyApp />)
+
+    expect(await screen.findByRole('heading', { name: 'Farms' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Farms' })).toHaveAttribute('aria-current', 'page')
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith('/api/benchmarks/'))).toBe(false)
   })
 
   it('keeps the general question blank until the Alberta example is explicitly selected', async () => {

@@ -587,7 +587,7 @@ def select_benchmark_evidence(
     *,
     required: bool,
 ) -> tuple[tuple[Path, ...], dict[str, Any]]:
-    """Select only frozen result receipts needed by the offline benchmark page."""
+    """Select frozen benchmark databases and receipts for offline review."""
 
     selected: list[Path] = []
     sets: dict[str, Any] = {}
@@ -822,7 +822,7 @@ def build_bundle(
         "runtime_boundary": (
             "The archive is self-contained for application source, policy-approved RAG/KG knowledge, the frozen Canadian benchmark and external AgroQA diagnostic fixtures, and spatial source/profile contracts plus the explicit local installer. "
             "It does not contain large generated spatial databases: after cloning, prepare a selected profile in a user-managed state directory and point AGRONOMY_AGENT_SPATIAL_PACK_ROOT at its verified pack. It also carries the "
-            "offline USDA NASS and Statistics Canada snapshots. When requested, it also carries the frozen canonical internal and external benchmark databases and receipts used by the offline benchmark page. It excludes model weights, raw geospatial downloads, secrets, user data, mutable session/trace databases, caches, and non-canonical historical outputs. "
+            "offline USDA NASS and Statistics Canada snapshots. When requested, it also carries the frozen canonical internal and external benchmark databases and receipts for offline review. It excludes model weights, raw geospatial downloads, secrets, user data, mutable session/trace databases, caches, and non-canonical historical outputs. "
             "Historical plan archives, retired evaluation suites, and quarantined or rights-unresolved corpora are excluded; governed corpus exclusions remain named in lineage. "
             "The external conference release authority is published beside the archive rather than embedded, because it records the completed archive's SHA-256 and Git reference. "
             "Apple Metal inference must run on the macOS host; Linux Docker containers cannot expose MLX Metal acceleration."
