@@ -12,6 +12,7 @@ from agronomy_agent.server.services.answer_renderer import (
 )
 from agronomy_agent.server.services.field_context_compiler import compile_field_context
 from agronomy_agent.geospatial.context_support import mapped_coverage_label
+from agronomy_agent.geospatial.geometry import geodesic_metrics
 from agronomy_agent.geographic_context import attach_trusted_geographic_context, format_trusted_geographic_context
 
 
@@ -22,12 +23,14 @@ MULTI = {"type": "MultiPolygon", "coordinates": [CONCAVE["coordinates"], [[[-94,
 
 
 def intersection(geometry):
+    field = shape(geometry)
     return geo._intersection_record(
         feature={"type": "Feature", "geometry": REGION,
                  "properties": {"code": "TEST", "name": "Mapped test", "label": "Mapped test",
                                 "source_scale_range": "1:100,000", "map_unit": "TEST",
                                 "dominant_components": [{"soil_name": "Test mapped soil"}]}},
-        layer=geo.REGION_LAYERS["ab_detailed_soil"], input_geometry=geometry,
+        layer=geo.REGION_LAYERS["ab_detailed_soil"], field=field, region=shape(REGION),
+        field_area_m2=geodesic_metrics(field)["area_m2"],
     )
 
 

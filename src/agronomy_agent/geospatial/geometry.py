@@ -7,10 +7,19 @@ from __future__ import annotations
 
 import json
 import math
-from typing import Any
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from shapely.geometry.base import BaseGeometry
 
 
-def checked_positions(value: Any, *, maximum: int = 10_000, label: str = "geometry") -> int:
+MAX_GEOMETRY_VERTICES = 10_000
+
+
+def checked_positions(
+    value: Any, *, maximum: int | None = MAX_GEOMETRY_VERTICES, label: str = "geometry",
+) -> int:
     """Bound exact GeoJSON nesting and finite JSON numbers before library work."""
     if not isinstance(value, dict):
         raise ValueError(f"{label} must be a GeoJSON geometry object")
@@ -30,7 +39,7 @@ def checked_positions(value: Any, *, maximum: int = 10_000, label: str = "geomet
         if not (-180 <= item[0] <= 180 and -90 <= item[1] <= 90):
             raise ValueError(f"{label} coordinates must be WGS84 longitude/latitude (EPSG:4326)")
         count += 1
-        if count > maximum:
+        if maximum is not None and count > maximum:
             raise ValueError(f"{label} exceeds {maximum} coordinate positions")
 
     def polygon(rings: Any) -> None:
@@ -59,9 +68,23 @@ def checked_positions(value: Any, *, maximum: int = 10_000, label: str = "geomet
     return count
 
 
-def canonical_geometry(value: Any, allowed_types: tuple[str, ...] = ("Point", "Polygon", "MultiPolygon"), max_vertices: int = 10_000) -> dict[str, Any]:
+def canonical_geometry(
+    value: Any, allowed_types: tuple[str, ...] = ("Point", "Polygon", "MultiPolygon"),
+    max_vertices: int = MAX_GEOMETRY_VERTICES,
+) -> dict[str, Any]:
     """Validate complete RFC 7946 geometry without silently fixing topology."""
-    from shapely.geometry import mapping, shape
+    from shapely.geometry import mapping
+
+    geometry = geometry_shape(value, allowed_types=allowed_types, max_vertices=max_vertices)
+    return json.loads(json.dumps(mapping(geometry), allow_nan=False))
+
+
+def geometry_shape(
+    value: Any, *, allowed_types: tuple[str, ...] = ("Point", "Polygon", "MultiPolygon"),
+    max_vertices: int | None = MAX_GEOMETRY_VERTICES,
+) -> BaseGeometry:
+    """Validate GeoJSON and return its Shapely geometry without a serialization round trip."""
+    from shapely.geometry import shape
     from shapely.validation import explain_validity
 
     if isinstance(value, dict) and value.get("type") == "Feature":
@@ -83,7 +106,7 @@ def canonical_geometry(value: Any, allowed_types: tuple[str, ...] = ("Point", "P
         raise ValueError("polygon geometry must have positive area")
     if geometry.bounds[2] - geometry.bounds[0] >= 180:
         raise ValueError("antimeridian-crossing geometry is unsupported")
-    return json.loads(json.dumps(mapping(geometry), allow_nan=False))
+    return geometry
 
 
 def project_geometry(geometry: Any, target_crs: Any, source_crs: Any = "EPSG:4326") -> Any:
@@ -147,6 +170,52 @@ def geodesic_metrics(geometry: Any) -> dict[str, Any]:
     area, perimeter = measure(parsed)
     point = parsed.representative_point()
     return {"area_m2": area, "perimeter_m": perimeter, "representative_point": None if point.is_empty else {"longitude": float(point.x), "latitude": float(point.y)}}
+
+
+@lru_cache(maxsize=1)
+def _cylindrical_area_rule() -> tuple[Any, float, Any, Any]:
+    from numpy.polynomial.legendre import leggauss
+    from pyproj import Proj
+
+    projection = Proj("+proj=cea +lat_ts=0 +ellps=WGS84 +units=m")
+    nodes, weights = leggauss(12)
+    return projection, projection(1, 0)[0], (nodes + 1) / 2, weights / 2
+
+
+def geojson_area_m2(geometry: Any) -> float:
+    """Ellipsoidal area of validated WGS84 shapes with straight GeoJSON edges.
+
+    The cylindrical equal-area projection has easting linear in longitude.
+    Integrate its northing along each original edge to get the signed area
+    integral. This respects the same edges as longitude/latitude clipping,
+    including when clipping inserts vertices along an edge.
+    """
+    if geometry.is_empty:
+        return 0.0
+    if geometry.geom_type in {"MultiPolygon", "GeometryCollection"}:
+        return math.fsum(geojson_area_m2(member) for member in geometry.geoms)
+    if geometry.geom_type != "Polygon":
+        return 0.0
+
+    import numpy as np
+    from shapely import get_coordinates
+
+    projection, metres_per_degree, nodes, weights = _cylindrical_area_rule()
+
+    def ring_area(ring: Any) -> float:
+        coordinates = get_coordinates(ring)
+        longitude_steps = np.diff(coordinates[:, 0])
+        changes_longitude = longitude_steps != 0
+        latitudes = coordinates[:-1, 1][changes_longitude, None] + (
+            np.diff(coordinates[:, 1])[changes_longitude, None] * nodes
+        )
+        samples = latitudes.ravel()
+        _, northing = projection(np.zeros_like(samples), samples, errcheck=True)
+        northing_origin = projection(0, float(coordinates[0, 1]))[1]
+        average_northing = (northing.reshape(latitudes.shape) - northing_origin) @ weights
+        return abs(float(np.dot(longitude_steps[changes_longitude], average_northing))) * metres_per_degree
+
+    return max(0.0, ring_area(geometry.exterior) - math.fsum(ring_area(ring) for ring in geometry.interiors))
 
 
 def geometries_intersect(left: Any, right: Any) -> bool:

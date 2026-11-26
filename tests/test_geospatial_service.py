@@ -49,11 +49,7 @@ def _write_local_layer(path: Path) -> None:
         connection.close()
 
 
-def _write_context_layer(path: Path) -> None:
-    geometry = {
-        "type": "Polygon",
-        "coordinates": [[[-104.8, 50.4], [-104.7, 50.4], [-104.7, 50.5], [-104.8, 50.5], [-104.8, 50.4]]],
-    }
+def _write_context_layer(path: Path, geometry: dict) -> None:
     properties = {
         "province_uid": "47",
         "province_name": "Saskatchewan",
@@ -145,11 +141,16 @@ def test_local_soil_layer_intersects_offline_and_preserves_components(
     assert result["network_policy"]["external_requests_attempted"] == 0
 
 
-def test_context_boundary_intersection_exposes_only_allowlisted_hierarchy_fields(
-    tmp_path: Path, monkeypatch, qualified_spatial_layer
+@pytest.mark.parametrize("field_kind", ["Point", "Polygon"])
+def test_detailed_context_boundary_intersection_exposes_only_allowlisted_fields(
+    tmp_path: Path, monkeypatch, qualified_spatial_layer, field_kind: str,
 ) -> None:
+    from shapely.geometry import Point, mapping
+
     database = tmp_path / "context.sqlite3"
-    _write_context_layer(database)
+    source_boundary = Point(-104.75, 50.45).buffer(0.05, quad_segs=6_000)
+    assert len(source_boundary.exterior.coords) > 20_000
+    _write_context_layer(database, mapping(source_boundary))
     layer = geo.RegionLayer(
         id="synthetic_context_boundary",
         label="Synthetic context boundary",
@@ -167,22 +168,30 @@ def test_context_boundary_intersection_exposes_only_allowlisted_hierarchy_fields
     monkeypatch.setitem(geo.REGION_LAYERS, layer.id, layer)
     qualified_spatial_layer(database, layer.id)
 
-    result = geo.intersect_region_layers(
-        geometry={
+    field = {"type": "Point", "coordinates": [-104.75, 50.45]} if field_kind == "Point" else {
             "type": "Polygon",
             "coordinates": [[[-104.76, 50.44], [-104.74, 50.44], [-104.74, 50.46], [-104.76, 50.46], [-104.76, 50.44]]],
-        },
+    }
+    result = geo.intersect_region_layers(
+        geometry=field,
         layer_ids=[layer.id],
         network_mode="offline",
     )
 
     assert result["errors"] == []
     intersection = result["intersections"][0]
+    assert intersection["coverage_estimate"] == 1.0
+    assert len(result["feature_collection"]["features"][0]["geometry"]["coordinates"][0]) > 20_000
     assert intersection["province_name"] == "Saskatchewan"
     assert intersection["province_uid"] == "47"
     assert intersection["dissemination_geography_id"] == "2021A000247"
     assert "unreviewed_source_field" not in intersection
     assert result["network_policy"]["external_requests_attempted"] == 0
+    outside = geo.intersect_region_layers(
+        geometry={"type": "Point", "coordinates": [-104.795, 50.495]}, layer_ids=[layer.id], network_mode="offline",
+    )
+    assert outside["errors"] == []
+    assert outside["intersections"] == []
 
 
 def test_uninstalled_context_layer_is_not_selected_or_silently_fetched_offline(
@@ -223,15 +232,12 @@ def test_uninstalled_context_layer_is_not_selected_or_silently_fetched_offline(
     assert result["network_policy"]["external_requests_attempted"] == 0
 
 
-def test_default_layer_selection_omits_uninstalled_and_prefers_detailed_sk(
+def test_default_layer_selection_omits_uninstalled(
     tmp_path: Path, monkeypatch, qualified_spatial_layer
 ) -> None:
     installed = tmp_path / "installed.sqlite3"
     _write_local_layer(installed)
-    thematic = tmp_path / "thematic.sqlite3"
-    _write_local_layer(thematic)
     qualified_spatial_layer(installed, "sk_detailed_soil")
-    qualified_spatial_layer(thematic, "sk_thematic_soil")
     layers = {
         "sk_detailed_soil": geo.RegionLayer(
             id="sk_detailed_soil",
@@ -244,18 +250,6 @@ def test_default_layer_selection_omits_uninstalled_and_prefers_detailed_sk(
             name_fields=("name",),
             query_backend="local_sqlite",
             local_database=str(installed),
-        ),
-        "sk_thematic_soil": geo.RegionLayer(
-            id="sk_thematic_soil",
-            label="thematic",
-            system="test",
-            service_url="",
-            source_url="",
-            color="#000000",
-            code_fields=("code",),
-            name_fields=("name",),
-            query_backend="local_sqlite",
-            local_database=str(thematic),
         ),
         "missing": geo.RegionLayer(
             id="missing",
@@ -280,19 +274,20 @@ def test_default_layer_selection_omits_uninstalled_and_prefers_detailed_sk(
 
 def test_shared_intersection_coverage_is_area_weighted_and_includes_all_members() -> None:
     from agronomy_agent.geospatial.geometry import geodesic_metrics
+    from shapely.geometry import shape
 
     first = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
     second = {"type": "Polygon", "coordinates": [[[2, 0], [4, 0], [4, 2], [2, 2], [2, 0]]]}
     field = {"type": "MultiPolygon", "coordinates": [first["coordinates"], second["coordinates"]]}
     expected = geodesic_metrics(second)["area_m2"] / geodesic_metrics(field)["area_m2"]
-    assert geo._coverage_estimate(field, second) == pytest.approx(expected, abs=1e-6)
+    assert geo._coverage_estimate(shape(field), shape(second), geodesic_metrics(field)["area_m2"]) == pytest.approx(expected, abs=1e-6)
     assert geo.geometries_intersect(field, second)
     assert not geo.geometries_intersect(field, {"type": "Point", "coordinates": [1.5, .5]})
     assert geo._geometry_area_acres(field) == pytest.approx(geodesic_metrics(field)["area_m2"] / 4046.8564224)
 
 
 def test_arcgis_polygon_holes_have_opposite_ring_orientation() -> None:
-    from shapely.geometry import LinearRing
+    from shapely.geometry import LinearRing, Point, shape
     geometry = {"type": "Polygon", "coordinates": [
         [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]],
         [[.2, .2], [.4, .2], [.4, .4], [.2, .4], [.2, .2]],
@@ -300,5 +295,5 @@ def test_arcgis_polygon_holes_have_opposite_ring_orientation() -> None:
     rings = json.loads(geo._arcgis_geometry(geometry))["rings"]
     assert not LinearRing(rings[0]).is_ccw
     assert LinearRing(rings[1]).is_ccw
-    assert geo._coverage_estimate({"type": "Point", "coordinates": [.3, .3]}, geometry) == 0
-    assert geo._coverage_estimate({"type": "Point", "coordinates": [.2, .3]}, geometry) == 1
+    assert geo._coverage_estimate(Point(.3, .3), shape(geometry), 0) == 0
+    assert geo._coverage_estimate(Point(.2, .3), shape(geometry), 0) == 1

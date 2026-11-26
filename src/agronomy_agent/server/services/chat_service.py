@@ -4826,12 +4826,8 @@ def _safe_field_context_intersections(value: Any) -> list[dict[str, Any]]:
                 "coverage_support_type",
                 "coverage_method",
                 "boundary",
-                "capability_label",
-                "capability_summary",
-                "primary_class",
                 "drainage_class",
                 "capability_class",
-                "capability_interpretation",
                 "erosion_risk",
                 "slope_class",
                 "surface_texture_group",
@@ -4847,8 +4843,6 @@ def _safe_field_context_intersections(value: Any) -> list[dict[str, Any]]:
                 "map_key",
                 "soil_landscape_id",
                 "mapping_basis",
-                "publication_year",
-                "coverage_area",
                 "binding_status",
             )
             if item.get(key) not in (None, "")

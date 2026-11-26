@@ -68,7 +68,26 @@ PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
   --download --build --verify
 ```
 
-The default retains verified raw archives so the local build can be audited and reproduced. To retain only the verified runtime databases and their lineage/receipt after the final probe passes, use `--discard-raw-after-build` with `--download --build --verify`. The installer refuses partial downloads, changed bytes, stale lineage, incomplete derived layers, or an invalid existing pack; it does not overwrite them.
+After the Prairie pack passes validation and its offline probes, the installer
+deletes the pinned downloads, intermediate SQLite databases, and duplicate
+derivation manifests. It keeps the runtime pack, source lineage, and a
+checksum-bound cleanup receipt in the state directory. A repeat full setup
+can verify and reuse the existing pack without fetching the archives again.
+Use `--retain-raw` for a build that needs to keep its inputs and intermediate
+copies. A build without `--verify` retains those files until a verified cleanup.
+
+For a Prairie pack previously installed with its inputs retained, run:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
+  --profile prairie-dss-v1 \
+  --data-root /absolute/path/to/open-agronomy-state \
+  --verify --cleanup
+```
+
+Cleanup checks the downloads against the source pins and the intermediate
+copies against the verified pack before deleting. A mismatched or linked
+asset stops cleanup so it can be inspected.
 
 After a successful setup, point the application at the exact generated pack:
 

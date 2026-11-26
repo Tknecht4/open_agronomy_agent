@@ -289,21 +289,21 @@
     },
     {
       "id": "scientific_reference",
-      "path": "outputs/full-evaluation-20261112/controller/frozen-560/scientific_reference_tasks_v1.jsonl",
+      "path": "outputs/evaluation-inputs/final-evaluation-suite-v1/9d78a7a9304ede96309ca44559ba0320a2e93e98292b279d0b9e0b5c6a23f2c5/scientific_reference_tasks_v1.jsonl",
       "execution": "scenario",
       "rows": 240,
       "sha256": "9d78a7a9304ede96309ca44559ba0320a2e93e98292b279d0b9e0b5c6a23f2c5"
     },
     {
       "id": "cca_repaired_reference",
-      "path": "outputs/full-evaluation-20261112/controller/frozen-560/cca_repaired_reference_tasks_v1.jsonl",
+      "path": "outputs/evaluation-inputs/final-evaluation-suite-v1/619b929156964063cb541f85cfdd1e3df61fce0395c536717b546613319547aa/cca_repaired_reference_tasks_v1.jsonl",
       "execution": "scenario",
       "rows": 28,
       "sha256": "619b929156964063cb541f85cfdd1e3df61fce0395c536717b546613319547aa"
     },
     {
       "id": "refusal_crop_scope_regressions",
-      "path": "outputs/full-evaluation-20261112/controller/regression-48/cases.private.jsonl",
+      "path": "outputs/evaluation-inputs/final-evaluation-suite-v1/841481f59489d3578a453b36d98da75186569b9be5ad408c90f6b599eef5cf98/cases.private.jsonl",
       "execution": "scenario",
       "rows": 48,
       "sha256": "841481f59489d3578a453b36d98da75186569b9be5ad408c90f6b599eef5cf98"

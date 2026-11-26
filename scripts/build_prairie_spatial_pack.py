@@ -37,15 +37,8 @@ from validate_canada_geospatial_sources import validate as validate_registry
 
 ROOT = REPOSITORY_ROOT
 SCHEMA_VERSION = "open_agronomy_agent.offline_spatial_pack.v2"
-LEGACY_SCHEMA_VERSION = "open_agronomy_agent.prairie_spatial_pack.v1"
 INSTALL_RECEIPT_SCHEMA_VERSION = "open_agronomy_agent.offline_spatial_install_receipt.v1"
 PACK_MANIFEST_NAME = "prairie_spatial_pack_manifest.json"
-LEGACY_PACK_SOURCE_IDS = (
-    "ca_aafc_ab_detailed_soil_survey",
-    "ca_aafc_sk_detailed_soil_survey",
-    "ca_aafc_mb_detailed_soil_survey",
-    "ca_aafc_soil_erosion_risk_2021",
-)
 DEFAULT_PROFILE_ID = "prairie-dss-v1"
 DEFAULT_PROFILE_MANIFEST = ROOT / "data/manifests/offline_spatial_profiles_v1.json"
 
@@ -193,10 +186,6 @@ def validate_pack(
                 errors.append("spatial pack profile entry SHA256 mismatch")
             if manifest.get("profile_manifest_sha256") != _sha256(profile_manifest_path):
                 errors.append("spatial pack profile manifest SHA256 mismatch")
-    elif schema_version == LEGACY_SCHEMA_VERSION:
-        expected_layers = {source_id: {} for source_id in LEGACY_PACK_SOURCE_IDS}
-        if profile_id is not None:
-            errors.append("legacy Prairie spatial pack cannot satisfy an explicit DSS-only profile")
     else:
         raise ValueError("unsupported offline spatial pack schema")
 

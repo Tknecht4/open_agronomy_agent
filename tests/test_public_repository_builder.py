@@ -444,6 +444,60 @@ def test_edge_staging_and_sbom_use_the_nested_requirement_input(tmp_path):
     assert relative in {item["path"] for item in annotation["dependency_inputs"]}
 
 
+def test_edge_staging_excludes_checkout_geo_cache(tmp_path):
+    from scripts.stage_edge_build_context import stage, _copy_sources
+
+    source = tmp_path / "source"
+    source.mkdir()
+    containerfile = (ROOT / "Containerfile").read_text()
+    (source / "Containerfile").write_text(containerfile)
+    for relative in _copy_sources(containerfile):
+        target = source / relative
+        if (ROOT / relative).is_file():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.touch()
+        else:
+            target.mkdir(parents=True, exist_ok=True)
+    (source / "container/runtime_manifest.json").write_text("{}")
+    cache = source / "data/derived/geo_cache"
+    cache.mkdir(parents=True, exist_ok=True)
+    (cache / "synthetic-field-response.json").write_text('{"features":[]}')
+    context = tmp_path / "context"
+    context.mkdir()
+    assert stage(source, context)["status"] == "pass"
+    assert not (context / "data/derived/geo_cache").exists()
+
+
+def test_edge_staging_includes_required_active_store_manifest_only(tmp_path):
+    from agronomy_agent.runtime_profiles import load_runtime_profile_registry
+    from scripts.build_edge_runtime_manifest import build_manifest
+    from scripts.stage_edge_build_context import stage
+
+    profiles = load_runtime_profile_registry(root=ROOT)
+    release_manifests = [Path(path) for path in profiles.active_rag_control_paths if path.startswith("data/derived/rag/")]
+    assert release_manifests
+    release_paths = {path.as_posix() for path in release_manifests}
+    controls = [entry for entry in build_manifest(ROOT)["control_files"] if entry["path"] in release_paths]
+    assert {entry["path"] for entry in controls} == release_paths
+
+    source = tmp_path / "source"
+    for path in release_manifests:
+        target = source / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((ROOT / path).read_bytes())
+        (target.parent / "unregistered-cache.json").write_text("{}")
+    (source / "Containerfile").write_text("COPY data/derived/rag ./data/derived/rag\n")
+    (source / "container").mkdir()
+    (source / "container/runtime_manifest.json").write_text(json.dumps({"control_files": controls}))
+    context = tmp_path / "context"
+    context.mkdir()
+
+    assert stage(source, context)["status"] == "pass"
+    for path in release_manifests:
+        assert (context / path).read_bytes() == (ROOT / path).read_bytes()
+    assert not list(context.rglob("unregistered-cache.json"))
+
+
 def test_edge_frontend_build_helpers_are_staged_and_hash_bound(tmp_path):
     from scripts.stage_edge_build_context import stage, _copy_sources
     from scripts.build_edge_runtime_manifest import CONTROL_PATHS

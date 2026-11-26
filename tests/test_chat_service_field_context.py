@@ -185,23 +185,21 @@ def test_non_soil_observation_keeps_event_date_and_unauthorized_history_is_exclu
     assert observed_at not in _append_field_context_prompt("", excluded)
 
 
-def test_pei_mapped_soil_context_keeps_bounded_lineage_fields() -> None:
+def test_prairie_mapped_soil_context_keeps_bounded_lineage_fields() -> None:
     safe = _safe_field_context_intersections(
         [
             {
-                "layer_id": "pei_detailed_soil",
-                "system": "AAFC PEI Detailed Soil Survey",
-                "code": "PEI_SOIL_1270",
-                "name": "PEI detailed soil map unit PEPED103Ch:6-Ti:3/CD",
-                "source_scale_range": "1:75,000",
-                "coverage_area": "Pictou County only",
-                "map_unit": "PEPED103Ch:6-Ti:3/CD",
+                "layer_id": "ab_detailed_soil",
+                "system": "AAFC Alberta Detailed Soil Survey",
+                "code": "AB_SOIL_1270",
+                "name": "Alberta detailed soil map unit MMNV9/U1l",
+                "source_scale_range": "1:100,000",
+                "map_unit": "MMNV9/U1l",
                 "mapping_basis": "soil information compiled and published over several prior decades",
-                "publication_year": 2013,
                 "dominant_components": [
                     {
                         "component": "1",
-                        "soil_name": "Charlottetown",
+                        "soil_name": "Malmo",
                         "proportion_percent": 60,
                         "drainage_class": "well drained",
                         "predominant_slope_percent": 3.5,
@@ -220,12 +218,10 @@ def test_pei_mapped_soil_context_keeps_bounded_lineage_fields() -> None:
         ]
     )
 
-    assert safe[0]["map_unit"] == "PEPED103Ch:6-Ti:3/CD"
-    assert safe[0]["source_scale_range"] == "1:75,000"
-    assert safe[0]["coverage_area"] == "Pictou County only"
-    assert safe[0]["publication_year"] == 2013
+    assert safe[0]["map_unit"] == "MMNV9/U1l"
+    assert safe[0]["source_scale_range"] == "1:100,000"
     component = safe[0]["dominant_components"][0]
-    assert component["soil_name"] == "Charlottetown"
+    assert component["soil_name"] == "Malmo"
     assert component["proportion_percent"] == 60
     assert component["surface_layer"]["observation_counts"] == {"clay_percent_by_weight": 4}
     assert "browser_instruction" not in component
@@ -243,7 +239,7 @@ def test_mapped_soil_context_caps_components_and_rejects_invalid_numbers() -> No
     ]
 
     safe = _safe_field_context_intersections(
-        [{"layer_id": "pei_detailed_soil", "dominant_components": components}]
+        [{"layer_id": "ab_detailed_soil", "dominant_components": components}]
     )
 
     assert len(safe[0]["dominant_components"]) == 3
@@ -312,7 +308,7 @@ def test_generic_ecozone_does_not_bypass_the_answer_engine() -> None:
     assert answer is None
 
 
-def test_thematic_soil_map_answer_uses_known_field_context_without_false_missing_crop_or_location() -> None:
+def test_detailed_soil_map_answer_uses_known_field_context_without_false_missing_crop_or_location() -> None:
     trace = {
         "route": {"question_type": "field_data"},
         "field_context": {
@@ -321,11 +317,11 @@ def test_thematic_soil_map_answer_uses_known_field_context_without_false_missing
             "jurisdiction": "Saskatchewan",
             "regional_intersections": [
                 {
-                    "system": "AAFC Saskatchewan Thematic Soil",
+                    "system": "AAFC Saskatchewan Detailed Soil Survey",
                     "layer_id": "sk_detailed_soil",
                     "code": "SK-2",
-                    "name": "Saskatchewan thematic soil",
-                    "capability_summary": "capability class 2; well drainage; 0 - 2% slope",
+                    "name": "Saskatchewan detailed soil",
+                    "soil_summary": "capability class 2; well drainage; 0 - 2% slope",
                     "capability_class": "2",
                     "drainage_class": "well",
                     "slope_class": "0 - 2%",

@@ -9,18 +9,23 @@ import threading
 import time
 import zlib
 from collections import OrderedDict
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from agronomy_agent.paths import repo_path
-from agronomy_agent.geospatial.geometry import canonical_geometry, geodesic_metrics
+from agronomy_agent.geospatial.geometry import canonical_geometry, geodesic_metrics, geometry_shape
 from agronomy_agent.geospatial.vector_io import read_vector_upload
 from agronomy_agent.geospatial.json_properties import bounded_json_properties, bounded_json_value
 from agronomy_agent.geospatial.source_integrity import local_layer_integrity
+
+if TYPE_CHECKING:
+    from shapely.geometry.base import BaseGeometry
 
 
 GEO_SERVICE_SCHEMA_VERSION = "open_agronomy_agent.geo_service.v1"
@@ -28,6 +33,7 @@ BOUNDARY_UPLOAD_SCHEMA_VERSION = "open_agronomy_agent.boundary_upload.v1"
 CACHE_DIR = repo_path(os.getenv("AGRONOMY_AGENT_GEO_CACHE_DIR", "data/derived/geo_cache"))
 HTTP_TIMEOUT_SECONDS = 25
 MAX_FEATURES_PER_LAYER = 80
+MAX_REMOTE_REGION_VERTICES = 20_000
 MAX_BBOX_SPAN_DEGREES = 12.0
 OFFLINE_INTERSECTION_CACHE_TTL_SECONDS = 300
 OFFLINE_INTERSECTION_CACHE_MAX_ENTRIES = 8
@@ -236,28 +242,6 @@ REGION_LAYERS: dict[str, RegionLayer] = {
             "observation, a soil test, a crop-suitability decision, a diagnosis, or management-rate authority."
         ),
     ),
-    "bc_agriculture_capability": RegionLayer(
-        id="bc_agriculture_capability",
-        country_code="CA",
-        label="BC Agriculture Capability Mapping",
-        system="BC Agriculture Capability",
-        service_url="",
-        source_url="https://catalogue.data.gov.bc.ca/dataset/agriculture-capability-mapping",
-        color="#cc9d45",
-        code_fields=("code",),
-        name_fields=("capability_summary", "capability_label"),
-        query_backend="local_sqlite",
-        local_database=_local_database_path(
-            environment_variable="AGRONOMY_AGENT_BC_AG_CAP_DB_PATH",
-            filename="bc_agriculture_capability.sqlite3",
-        ),
-        local_match_reason="Bundled OGL-BC polygon intersection",
-        boundary=(
-            "Legacy generalized capability mapping from the 1960s through 1990s. It does not establish "
-            "crop-specific suitability, yield, required inputs, feasible improvements, current field condition, "
-            "or field truth. Confirm with current local evidence before management decisions."
-        ),
-    ),
     "sk_detailed_soil": RegionLayer(
         id="sk_detailed_soil",
         country_code="CA",
@@ -280,30 +264,6 @@ REGION_LAYERS: dict[str, RegionLayer] = {
             "point or present nutrient supply, pH, drainage performance, compaction, salinity, crop "
             "suitability, or a management rate. Ground-truth mapped differences and use current soil tests "
             "and Saskatchewan guidance."
-        ),
-    ),
-    "sk_thematic_soil": RegionLayer(
-        id="sk_thematic_soil",
-        country_code="CA",
-        label="Saskatchewan Thematic Soil Maps",
-        system="AAFC Saskatchewan Thematic Soil",
-        service_url="",
-        source_url="https://open.canada.ca/data/en/dataset/ed36f4f3-2fb9-4241-8e29-6741e8b9e400",
-        color="#6f8f70",
-        code_fields=("code",),
-        name_fields=("soil_summary",),
-        query_backend="local_sqlite",
-        local_database=_local_database_path(
-            environment_variable="AGRONOMY_AGENT_SK_THEMATIC_SOIL_DB_PATH",
-            filename="sk_thematic_soil.sqlite3",
-        ),
-        local_match_reason="Bundled OGL-Canada thematic-soil intersection",
-        boundary=(
-            "Dominant generalized thematic values derived from the Saskatchewan Detailed Soils Database. "
-            "A polygon can contain variation and does not establish current field condition, an exact soil "
-            "component at a point, crop-specific suitability, nutrient status, drainage performance, erosion "
-            "outcome, or a management rate. Confirm with field observations, sampling, detailed survey evidence, "
-            "and current Saskatchewan guidance."
         ),
     ),
     "ab_detailed_soil": RegionLayer(
@@ -351,74 +311,6 @@ REGION_LAYERS: dict[str, RegionLayer] = {
             "mapped priors, not proof of soil at a point or present nutrient supply, pH, drainage performance, "
             "compaction, salinity, crop suitability, or a management rate. Ground-truth mapped differences and "
             "use current soil tests and Manitoba guidance."
-        ),
-    ),
-    "pei_detailed_soil": RegionLayer(
-        id="pei_detailed_soil",
-        country_code="CA",
-        label="PEI Detailed Soil Survey (1:75,000)",
-        system="AAFC PEI Detailed Soil Survey",
-        service_url="",
-        source_url="https://open.canada.ca/data/en/dataset/7fa18ce7-6c14-438a-95c6-bb0906ddfb30",
-        color="#7c8b72",
-        code_fields=("code",),
-        name_fields=("soil_summary",),
-        query_backend="local_sqlite",
-        local_database=_local_database_path(
-            environment_variable="AGRONOMY_AGENT_PEI_DETAILED_SOIL_DB_PATH",
-            filename="pei_detailed_soil.sqlite3",
-        ),
-        local_match_reason="Bundled OGL-Canada PEI detailed-soil intersection",
-        boundary=(
-            "Historical 1:75,000 soil-landscape mapping with linked map-unit components, soil names, and "
-            "layer attributes. A polygon is a mapped prior, not proof of the soil at a point or of present "
-            "nutrient supply, pH, drainage performance, compaction, erosion, crop suitability, or a management "
-            "rate. Ground-truth mapped differences and use current soil tests and local guidance."
-        ),
-    ),
-    "ns_pictou_detailed_soil": RegionLayer(
-        id="ns_pictou_detailed_soil",
-        country_code="CA",
-        label="Pictou County Detailed Soil Survey (1:50,000)",
-        system="AAFC Nova Scotia Detailed Soil Survey",
-        service_url="",
-        source_url="https://open.canada.ca/data/en/dataset/083534ca-d5b0-46f5-b540-f3a706dbc2de",
-        color="#667f8c",
-        code_fields=("code",),
-        name_fields=("soil_summary",),
-        query_backend="local_sqlite",
-        local_database=_local_database_path(
-            environment_variable="AGRONOMY_AGENT_NS_PICTOU_DETAILED_SOIL_DB_PATH",
-            filename="ns_pictou_detailed_soil.sqlite3",
-        ),
-        local_match_reason="Bundled OGL-Canada Pictou County detailed-soil intersection",
-        boundary=(
-            "Historical Version 1 soil-landscape mapping at 1:50,000 for Pictou County only; this is not "
-            "province-wide Nova Scotia coverage. A polygon is a mapped prior, not proof of the soil at a point "
-            "or of present nutrient supply, pH, drainage performance, compaction, erosion, crop suitability, "
-            "or a management rate. Ground-truth mapped differences and use current soil tests and local guidance."
-        ),
-    ),
-    "ca_soil_erosion_risk": RegionLayer(
-        id="ca_soil_erosion_risk",
-        country_code="CA",
-        label="AAFC Soil Erosion Risk 2021",
-        system="AAFC Soil Erosion Risk",
-        service_url="",
-        source_url="https://open.canada.ca/data/en/dataset/b52b3c91-e0eb-47d1-aea5-fa5428254512",
-        color="#df823f",
-        code_fields=("code",),
-        name_fields=("name",),
-        query_backend="local_sqlite",
-        local_database=_local_database_path(
-            environment_variable="AGRONOMY_AGENT_CA_EROSION_RISK_DB_PATH",
-            filename="ca_soil_erosion_risk.sqlite3",
-        ),
-        local_match_reason="Bundled OGL-Canada soil-erosion-risk intersection",
-        boundary=(
-            "AAFC modelled combined wind, water, and tillage erosion risk for agricultural Soil Landscapes "
-            "of Canada through 2021. It is regional historical context, not current erosion observation, "
-            "event prediction, measured field loss, field diagnosis, or management-prescription authority."
         ),
     ),
 }
@@ -568,15 +460,28 @@ def intersect_region_layers(
     network_mode: str = "online",
     country_scope: str | None = None,
 ) -> dict[str, Any]:
+    from shapely.geometry import shape
+
     parsed_geometry = _validate_geojson_geometry(geometry)
     bbox = _geometry_bbox(parsed_geometry)
-    west, south, east, north = _expanded_bbox(bbox)
+    try:
+        query_bbox = _expanded_bbox(bbox)
+    except ValueError:
+        # The local field can be stored and measured with its full footprint.
+        query_bbox = bbox
+    remote_span_supported = max(bbox[2] - bbox[0], bbox[3] - bbox[1]) <= MAX_BBOX_SPAN_DEGREES
     requested_layers = _selected_layers(layer_ids)
     layers, skipped_payload, readiness = _layers_for_request(
         requested_layers,
         network_mode=network_mode,
         country_scope=country_scope,
     )
+    if not remote_span_supported:
+        remote_layers = [layer for layer in layers if layer.query_backend != "local_sqlite"]
+        skipped_payload.extend({
+            **layer, "status": "unsupported_geometry", "reason": "remote_geometry_span_unsupported",
+        } for layer in _layer_payload(remote_layers))
+        layers = [layer for layer in layers if layer.query_backend == "local_sqlite"]
     offline_cache_key = (
         _offline_intersection_cache_key(
             parsed_geometry=parsed_geometry, layers=layers,
@@ -599,38 +504,43 @@ def intersect_region_layers(
                 cached["source_query_cache_hit"] = False
                 cached["source_query_cache_rejected"] = True
             return cached
+    field_shape = shape(parsed_geometry)
+    field_area_m2 = geodesic_metrics(field_shape)["area_m2"]
     features: list[dict[str, Any]] = []
     intersections: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
     source_collection_status: list[dict[str, Any]] = []
     for layer in layers:
         try:
-            if layer.query_backend == "local_sqlite":
+            is_local = layer.query_backend == "local_sqlite"
+            if is_local:
                 collection = _query_layer(layer, geometry=_arcgis_envelope(*bbox), geometry_type="esriGeometryEnvelope")
-                if isinstance(collection, dict) and isinstance(collection.get("features"), list):
-                    candidates = collection["features"]
-                    selected = []
-                    for feature in candidates:
-                        try:
-                            if _geometries_intersect(parsed_geometry, feature["geometry"]):
-                                selected.append(feature)
-                        except (ValueError, TypeError, KeyError):
-                            selected.append(feature)  # Preserve invalid-source accounting.
-                    collection = {**collection, "features": selected}
             else:
                 collection = _query_layer(layer, geometry=_arcgis_geometry(parsed_geometry), geometry_type=_arcgis_geometry_type(parsed_geometry))
             source_collection_status.append(_source_collection_status(collection, layer_id=layer.id))
-            normalized = _normalize_feature_collection(collection, layer)
-            features.extend(normalized)
-            for feature in normalized:
-                intersections.append(_intersection_record(feature=feature, layer=layer, input_geometry=parsed_geometry))
+            layer_features = []
+            layer_matches = []
+            for feature in _normalize_feature_collection(collection, layer):
+                # Installed polygons have already passed layer identity verification.
+                # Their coordinate numbers and topology still need validation.
+                region_shape = geometry_shape(
+                    feature["geometry"], max_vertices=None if is_local else MAX_REMOTE_REGION_VERTICES,
+                )
+                if is_local and not field_shape.intersects(region_shape):
+                    continue
+                layer_features.append(feature)
+                layer_matches.append(_intersection_record(
+                    feature=feature, layer=layer, field=field_shape, region=region_shape, field_area_m2=field_area_m2,
+                ))
+            features.extend(layer_features)
+            intersections.extend(layer_matches)
         except Exception as exc:  # pragma: no cover - network failures vary.
             errors.append({"layer_id": layer.id, "message": str(exc)})
     _retain_stable_local_sources(layers, readiness, features, errors, intersections)
     intersections.sort(key=lambda item: (item["confidence"], item["coverage_estimate"]), reverse=True)
     result = {
         "schema_version": GEO_SERVICE_SCHEMA_VERSION,
-        "query": {"bbox": [west, south, east, north], "mode": "field_intersection"},
+        "query": {"bbox": list(query_bbox), "mode": "field_intersection"},
         "layers": _layer_payload(layers),
         "skipped_layers": skipped_payload,
         "query_attempted_layer_ids": [layer.id for layer in layers],
@@ -782,15 +692,11 @@ def attach_region_intersections_to_upload(
 
 def _selected_layers(layer_ids: list[str] | None) -> list[RegionLayer]:
     if not layer_ids:
-        selected = [
+        return [
             layer
             for layer in REGION_LAYERS.values()
             if layer.query_backend != "local_sqlite" or _local_layer_installed(layer)
         ]
-        selected_ids = {layer.id for layer in selected}
-        if "sk_detailed_soil" in selected_ids and "sk_thematic_soil" in selected_ids:
-            selected = [layer for layer in selected if layer.id != "sk_thematic_soil"]
-        return selected
     selected: list[RegionLayer] = []
     for layer_id in layer_ids:
         if layer_id not in REGION_LAYERS:
@@ -951,13 +857,11 @@ def verified_local_candidates(layer: RegionLayer, bounds: tuple[float, float, fl
     return readiness, result["features"]
 
 
-def _query_local_sqlite_layer(layer: RegionLayer, *, geometry: str, geometry_type: str) -> dict[str, Any]:
+@contextmanager
+def _local_candidate_rows(
+    layer: RegionLayer, envelopes: Iterable[tuple[float, float, float, float]], *, limit: int | None,
+) -> Iterator[tuple[Iterator[sqlite3.Row], bool, dict[str, Any]]]:
     database = Path(str(layer.local_database or ""))
-    readiness = _local_layer_readiness(layer)
-    if readiness["status"] != "verified":
-        raise ValueError(f"bundled layer source is {readiness['status']}: {', '.join(readiness['errors'])}")
-    query_geometry, bbox = _local_query_geometry(geometry=geometry, geometry_type=geometry_type)
-    west, south, east, north = bbox
     connection = sqlite3.connect(database.resolve().as_uri() + "?mode=ro&immutable=1", uri=True)
     connection.row_factory = sqlite3.Row
     try:
@@ -976,44 +880,86 @@ def _query_local_sqlite_layer(layer: RegionLayer, *, geometry: str, geometry_typ
             compressed_payloads = False
         else:
             raise ValueError("bundled layer has no supported feature payload encoding")
-        rows = connection.execute(
-            f"""
+        # Coverage streams the RTree result. Viewports retain their bounded ordering.
+        limit_clause = "ORDER BY f.fid LIMIT ?" if limit is not None else ""
+        sql = f"""
             SELECT f.fid, f.code, f.name, {payload_columns}
             FROM feature_bounds AS bounds
             JOIN features AS f ON f.fid = bounds.fid
             WHERE bounds.max_lon >= ? AND bounds.min_lon <= ?
               AND bounds.max_lat >= ? AND bounds.min_lat <= ?
-            ORDER BY f.fid
-            LIMIT ?
-            """,
-            (west, east, south, north, MAX_FEATURES_PER_LAYER * 8),
-        ).fetchall()
+            {limit_clause}
+            """
+
+        def rows() -> Iterator[sqlite3.Row]:
+            for west, south, east, north in envelopes:
+                parameters = (west, east, south, north)
+                yield from connection.execute(sql, (*parameters, limit) if limit is not None else parameters)
+
+        yield rows(), compressed_payloads, metadata
     finally:
         connection.close()
 
+
+def _local_feature(row: sqlite3.Row, compressed: bool, metadata: dict[str, Any]) -> dict[str, Any]:
+    if compressed:
+        geometry = json.loads(zlib.decompress(bytes(row["geometry_zlib"])))
+        properties = json.loads(zlib.decompress(bytes(row["properties_zlib"])))
+    else:
+        geometry = json.loads(str(row["geometry_json"]))
+        properties = json.loads(str(row["properties_json"]))
+    if not isinstance(properties, dict):
+        raise ValueError("local feature properties must be an object")
+    properties.setdefault("source_scale_range", metadata.get("source_scale_range"))
+    properties.setdefault("source_scale_note", metadata.get("source_scale_note"))
+    properties.setdefault("source_attribution", metadata.get("attribution"))
+    properties.update({"code": str(row["code"]), "name": str(row["name"])})
+    return {"type": "Feature", "id": int(row["fid"]), "geometry": geometry, "properties": properties}
+
+
+@contextmanager
+def local_coverage_features(
+    layer: RegionLayer, envelopes: tuple[tuple[float, float, float, float], ...], *, readiness: dict[str, Any],
+) -> Iterator[Iterator[dict[str, Any] | None]]:
+    """Stream every indexed candidate from a verified pack, including malformed rows."""
+    _assert_stable_local_source(layer, readiness)
+    with _local_candidate_rows(layer, envelopes, limit=None) as (rows, compressed, metadata):
+        def records() -> Iterator[dict[str, Any] | None]:
+            seen = set() if len(envelopes) > 1 else None
+            for row in rows:
+                if seen is not None:
+                    if row["fid"] in seen:
+                        continue
+                    seen.add(row["fid"])
+                try:
+                    feature = _local_feature(row, compressed, metadata)
+                except (ValueError, TypeError, RecursionError, zlib.error):
+                    yield None
+                    continue
+                normalized = _normalize_feature_collection({"features": [feature]}, layer)
+                yield normalized[0] if normalized else None
+
+        yield records()
+    _assert_stable_local_source(layer, readiness)
+
+
+def _query_local_sqlite_layer(layer: RegionLayer, *, geometry: str, geometry_type: str) -> dict[str, Any]:
+    from shapely.geometry import shape
+
+    readiness = _local_layer_readiness(layer)
+    if readiness["status"] != "verified":
+        raise ValueError(f"bundled layer source is {readiness['status']}: {', '.join(readiness['errors'])}")
+    query_geometry, bbox = _local_query_geometry(geometry=geometry, geometry_type=geometry_type)
+    query_shape = shape(query_geometry) if query_geometry is not None else None
+    with _local_candidate_rows(layer, (bbox,), limit=MAX_FEATURES_PER_LAYER * 8) as (cursor, compressed, metadata):
+        rows = list(cursor)
     _assert_stable_local_source(layer, readiness)
     features: list[dict[str, Any]] = []
     for row in rows:
-        if compressed_payloads:
-            region_geometry = json.loads(zlib.decompress(bytes(row["geometry_zlib"])).decode("utf-8"))
-            properties = json.loads(zlib.decompress(bytes(row["properties_zlib"])).decode("utf-8"))
-        else:
-            region_geometry = json.loads(str(row["geometry_json"]))
-            properties = json.loads(str(row["properties_json"]))
-        if query_geometry is not None and not _geometries_intersect(query_geometry, region_geometry):
+        feature = _local_feature(row, compressed, metadata)
+        if query_shape is not None and not query_shape.intersects(geometry_shape(feature["geometry"], max_vertices=None)):
             continue
-        properties.setdefault("source_scale_range", metadata.get("source_scale_range"))
-        properties.setdefault("source_scale_note", metadata.get("source_scale_note"))
-        properties.setdefault("source_attribution", metadata.get("attribution"))
-        properties.update({"code": str(row["code"]), "name": str(row["name"])})
-        features.append(
-            {
-                "type": "Feature",
-                "id": int(row["fid"]),
-                "geometry": region_geometry,
-                "properties": properties,
-            }
-        )
+        features.append(feature)
         if len(features) >= MAX_FEATURES_PER_LAYER:
             break
     return {
@@ -1027,7 +973,7 @@ def _local_query_geometry(*, geometry: str, geometry_type: str) -> tuple[dict[st
         values = tuple(float(value) for value in geometry.split(","))
         if len(values) != 4:
             raise ValueError("local layer envelope must contain four coordinates")
-        return None, _validate_bbox(values)
+        return None, _validate_bbox(values, limit_span=False)
     payload = json.loads(geometry)
     if geometry_type == "esriGeometryPoint":
         parsed = _validate_geojson_geometry({"type": "Point", "coordinates": [payload["x"], payload["y"]]})
@@ -1085,10 +1031,12 @@ def _normalize_feature_collection(collection: dict[str, Any], layer: RegionLayer
     return normalized
 
 
-def _intersection_record(*, feature: dict[str, Any], layer: RegionLayer, input_geometry: dict[str, Any]) -> dict[str, Any]:
+def _intersection_record(
+    *, feature: dict[str, Any], layer: RegionLayer, field: BaseGeometry, region: BaseGeometry, field_area_m2: float,
+) -> dict[str, Any]:
     properties = feature["properties"]
-    coverage = _coverage_estimate(input_geometry, feature["geometry"])
-    coverage_support_type = "point_membership" if canonical_geometry(input_geometry)["type"] == "Point" else "polygon_area"
+    coverage = _coverage_estimate(field, region, field_area_m2)
+    coverage_support_type = "point_membership" if field.geom_type == "Point" else "polygon_area"
     record = {
         "layer_id": layer.id,
         "layer_label": layer.label,
@@ -1125,15 +1073,9 @@ def _intersection_record(*, feature: dict[str, Any], layer: RegionLayer, input_g
         "ecozone_id",
         "ecoprovince_id",
         "dissemination_geography_id",
-        "capability_label",
-        "improved_capability_label",
-        "primary_class",
-        "components",
         "source_scale",
         "source_scale_label",
         "source_scale_range",
-        "capability_summary",
-        "polygon_comment",
         "source_scale_note",
         "map_unit",
         "map_name",
@@ -1143,18 +1085,8 @@ def _intersection_record(*, feature: dict[str, Any], layer: RegionLayer, input_g
         "mapping_basis",
         "drainage_class",
         "capability_class",
-        "capability_interpretation",
         "erosion_risk",
-        "erosion_indicator_2021",
-        "erosion_risk_1981",
-        "erosion_indicator_1981",
-        "erosion_change_1981_2021",
-        "erosion_change_indicator",
-        "erosion_summary",
         "soil_landscape_id",
-        "source_year",
-        "publication_year",
-        "coverage_area",
         "slope_class",
         "surface_texture_group",
         "salinity_class",
@@ -1182,7 +1114,9 @@ def _normalize_code(layer: RegionLayer, raw_code: str) -> str:
     return code
 
 
-def _validate_bbox(bbox: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+def _validate_bbox(
+    bbox: tuple[float, float, float, float], *, limit_span: bool = True,
+) -> tuple[float, float, float, float]:
     west, south, east, north = bbox
     values = [west, south, east, north]
     if not all(math.isfinite(value) for value in values):
@@ -1191,7 +1125,7 @@ def _validate_bbox(bbox: tuple[float, float, float, float]) -> tuple[float, floa
         raise ValueError("bbox must be west,south,east,north")
     if not (-180 <= west <= 180 and -180 <= east <= 180 and -90 <= south <= 90 and -90 <= north <= 90):
         raise ValueError("bbox coordinates are outside WGS84 bounds")
-    if east - west > MAX_BBOX_SPAN_DEGREES or north - south > MAX_BBOX_SPAN_DEGREES:
+    if limit_span and max(east - west, north - south) > MAX_BBOX_SPAN_DEGREES:
         raise ValueError(f"bbox span must be {MAX_BBOX_SPAN_DEGREES} degrees or less")
     return west, south, east, north
 
@@ -1248,10 +1182,7 @@ def geometries_intersect(
 ) -> bool:
     """Return whether two validated WGS84 point/polygon geometries intersect."""
 
-    return _geometries_intersect(
-        _validate_geojson_geometry(left),
-        _validate_geojson_geometry(right),
-    )
+    return bool(geometry_shape(left).intersects(geometry_shape(right)))
 
 
 def _geometry_bbox(geometry: dict[str, Any]) -> tuple[float, float, float, float]:
@@ -1281,21 +1212,11 @@ def _iter_positions(geometry: dict[str, Any]) -> Any:
                 yield from ring
 
 
-def _coverage_estimate(input_geometry: dict[str, Any], region_geometry: dict[str, Any]) -> float:
-    from shapely.geometry import shape
-    field = shape(canonical_geometry(input_geometry))
-    region = shape(canonical_geometry(region_geometry, max_vertices=20_000))
+def _coverage_estimate(field: BaseGeometry, region: BaseGeometry, field_area_m2: float) -> float:
     if field.geom_type == "Point":
         return 1.0 if region.covers(field) else 0.0
-    total = geodesic_metrics(field)["area_m2"]
     covered = geodesic_metrics(field.intersection(region))["area_m2"]
-    return round(min(1.0, max(0.0, covered / total)), 6)
-
-
-def _geometries_intersect(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    from shapely.geometry import shape
-    return bool(shape(canonical_geometry(left, max_vertices=20_000)).intersects(
-        shape(canonical_geometry(right, max_vertices=20_000))))
+    return round(min(1.0, max(0.0, covered / field_area_m2)), 6)
 
 
 def _upload_feature(

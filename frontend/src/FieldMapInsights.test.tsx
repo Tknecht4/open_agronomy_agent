@@ -147,17 +147,21 @@ describe('compact on-demand field map insights', () => {
     expect(screen.getByText('24.7 ac from boundary')).toBeInTheDocument()
   })
 
-  it('times out sources without losing geometry, and ignores a late response', async () => {
+  it('keeps a long-running mapped query open and renders its completed coverage', async () => {
     vi.useFakeTimers()
     const source = deferred()
     vi.stubGlobal('fetch', vi.fn((_url, options) => isGeometryOnly(options) ? Promise.resolve(response(geometryResult)) : source.promise))
-    render(<FieldMapInsights {...props} />)
+    render(<FieldMapInsights {...props} allowNetwork={false} layerIds={['sk_detailed_soil']} />)
     await act(async () => { await Promise.resolve() })
     expect(screen.getByText('10 ha')).toBeInTheDocument()
-    await act(async () => { await vi.advanceTimersByTimeAsync(60_000) })
-    expect(screen.getByRole('alert')).toHaveTextContent('taking too long')
-    await act(async () => { source.resolve(response(result)); await source.promise })
-    expect(screen.queryByText('Canada ecozones')).not.toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(120_000) })
+    expect(screen.getByRole('status')).toHaveTextContent('Reading 1 map source')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    await act(async () => {
+      source.resolve(response({ ...result, layers: [{ ...result.layers[0], layer_id: 'sk_detailed_soil' }] }))
+      await source.promise
+    })
+    expect(screen.getByText('Saskatchewan soils', { selector: '.insight-layer-label strong' })).toBeInTheDocument()
     expect(screen.getByText('10 ha')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled()
   })

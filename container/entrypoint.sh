@@ -3,10 +3,6 @@ set -eu
 
 mkdir -p /state/db /state/artifacts /state/cache/geo /state/cache/agno_lexical_index /state/cache/public_tools /state/logs
 
-if [ -d /app/data/derived/geo_cache ]; then
-  cp -n /app/data/derived/geo_cache/*.json /state/cache/geo/ 2>/dev/null || true
-fi
-
 if [ "${AGRONOMY_AGENT_FIELD_LAN:-false}" = "true" ]; then
   if [ ! -f /field-lan-source/tls.crt ] || [ ! -f /field-lan-source/tls.key ]; then
     printf 'Field-LAN mode requires read-only tls.crt and tls.key mounts.\n' >&2

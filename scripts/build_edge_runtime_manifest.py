@@ -23,6 +23,7 @@ from agronomy_agent.corpus_governance import (  # noqa: E402
     load_corpus_policy,
     partition_runtime_corpus_paths,
 )
+from agronomy_agent.runtime_profiles import RUNTIME_PROFILE_REGISTRY, load_runtime_profile_registry  # noqa: E402
 
 
 SCHEMA_VERSION = "open_agronomy_agent.edge_runtime_manifest.v1"
@@ -200,6 +201,7 @@ def _on_demand_release_paths(
 
 def build_manifest(root: Path, *, rag_config: str | Path = RAG_CONFIG) -> dict[str, Any]:
     root = root.resolve()
+    profiles = load_runtime_profile_registry(root=root)
     rag_value = Path(rag_config)
     rag_path = _path_in_root(
         root,
@@ -232,13 +234,15 @@ def build_manifest(root: Path, *, rag_config: str | Path = RAG_CONFIG) -> dict[s
     on_demand_paths = _on_demand_release_paths(root, artifact_root, on_demand_values)
     knowledge_paths = [*corpus_paths, *graph_paths, *on_demand_paths]
     policy_path = _artifact_path(artifact_root, str(policy_value)) if policy_value else None
-    required_paths = [
+    required_paths = dict.fromkeys([
         rag_path,
         root / MODEL_CONFIG,
+        root / RUNTIME_PROFILE_REGISTRY,
         *(root / value for value in CONTROL_PATHS),
+        *(root / value for value in profiles.active_rag_control_paths),
         *([policy_path] if policy_path is not None else []),
         *knowledge_paths,
-    ]
+    ])
     missing = [
         str(path)
         for path in required_paths
@@ -273,7 +277,13 @@ def build_manifest(root: Path, *, rag_config: str | Path = RAG_CONFIG) -> dict[s
         for path in required_paths
         if path not in knowledge_paths
     ]
-    geo_cache = _tree_digest(root, root / "data/derived/geo_cache")
+    # Keep the empty seed in the image contract so overlays can reject a seeded base.
+    geo_cache = {
+        "path": "data/derived/geo_cache",
+        "file_count": 0,
+        "bytes": 0,
+        "sha256": hashlib.sha256(b"").hexdigest(),
+    }
     bundled_geo_layers = {
         **_tree_digest(
             root,

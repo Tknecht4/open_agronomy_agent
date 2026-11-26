@@ -548,22 +548,21 @@ def _map_interpretation_answer(question: str | None, trace: dict[str, Any]) -> s
     usable = [item for item in intersections if isinstance(item, dict)]
     if not usable:
         return None
-    thematic = [
+    mapped_soils = [
         item
         for item in usable
         if re.search(
-            r"\b(?:capability|thematic soil|soil map|soil survey)\b",
+            r"\b(?:soil map|soil survey)\b",
             " ".join(str(item.get(key) or "") for key in ("system", "layer_id", "name")),
             re.IGNORECASE,
         )
     ]
-    if not thematic:
+    if not mapped_soils:
         return None
-    selected = thematic[0]
+    selected = mapped_soils[0]
     system = str(selected.get("system") or "official regional mapping").strip()
     name = str(
-        selected.get("capability_summary")
-        or selected.get("soil_summary")
+        selected.get("soil_summary")
         or selected.get("name")
         or selected.get("code")
         or "mapped polygon"
@@ -583,7 +582,7 @@ def _map_interpretation_answer(question: str | None, trace: dict[str, Any]) -> s
         if value:
             detail_bits.append(f"{label} {value}")
     detail_sentence = f" Its attributes include {', '.join(detail_bits[:4])}." if detail_bits else ""
-    heterogeneous = len(thematic) > 1
+    heterogeneous = len(mapped_soils) > 1
     variation_sentence = (
         " Smaller intersecting polygons carry different mapped classes, so the boundary should be treated as heterogeneous."
         if heterogeneous

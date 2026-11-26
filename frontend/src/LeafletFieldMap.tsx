@@ -119,7 +119,15 @@ export function LeafletFieldMap({
     }).then(payload => {
       if (controller.signal.aborted) return
       if (!Array.isArray(payload.layers)) throw new Error('Invalid layer catalog')
-      setCatalog(payload.layers.filter((layer: MapLayerChoice) => typeof layer.id === 'string' && typeof layer.label === 'string'))
+      const layers: MapLayerChoice[] = payload.layers.filter(
+        (layer: MapLayerChoice) => typeof layer.id === 'string' && typeof layer.label === 'string',
+      )
+      setCatalog(layers)
+      const knownIds = new Set(layers.map(layer => layer.id))
+      setPreferences(current => {
+        const selected = current.layers.filter(id => knownIds.has(id))
+        return selected.length === current.layers.length ? current : { ...current, layers: selected }
+      })
       setCatalogStatus('ready')
     }).catch(() => { if (!controller.signal.aborted) { setCatalog([]); setCatalogStatus('error') } })
     return () => controller.abort()
@@ -417,17 +425,7 @@ export function LeafletFieldMap({
             dashArray:
               properties.layer_id === 'epa_l3_us' || properties.layer_id === 'canada_ecozones'
                 ? '8 5'
-                : properties.layer_id === 'bc_agriculture_capability'
-                  ? '5 3'
-                  : properties.layer_id === 'sk_thematic_soil'
-                    ? '3 3'
-                  : properties.layer_id === 'sk_detailed_soil'
-                    ? undefined
-                  : properties.layer_id === 'pei_detailed_soil'
-                    ? '2 4'
-                  : properties.layer_id === 'ns_pictou_detailed_soil'
-                    ? '7 3 2 3'
-                  : undefined,
+                : undefined,
           },
         })
         if (mode === 'inspect') {

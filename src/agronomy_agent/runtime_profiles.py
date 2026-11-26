@@ -23,6 +23,7 @@ class RuntimeProfileRegistry:
     default_rag_config: str
     selectable_rag_configs: tuple[str, ...]
     historical_rag_configs: tuple[str, ...]
+    active_rag_control_paths: tuple[str, ...]
 
 
 def _sha256(path: Path) -> str:
@@ -118,6 +119,7 @@ def load_runtime_profile_registry(
     if not isinstance(active_rows, list) or not active_rows:
         raise ValueError("runtime profile registry must declare active_rag_profiles")
     selectable: list[str] = []
+    active_rag_control_paths: list[str] = []
     for index, row in enumerate(active_rows):
         label = f"active_rag_profiles[{index}]"
         if not isinstance(row, dict) or row.get("status") != "active":
@@ -162,6 +164,7 @@ def load_runtime_profile_registry(
         if not any(str(value).startswith(release_root) for value in retrieval["corpus_paths"]):
             raise ValueError(f"{label} does not reference its bound knowledge release")
         selectable.append(config)
+        active_rag_control_paths.extend((policy_reference, manifest_reference))
     if len(selectable) != len(set(selectable)):
         raise ValueError("runtime profile registry contains duplicate active RAG paths")
 
@@ -198,4 +201,5 @@ def load_runtime_profile_registry(
         default_rag_config=default_rag_config,
         selectable_rag_configs=tuple(selectable),
         historical_rag_configs=tuple(historical),
+        active_rag_control_paths=tuple(dict.fromkeys(active_rag_control_paths)),
     )

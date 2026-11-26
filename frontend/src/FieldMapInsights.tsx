@@ -28,8 +28,8 @@ const reasonLabel = (reason?: string) => ({
   source_normalization_incomplete: 'Some source records could not be verified.',
   legacy_remote_query_geometry_incomplete: 'This online source cannot confirm complete coverage for multipart boundaries or holes.',
   source_feature_limit_reached: 'This request reached the source limit. Coverage is incomplete.',
-  source_candidate_limit_reached: 'This request reached the source limit. Coverage is incomplete.',
   source_vertex_limit_reached: 'This source is too detailed for an interactive calculation.',
+  remote_geometry_span_unsupported: 'This online source cannot query a boundary spanning more than 12 degrees.',
   invalid_source_geometry: 'Some source shapes could not be analysed.',
   local_layer_not_installed: 'This map pack is not installed.',
   offline_network_policy: 'This source requires connected mode.',
@@ -49,16 +49,11 @@ function useAnalysisRequest(body: string, identity: string, enabled: boolean, re
     if (!enabled) return
     const controller = new AbortController()
     setResult({ key, data: null, state: 'loading', error: '' })
-    const timeoutMessage = 'This request is taking too long. Try again.'
-    const timeout = window.setTimeout(() => {
-      controller.abort()
-      setResult({ key, data: null, state: 'error', error: timeoutMessage })
-    }, 60_000)
     fetch('/api/geo/field-analysis', {
       method: 'POST', headers: { 'content-type': 'application/json', ...csrfHeaders() },
       body, signal: controller.signal,
     }).then(async response => {
-      if (!response.ok) throw new Error(response.status === 413 ? 'This boundary is too detailed for interactive analysis. Use a simplified copy.' : response.status === 422 ? 'This boundary cannot be analysed. Check its shape and size.' : 'Field insights are unavailable. Try again shortly.')
+      if (!response.ok) throw new Error(response.status === 413 ? 'This boundary exceeds the supported request size.' : response.status === 422 ? 'This boundary cannot be analysed. Check its shape and size.' : 'Field insights are unavailable. Try again shortly.')
       const payload = await response.json()
       if (payload.schema_version !== 'open_agronomy_agent.field_map_analysis.v1' || !payload.geometry || !Array.isArray(payload.layers)) throw new Error('The analysis response was incomplete. Try again.')
       return payload as FieldMapAnalysis
@@ -66,8 +61,8 @@ function useAnalysisRequest(body: string, identity: string, enabled: boolean, re
       if (!controller.signal.aborted) setResult({ key, data: payload, state: 'ready', error: '' })
     }).catch(cause => {
       if (!controller.signal.aborted) setResult({ key, data: null, state: 'error', error: cause.message })
-    }).finally(() => window.clearTimeout(timeout))
-    return () => { window.clearTimeout(timeout); controller.abort() }
+    })
+    return () => controller.abort()
   }, [body, key, enabled])
   return result?.key === key ? result : { key, data: null, state: 'loading' as const, error: '' }
 }
@@ -109,22 +104,25 @@ export function FieldMapInsights({ geometry, fieldKey, fieldName, layerIds, allo
     <section className="insight-coverage" aria-label="Mapped context">
       <header><h4>{point ? 'At this location' : 'Mapped zones'}</h4></header>
       {!layerIds.length ? <p className="insights-message">Choose context layers in Map & layers to compare this field with official mapping.</p> : mapping.state === 'loading' ? <p className="insights-loading" role="status"><RefreshCw size={15} className="spin" /> Reading {layerIds.length} map {layerIds.length === 1 ? 'source' : 'sources'}…</p> : mapping.state === 'error' ? <p className="insights-message" role="alert">{mapping.error} {metrics ? 'Boundary measurements remain available above.' : ''}</p> : <>
-        {layers.filter(layer => layer.status !== 'complete' || layer.zones.length > 0).map(layer => <article className="insight-layer" key={layer.layer_id}>
+        {layers.filter(layer => layer.status !== 'complete' || layer.zones.length > 0).map(layer => {
+          const zoneCount = layer.zones.length + layer.omitted_zone_count
+          return <article className="insight-layer" key={layer.layer_id}>
           <details>
             <summary>
-              <div className="insight-layer-label"><strong>{mapLayerLabel({ id: layer.layer_id, label: layer.label })}</strong><span>{layer.zones.length === 1 ? layer.zones[0].name || layer.zones[0].code || 'Unnamed map zone' : layer.zones.length > 1 ? `${layer.zones.length} mapped zones` : 'No verified match'}</span></div>
+              <div className="insight-layer-label"><strong>{mapLayerLabel({ id: layer.layer_id, label: layer.label })}</strong><span>{zoneCount > 1 ? `${zoneCount} mapped zones` : layer.zones.length === 1 ? layer.zones[0].name || layer.zones[0].code || 'Unnamed map zone' : 'No verified match'}</span></div>
               <div className="insight-layer-value">{!point && layer.coverage_fraction !== null ? <><strong>{percent(layer.coverage_fraction)}</strong><span>covered</span></> : <span className={`insight-status ${layer.status}`}>{statusLabel(layer.status)}</span>}</div>
               <ChevronDown size={15} className="insight-chevron" aria-hidden="true" />
             </summary>
             <div className="insight-layer-detail">
               {!point && layer.coverage_fraction !== null ? <p className="insight-total">{area(layer.covered_area_ha)} mapped · {percent(layer.coverage_fraction)} of boundary</p> : null}
               {layer.zones.length ? <table className="insight-zones"><caption className="sr-only">Mapped zones in {layer.label}</caption><thead><tr><th scope="col">Zone</th>{!point ? <><th scope="col">Area</th><th scope="col">Share</th></> : null}</tr></thead><tbody>{layer.zones.map((zone, index) => <tr key={`${zone.code}:${index}`}><th scope="row">{zone.name || zone.code || 'Unnamed map zone'}</th>{!point ? <><td>{area(zone.area_ha)}</td><td>{percent(zone.fraction_of_field)}</td></> : null}</tr>)}</tbody></table> : null}
-              {layer.omitted_zone_count > 0 ? <p>{layer.omitted_zone_count} smaller zones included in total coverage.</p> : null}
+              {layer.omitted_zone_count > 0 ? <p>{layer.omitted_zone_count} more {layer.omitted_zone_count === 1 ? 'zone' : 'zones'} found.</p> : null}
               <div className="insight-source"><strong>Source & method</strong><p>{layer.label}</p><p>{layer.coverage_method}</p><p>{layer.uncertainty}</p><p>{layer.boundary}</p>{safeSourceUrl(layer.source_url) ? <a href={layer.source_url} target="_blank" rel="noreferrer">Open source <ArrowUpRight size={13} /></a> : null}</div>
             </div>
           </details>
           {layer.status !== 'complete' ? <p className="insight-source-note"><strong>{statusLabel(layer.status)}.</strong> {reasonLabel(layer.reason)}</p> : null}
-        </article>)}
+        </article>
+        })}
         {unmatched.length ? <details className="insight-empty-layers"><summary>{unmatched.length} {unmatched.length === 1 ? 'layer had' : 'layers had'} no mapped match</summary><ul>{unmatched.map(layer => <li key={layer.layer_id}><span>{mapLayerLabel({ id: layer.layer_id, label: layer.label })}</span>{!point && layer.coverage_fraction !== null ? <strong>{percent(layer.coverage_fraction)}</strong> : null}{safeSourceUrl(layer.source_url) ? <a href={layer.source_url} target="_blank" rel="noreferrer">Source ↗</a> : null}</li>)}</ul></details> : null}
       </>}
     </section>

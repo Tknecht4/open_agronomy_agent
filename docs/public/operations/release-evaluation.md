@@ -44,7 +44,9 @@ PYTHONPATH=src .venv/bin/python scripts/run_release_evaluation.py \
 The catalog in `configs/final_evaluation_suite_v1.json` accounts for every
 JSONL input in `data/eval/` and the retained scientific, CCA,
 refusal/crop-scope, and V3 input bundles. Missing files, changed row counts,
-changed pinned hashes, and uncataloged inputs stop planning. Restore retained
+changed pinned hashes, and uncataloged inputs stop planning. The catalog pins
+the scientific, CCA, and refusal/crop-scope inputs under the private
+`outputs/evaluation-inputs/final-evaluation-suite-v1/` directory. Restore
 controller inputs at the catalog's paths using the exact pinned bytes. The V3
 inputs can be rebuilt using the pinned input preparation procedure in the
 [evaluation contract](../evaluation.md#public-v3-competence-candidate).

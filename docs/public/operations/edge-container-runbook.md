@@ -72,6 +72,9 @@ Stopping the profile invalidates the in-memory session secret. Passing the launc
 - The image declares geospatial content class `lineage_manifests_only` and
   `runtime_layer_assets_included=false`; the selected offline profile manifest,
   install receipt, and validator are the authority for installed layer bytes.
+- Geospatial responses are cached under the mounted `/state/cache/geo`.
+  For an older image built with a populated cache seed, use a full rebuild
+  so the new image has no inherited cache layer.
 - Field-LAN uses an explicit no-public-egress network and HTTPS.
 
 ## Recovery and promotion
