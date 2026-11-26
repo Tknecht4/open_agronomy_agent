@@ -124,7 +124,9 @@ def _write_fixture_database(
         connection.close()
 
 
-def _write_fixture_profile_state(tmp_path: Path) -> tuple[Path, Path, Path, str]:
+def _write_fixture_profile_state(
+    tmp_path: Path, *, profile_id: str = "fixture-dss-v1",
+) -> tuple[Path, Path, Path, str]:
     state_root = tmp_path / "state"
     registry_path = tmp_path / "registry.json"
     profile_path = tmp_path / "profiles.json"
@@ -150,12 +152,12 @@ def _write_fixture_profile_state(tmp_path: Path) -> tuple[Path, Path, Path, str]
     raw_sha256 = _sha256(raw_path)
     source_entry_sha256 = profiles.canonical_json_sha256(source)
     profile = {
-        "id": "fixture-dss-v1",
+        "id": profile_id,
         "title": "Fixture DSS",
         "status": "approved_for_local_install",
         "source_registry_path": "registry.json",
         "pack": {
-            "directory": "spatial-pack/fixture-dss-v1",
+            "directory": f"spatial-pack/{profile_id}",
             "manifest": pack.PACK_MANIFEST_NAME,
             "install_receipt": "install_receipt.json",
             "minimum_free_bytes": 1,
@@ -237,7 +239,6 @@ def test_prairie_profile_pins_exact_dss_sources_and_registry_entries() -> None:
     )
     assert profiles.validate_profile_registry_contract(profile, registry) == []
     assert profile["pack"]["minimum_free_bytes"] >= 1_000_000_000
-    assert "ca_aafc_soil_erosion_risk_2021" in profile["deferred_layers"]
 
 
 def test_default_geospatial_catalog_validation_does_not_claim_external_assets_are_bundled() -> None:
@@ -312,6 +313,121 @@ def test_setup_dry_run_never_creates_the_selected_state_directory(tmp_path: Path
         "spatial-pack/prairie-dss-v1"
     )
     assert not state_root.exists()
+
+
+def test_verified_prairie_build_cleans_sources_and_reuses_installed_pack(tmp_path: Path, monkeypatch) -> None:
+    profile_id = pack.DEFAULT_PROFILE_ID
+    state_root, registry_path, profile_path, source_id = _write_fixture_profile_state(tmp_path, profile_id=profile_id)
+    profile = profiles.load_profile(profile_path, profile_id)
+    source = profiles.source_row(profile, source_id)
+    paths = {kind: profiles.resolve_state_path(state_root, source, kind) for kind in source["state_paths"]}
+    destination = profiles.resolve_pack_root(state_root, profile)
+    assert all(path.is_file() for path in paths.values())
+    saw_raw_during_probe = []
+
+    def probe(*args, **kwargs):
+        saw_raw_during_probe.append(paths["raw"].exists())
+        return {"status": "pass", "errors": []}
+
+    monkeypatch.setattr(setup, "run_prairie_probe", probe)
+    kwargs = {
+        "profile_id": profile_id, "data_root": state_root, "registry_path": registry_path,
+        "profile_manifest_path": profile_path, "build": True, "verify": True, "dry_run": False,
+    }
+    report = setup.run_setup(download=False, **kwargs)
+    removed = {"raw", "derived", "derived_manifest"}
+    assert {row["path"] for row in report["cleanup"]["removed"]} == {
+        paths[kind].relative_to(state_root).as_posix() for kind in removed
+    }
+    assert all(not paths[kind].exists() for kind in removed)
+    assert paths["lineage"].is_file()
+    assert report["raw_retained_after_success"] is False
+    cleanup_receipt = Path(report["cleanup"]["receipt"])
+    receipt_bytes = cleanup_receipt.read_bytes()
+
+    def unexpected_download(**kwargs):
+        pytest.fail("an existing verified pack needs no downloads")
+
+    monkeypatch.setattr(setup, "_download_source", unexpected_download)
+    retry = setup.run_setup(download=True, **kwargs)
+    assert retry["pack"]["action"] == "reused"
+    assert retry["cleanup"]["removed"] == []
+    assert saw_raw_during_probe == [True, False]
+    assert cleanup_receipt.read_bytes() == receipt_bytes
+    assert pack.validate_pack(destination, profile_id=profile_id, profile_manifest_path=profile_path)["status"] == "pass"
+
+
+@pytest.mark.parametrize("failure", ["probe", "different_intermediate", "linked_pack_asset"])
+def test_prairie_cleanup_fails_closed_before_deleting_sources(tmp_path: Path, monkeypatch, failure: str) -> None:
+    profile_id = pack.DEFAULT_PROFILE_ID
+    state_root, registry_path, profile_path, source_id = _write_fixture_profile_state(tmp_path, profile_id=profile_id)
+    profile = profiles.load_profile(profile_path, profile_id)
+    source = profiles.source_row(profile, source_id)
+    paths = {kind: profiles.resolve_state_path(state_root, source, kind) for kind in source["state_paths"]}
+    destination = profiles.resolve_pack_root(state_root, profile)
+    pack.build_pack(
+        registry_path=registry_path, asset_root=state_root, destination=destination,
+        profile_id=profile_id, profile_manifest_path=profile_path, retain_raw=True,
+    )
+    monkeypatch.setattr(setup, "run_prairie_probe", lambda *args, **kwargs: {
+        "status": "fail" if failure == "probe" else "pass", "errors": ["fixture"] if failure == "probe" else [],
+    })
+    if failure == "different_intermediate":
+        paths["derived_manifest"].write_text("{}", encoding="utf-8")
+    elif failure == "linked_pack_asset":
+        packed = destination / paths["derived"].name
+        packed.unlink()
+        packed.symlink_to(paths["derived"])
+    before = {kind: _sha256(path) for kind, path in paths.items()}
+    with pytest.raises(ValueError, match="probe failed|differs from verified bytes|packed asset is linked"):
+        setup.run_setup(
+            profile_id=profile_id, data_root=state_root, registry_path=registry_path,
+            profile_manifest_path=profile_path, download=False, build=False,
+            verify=True, cleanup=True, dry_run=False,
+        )
+    assert {kind: _sha256(path) for kind, path in paths.items()} == before
+    assert not list(state_root.glob("prairie-dss-cleanup-*.json"))
+
+
+def test_prairie_cleanup_rechecks_each_unlink_and_can_retry(tmp_path: Path, monkeypatch) -> None:
+    profile_id = pack.DEFAULT_PROFILE_ID
+    state_root, registry_path, profile_path, source_id = _write_fixture_profile_state(tmp_path, profile_id=profile_id)
+    profile = profiles.load_profile(profile_path, profile_id)
+    source = profiles.source_row(profile, source_id)
+    raw = profiles.resolve_state_path(state_root, source, "raw")
+    derived = profiles.resolve_state_path(state_root, source, "derived")
+    destination = profiles.resolve_pack_root(state_root, profile)
+    pack.build_pack(
+        registry_path=registry_path, asset_root=state_root, destination=destination,
+        profile_id=profile_id, profile_manifest_path=profile_path, retain_raw=True,
+    )
+    monkeypatch.setattr(setup, "run_prairie_probe", lambda *args, **kwargs: {"status": "pass", "errors": []})
+    unlink = setup.os.unlink
+
+    def replace_later_asset(path, *, dir_fd=None):
+        unlink(path, dir_fd=dir_fd)
+        if path == raw.name and dir_fd is not None:
+            derived.write_bytes(b"new unrelated bytes")
+
+    kwargs = {
+        "profile_id": profile_id, "data_root": state_root, "registry_path": registry_path,
+        "profile_manifest_path": profile_path, "download": False, "build": False,
+        "verify": True, "cleanup": True, "dry_run": False,
+    }
+    with monkeypatch.context() as instrument:
+        instrument.setattr(setup.os, "unlink", replace_later_asset)
+        with pytest.raises(ValueError, match="asset changed before removal"):
+            setup.run_setup(**kwargs)
+    assert not raw.exists()
+    assert derived.read_bytes() == b"new unrelated bytes"
+    assert not list(state_root.glob("prairie-dss-cleanup-*.json"))
+
+    derived.write_bytes((destination / derived.name).read_bytes())
+    retry = setup.run_setup(**kwargs)
+    assert not derived.exists()
+    assert retry["cleanup"]["already_absent"] == [raw.relative_to(state_root).as_posix()]
+    assert retry["cleanup"]["removed_bytes"] == sum(row["bytes"] for row in retry["cleanup"]["removed"])
+    assert pack.validate_pack(destination, profile_id=profile_id, profile_manifest_path=profile_path)["status"] == "pass"
 
 
 def test_setup_dry_run_does_not_create_a_state_root_lock(tmp_path: Path) -> None:

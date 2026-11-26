@@ -265,109 +265,6 @@ const uploadLayerErrorPayload = {
   status_message: 'two-fields.geojson loaded; official regional layer intersection needs attention.',
 }
 
-const peiRing = [
-  [-63.14, 46.24],
-  [-63.12, 46.24],
-  [-63.12, 46.26],
-  [-63.14, 46.26],
-  [-63.14, 46.24],
-]
-
-const peiUploadPayload = {
-  ...uploadPayload,
-  filename: 'pei-field.geojson',
-  feature_count: 1,
-  parsed_feature_count: 1,
-  geometry: { type: 'Polygon', coordinates: [peiRing] },
-  bbox: [-63.14, 46.24, -63.12, 46.26],
-  feature_collection: {
-    type: 'FeatureCollection',
-    features: [{
-      type: 'Feature',
-      id: 'geojson:0',
-      properties: { name: 'PEI field' },
-      geometry: { type: 'Polygon', coordinates: [peiRing] },
-    }],
-  },
-  feature_summaries: [{
-    id: 'geojson:0',
-    label: 'PEI field',
-    geometry_type: 'Polygon',
-    bbox: [-63.14, 46.24, -63.12, 46.26],
-    acres: 62,
-    selected: true,
-    properties: { name: 'PEI field' },
-  }],
-  regional_intersections: [{
-    layer_id: 'pei_detailed_soil',
-    layer_label: 'PEI Detailed Soil Survey (1:75,000)',
-    system: 'AAFC PEI Detailed Soil Survey',
-    code: 'PEI_SOIL_1270',
-    name: 'PEI detailed soil map unit PEPED103Ch:6-Ti:3/CD: 60% Charlottetown; 30% Tignish',
-    label: 'PEI detailed soil map unit PEPED103Ch:6-Ti:3/CD: 60% Charlottetown; 30% Tignish',
-    source_url: 'https://open.canada.ca/data/en/dataset/7fa18ce7-6c14-438a-95c6-bb0906ddfb30',
-    confidence: 0.94,
-    coverage_estimate: 1,
-    match_reason: 'Bundled OGL-Canada PEI detailed-soil intersection',
-    source: 'bundled_official_geospatial_layer',
-    source_scale_range: '1:75,000',
-    map_unit: 'PEPED103Ch:6-Ti:3/CD',
-    dominant_components: [
-      { soil_name: 'Charlottetown', proportion_percent: 60, drainage_class: 'well drained' },
-      { soil_name: 'Tignish', proportion_percent: 30, drainage_class: 'well drained' },
-    ],
-    publication_year: 2013,
-    boundary: 'Historical mapped prior, not current field truth or a management rate.',
-  }],
-  regional_feature_collection: { type: 'FeatureCollection', features: [] },
-  official_layer_status: [{
-    layer_id: 'pei_detailed_soil',
-    label: 'PEI Detailed Soil Survey (1:75,000)',
-    system: 'AAFC PEI Detailed Soil Survey',
-    status: 'matched',
-    match_count: 1,
-    message: 'matched bundled official polygon',
-  }],
-  warnings: [],
-  status_message: 'pei-field.geojson loaded with one historical mapped-soil match.',
-}
-
-const nsPictouUploadPayload = {
-  ...peiUploadPayload,
-  filename: 'pictou-field.geojson',
-  regional_intersections: [{
-    layer_id: 'ns_pictou_detailed_soil',
-    layer_label: 'Pictou County Detailed Soil Survey (1:50,000)',
-    system: 'AAFC Nova Scotia Detailed Soil Survey',
-    code: 'NS_PICTOU_SOIL_1',
-    name: 'Pictou County detailed soil map unit NSNSD005Qu4/C: 70% Queens; 30% Queens',
-    label: 'Pictou County detailed soil map unit NSNSD005Qu4/C: 70% Queens; 30% Queens',
-    source_url: 'https://open.canada.ca/data/en/dataset/083534ca-d5b0-46f5-b540-f3a706dbc2de',
-    confidence: 0.94,
-    coverage_estimate: 1,
-    match_reason: 'Bundled OGL-Canada Pictou County detailed-soil intersection',
-    source: 'bundled_official_geospatial_layer',
-    source_scale_range: '1:50,000',
-    map_unit: 'NSNSD005Qu4/C',
-    coverage_area: 'Pictou County only',
-    dominant_components: [
-      { soil_name: 'Queens', proportion_percent: 70, drainage_class: 'imperfectly drained' },
-      { soil_name: 'Queens', proportion_percent: 30, drainage_class: 'poorly drained' },
-    ],
-    publication_year: 2013,
-    boundary: 'Historical Pictou County mapped prior; not province-wide coverage or current field truth.',
-  }],
-  official_layer_status: [{
-    layer_id: 'ns_pictou_detailed_soil',
-    label: 'Pictou County Detailed Soil Survey (1:50,000)',
-    system: 'AAFC Nova Scotia Detailed Soil Survey',
-    status: 'matched',
-    match_count: 1,
-    message: 'matched bundled official polygon',
-  }],
-  status_message: 'pictou-field.geojson loaded with one historical mapped-soil match.',
-}
-
 const southPriors = {
   location_text: 'Iowa Des Moines Lobe corn soil phosphorus boundary 4 vertices 50 acres',
   candidate_regions: [
@@ -468,60 +365,18 @@ const pointPriors = {
   ],
 }
 
-const bcPriors = {
-  location_text: 'British Columbia Fraser Valley mixed cropping boundary 4 vertices 96 acres',
-  candidate_regions: [
-    {
-      label: 'BC agriculture capability: 70% class 2; 30% class 2',
-      name: 'BC agriculture capability: 70% class 2; 30% class 2',
-      layer: 'bc_agriculture_capability',
-      system: 'BC Agriculture Capability',
-      code: 'CAPABILITY_2',
-      confidence: 1,
-    },
-  ],
+const abPriors = {
   boosted_namespaces: ['regional_environment_context', 'soil_water', 'crop_management'],
   evidence: ['official_polygon_intersection'],
   missing_context: [],
   uncertainty: 'low',
   used_as_prior_only: true,
   not_field_specific_fact: true,
-  disclaimer: 'Legacy capability polygons are context priors, not current field truth.',
+  disclaimer: 'Mapped soils are regional context.',
   ui_notice: 'Official regional polygons intersected the sample field geometry.',
   recommended_followups: ['Confirm current soil, drainage, field history, and crop goals.'],
-  regional_intersections: [
-    {
-      layer_id: 'bc_agriculture_capability',
-      layer_label: 'BC Agriculture Capability Mapping',
-      system: 'BC Agriculture Capability',
-      code: 'CAPABILITY_2',
-      name: 'BC agriculture capability: 70% class 2; 30% class 2',
-      label: 'BC agriculture capability: 70% class 2; 30% class 2',
-      source_url: 'https://catalogue.data.gov.bc.ca/dataset/agriculture-capability-mapping',
-      confidence: 1,
-      coverage_estimate: 0.78,
-      match_reason: 'Bundled official geospatial layer intersection',
-      source: 'bundled_official_geospatial_layer',
-      source_scale_range: '1:20,000 to 1:100,000',
-      boundary: 'Legacy regional context, not current field truth.',
-    },
-  ],
   regional_feature_collection: { type: 'FeatureCollection', features: [] },
   geo_errors: [],
-  official_layer_status: [
-    {
-      layer_id: 'bc_agriculture_capability',
-      label: 'BC Agriculture Capability Mapping',
-      system: 'BC Agriculture Capability',
-      status: 'matched',
-      match_count: 1,
-      message: 'matched bundled official polygon',
-    },
-  ],
-}
-
-const abPriors = {
-  ...bcPriors,
   location_text: 'Alberta Leduc County barley boundary 4 vertices 160 acres',
   candidate_regions: [{
     label: 'Alberta detailed soil map unit MMNV9/U1l',
@@ -560,10 +415,10 @@ const skPriors = {
   location_text: 'Saskatchewan Regina Plain spring wheat boundary 4 vertices 96 acres',
   candidate_regions: [
     {
-      label: 'Saskatchewan thematic soil: capability class 2; well drainage; 0 - 2% slope',
-      name: 'Saskatchewan thematic soil: capability class 2; well drainage; 0 - 2% slope',
-      layer: 'sk_thematic_soil',
-      system: 'AAFC Saskatchewan Thematic Soil',
+      label: 'Saskatchewan detailed soil map unit SK-40147',
+      name: 'Saskatchewan detailed soil map unit SK-40147',
+      layer: 'sk_detailed_soil',
+      system: 'AAFC Saskatchewan Detailed Soil Survey',
       code: 'SK_SOIL_40147',
       confidence: 0.94,
     },
@@ -574,26 +429,25 @@ const skPriors = {
   uncertainty: 'low',
   used_as_prior_only: true,
   not_field_specific_fact: true,
-  disclaimer: 'Thematic soil polygons are context priors, not current field truth.',
-  ui_notice: 'The bundled Saskatchewan thematic soil polygon intersected the sample field geometry.',
+  disclaimer: 'Detailed soil polygons are context priors, not current field truth.',
+  ui_notice: 'The bundled Saskatchewan detailed soil polygon intersected the sample field geometry.',
   recommended_followups: ['Confirm field variability, soil profile, nutrient status, salinity, and drainage performance.'],
   regional_intersections: [
     {
-      layer_id: 'sk_thematic_soil',
-      layer_label: 'Saskatchewan Thematic Soil Maps',
-      system: 'AAFC Saskatchewan Thematic Soil',
+      layer_id: 'sk_detailed_soil',
+      layer_label: 'Saskatchewan Detailed Soil Survey',
+      system: 'AAFC Saskatchewan Detailed Soil Survey',
       code: 'SK_SOIL_40147',
-      name: 'Saskatchewan thematic soil: capability class 2; well drainage; 0 - 2% slope',
-      label: 'Saskatchewan thematic soil: capability class 2; well drainage; 0 - 2% slope',
-      source_url: 'https://open.canada.ca/data/en/dataset/ed36f4f3-2fb9-4241-8e29-6741e8b9e400',
+      name: 'Saskatchewan detailed soil map unit SK-40147',
+      label: 'Saskatchewan detailed soil map unit SK-40147',
+      source_url: 'https://open.canada.ca/data/en/dataset/3734623c-25c5-4e69-936d-26f764a2807f',
       confidence: 0.94,
       coverage_estimate: 1,
-      match_reason: 'Bundled OGL-Canada thematic-soil intersection',
+      match_reason: 'Installed OGL-Canada Saskatchewan DSS v3 intersection',
       source: 'bundled_official_geospatial_layer',
-      source_scale_note: 'Revised and condensed from the Saskatchewan Detailed Soils Database.',
+      source_scale_label: '1:100,000',
       drainage_class: 'Well',
       capability_class: '2',
-      capability_interpretation: 'moderate limitations or moderate conservation needs',
       erosion_risk: 'Very Low',
       slope_class: '0 - 2%',
       surface_texture_group: 'Fine',
@@ -604,9 +458,9 @@ const skPriors = {
   geo_errors: [],
   official_layer_status: [
     {
-      layer_id: 'sk_thematic_soil',
-      label: 'Saskatchewan Thematic Soil Maps',
-      system: 'AAFC Saskatchewan Thematic Soil',
+      layer_id: 'sk_detailed_soil',
+      label: 'Saskatchewan Detailed Soil Survey',
+      system: 'AAFC Saskatchewan Detailed Soil Survey',
       status: 'matched',
       match_count: 1,
       message: 'matched bundled official polygon',
@@ -615,64 +469,32 @@ const skPriors = {
 }
 
 const mbPriors = {
+  ...abPriors,
   location_text: 'Manitoba Aspen Parkland canola boundary 4 vertices 320 acres',
-  candidate_regions: [
-    {
-      label: '2021 soil erosion risk: Very Low',
-      name: '2021 soil erosion risk: Very Low',
-      layer: 'ca_soil_erosion_risk',
-      system: 'AAFC Soil Erosion Risk',
-      code: 'CA_ERI_511002',
-      confidence: 0.94,
-    },
-  ],
-  boosted_namespaces: ['regional_environment_context', 'soil_water', 'crop_management'],
-  evidence: ['official_polygon_intersection'],
-  missing_context: [],
-  uncertainty: 'low',
-  used_as_prior_only: true,
-  not_field_specific_fact: true,
-  disclaimer: 'AAFC erosion-risk polygons are regional historical context, not current field truth.',
-  ui_notice: 'The bundled AAFC erosion-risk polygon intersected the sample field geometry.',
-  recommended_followups: ['Confirm present cover, slope, residue, drainage, and erosion evidence in the field.'],
-  regional_intersections: [
-    {
-      layer_id: 'ca_soil_erosion_risk',
-      layer_label: 'AAFC Soil Erosion Risk 2021',
-      system: 'AAFC Soil Erosion Risk',
-      code: 'CA_ERI_511002',
-      name: '2021 soil erosion risk: Very Low',
-      label: '2021 soil erosion risk: Very Low',
-      source_url: 'https://open.canada.ca/data/en/dataset/b52b3c91-e0eb-47d1-aea5-fa5428254512',
-      confidence: 0.94,
-      coverage_estimate: 1,
-      match_reason: 'Bundled OGL-Canada soil-erosion-risk intersection',
-      source: 'bundled_official_geospatial_layer',
-      source_scale: 'Generalized Soil Landscapes of Canada polygons; not a field-scale erosion survey.',
-      erosion_risk: 'Very Low',
-      erosion_indicator_2021: 4.002,
-      erosion_risk_1981: 'Low',
-      erosion_indicator_1981: 7.191,
-      erosion_change_1981_2021: 'Decrease',
-      erosion_change_indicator: -3.189,
-      erosion_summary: 'AAFC modelled soil erosion risk for Soil Landscape 511002: Very Low in 2021; 1981-2021 change class decrease.',
-      soil_landscape_id: 511002,
-      source_year: 2021,
-      boundary: 'Regional historical context, not current erosion observation or field diagnosis.',
-    },
-  ],
-  regional_feature_collection: { type: 'FeatureCollection', features: [] },
-  geo_errors: [],
-  official_layer_status: [
-    {
-      layer_id: 'ca_soil_erosion_risk',
-      label: 'AAFC Soil Erosion Risk 2021',
-      system: 'AAFC Soil Erosion Risk',
-      status: 'matched',
-      match_count: 1,
-      message: 'matched bundled official polygon',
-    },
-  ],
+  candidate_regions: [{
+    label: 'Manitoba detailed soil map unit MB-802',
+    name: 'Manitoba detailed soil map unit MB-802',
+    layer: 'mb_detailed_soil',
+    system: 'AAFC Manitoba Detailed Soil Survey',
+    code: 'MB_SOIL_802',
+    confidence: 0.94,
+  }],
+  regional_intersections: [{
+    ...abPriors.regional_intersections[0],
+    layer_id: 'mb_detailed_soil',
+    layer_label: 'Manitoba Detailed Soil Survey',
+    system: 'AAFC Manitoba Detailed Soil Survey',
+    code: 'MB_SOIL_802',
+    name: 'Manitoba detailed soil map unit MB-802',
+    label: 'Manitoba detailed soil map unit MB-802',
+    source_scale_range: '1:20,000 to 1:126,720',
+  }],
+  official_layer_status: [{
+    ...abPriors.official_layer_status[0],
+    layer_id: 'mb_detailed_soil',
+    label: 'Manitoba Detailed Soil Survey',
+    system: 'AAFC Manitoba Detailed Soil Survey',
+  }],
 }
 
 const nasdiConditions = {
@@ -843,7 +665,6 @@ const installFetchMock = (
       const body = JSON.parse(String(init?.body || '{}'))
       if (body.geometry?.type === 'Point') return jsonResponse(pointPriors)
       const firstLongitude = body.geometry?.coordinates?.[0]?.[0]?.[0]
-      if (firstLongitude < -120) return jsonResponse(bcPriors)
       if (firstLongitude < -110) return jsonResponse(abPriors)
       if (firstLongitude < -100) return jsonResponse(skPriors)
       if (firstLongitude < -95) return jsonResponse(mbPriors)
@@ -1187,10 +1008,10 @@ describe('Open Agronomy map upload workflow', () => {
     openFieldTab('Map context')
 
     expect(
-      (await screen.findAllByText(/Saskatchewan thematic soil: capability class 2; well drainage; 0 - 2% slope/i)).length,
+      (await screen.findAllByText(/Saskatchewan detailed soil map unit SK-40147/i)).length,
     ).toBeGreaterThan(0)
     expect(
-      screen.getByText(/Source resolution: Revised and condensed from the Saskatchewan Detailed Soils Database/i),
+      screen.getByText(/Source mapping scale 1:100,000/i),
     ).toBeInTheDocument()
     expect(screen.getAllByText(/Generalized regional context, not current field truth/i).length).toBeGreaterThan(0)
     expect(await screen.findByText('Current regional conditions')).toBeInTheDocument()
@@ -1243,15 +1064,15 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('link', { name: /official source/i })).toHaveAttribute('href', nasdiConditions.source)
   })
 
-  it('loads the Manitoba sample with national soil-erosion context', async () => {
+  it('loads the Manitoba sample with detailed soil survey context', async () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
     await selectExample('canola-acidity')
     openFieldTab('Map context')
 
-    expect((await screen.findAllByText(/2021 soil erosion risk: Very Low/i)).length).toBeGreaterThan(0)
-    expect(screen.getByText(/1981-2021 change class decrease/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/Manitoba detailed soil map unit MB-802/i)).length).toBeGreaterThan(0)
+    expect(screen.getByText('Source mapping scale 1:20,000 to 1:126,720')).toBeInTheDocument()
     expect(screen.getByText(/Generalized regional context, not current field truth/i)).toBeInTheDocument()
     const priorsCall = fetchMock.mock.calls.find(([url, init]) => {
       if (String(url) !== '/api/geo/priors' || init?.method !== 'POST') return false
@@ -1262,52 +1083,6 @@ describe('Open Agronomy map upload workflow', () => {
     openPrimaryPage('Map')
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'polygon')
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-99.959')
-  })
-
-  it('renders PEI mapped-soil context as historical rather than field truth', async () => {
-    installFetchMock(emptyDemoFields, peiUploadPayload)
-    render(<OpenAgronomyApp />)
-
-    openPrimaryPage('Fields')
-    fireEvent.change(await screen.findByLabelText('Boundary upload'), {
-      target: { files: [new File([JSON.stringify({ type: 'Polygon', coordinates: [peiRing] })], 'pei-field.geojson')] },
-    })
-    openFieldTab('Map context')
-
-    expect(
-      (await screen.findAllByText(/PEI detailed soil map unit PEPED103Ch:6-Ti:3\/CD/i)).length,
-    ).toBeGreaterThan(0)
-    expect(screen.getByText('Source mapping scale 1:75,000')).toBeInTheDocument()
-    expect(screen.getByText('Historical mapped context, not current field truth.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Official layer source' })).toHaveAttribute(
-      'href',
-      'https://open.canada.ca/data/en/dataset/7fa18ce7-6c14-438a-95c6-bb0906ddfb30',
-    )
-  })
-
-  it('renders Nova Scotia soil context as Pictou County only', async () => {
-    installFetchMock(emptyDemoFields, nsPictouUploadPayload)
-    render(<OpenAgronomyApp />)
-
-    openPrimaryPage('Fields')
-    fireEvent.change(await screen.findByLabelText('Boundary upload'), {
-      target: {
-        files: [new File([JSON.stringify({ type: 'Polygon', coordinates: [peiRing] })], 'pictou-field.geojson')],
-      },
-    })
-    openFieldTab('Map context')
-
-    expect(
-      (await screen.findAllByText(/Pictou County detailed soil map unit NSNSD005Qu4\/C/i)).length,
-    ).toBeGreaterThan(0)
-    expect(screen.getByText('Source mapping scale 1:50,000')).toBeInTheDocument()
-    expect(
-      screen.getByText('Pictou County only historical context—not province-wide or current field truth.'),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Official layer source' })).toHaveAttribute(
-      'href',
-      'https://open.canada.ca/data/en/dataset/083534ca-d5b0-46f5-b540-f3a706dbc2de',
-    )
   })
 
   it('does not let a stale sample-layer response overwrite a newer uploaded field', async () => {
@@ -1325,9 +1100,9 @@ describe('Open Agronomy map upload workflow', () => {
       if (url === '/api/demo/fields') return jsonResponse(emptyDemoFields)
       if (url === '/api/geo/priors') {
         lookupCount += 1
-        return lookupCount === 1 ? initialLookup : jsonResponse(bcPriors)
+        return lookupCount === 1 ? initialLookup : jsonResponse(abPriors)
       }
-      if (url.startsWith('/api/geo/boundary-upload?')) return jsonResponse(nsPictouUploadPayload)
+      if (url.startsWith('/api/geo/boundary-upload?')) return jsonResponse(uploadPayload)
       if (url === '/api/tools/aafc-nasdi-agroclimate') return jsonResponse(nasdiConditions)
       return jsonResponse({})
     })
@@ -1337,21 +1112,21 @@ describe('Open Agronomy map upload workflow', () => {
     await selectExample()
     fireEvent.change(await screen.findByLabelText('Boundary upload'), {
       target: {
-        files: [new File([JSON.stringify({ type: 'Polygon', coordinates: [peiRing] })], 'pictou-field.geojson')],
+        files: [new File([JSON.stringify({ type: 'Polygon', coordinates: [northRing] })], 'iowa-field.geojson')],
       },
     })
     openFieldTab('Map context')
     expect(
-      (await screen.findAllByText(/Pictou County detailed soil map unit NSNSD005Qu4\/C/i)).length,
+      (await screen.findAllByText('Central Iowa and Minnesota Till Prairies')).length,
     ).toBeGreaterThan(0)
 
-    releaseInitialLookup(jsonResponse(bcPriors))
+    releaseInitialLookup(jsonResponse(abPriors))
     await waitFor(() => {
       expect(
-        screen.getByText('Pictou County only historical context—not province-wide or current field truth.'),
+        screen.getByText('Official layer source'),
       ).toBeInTheDocument()
     })
-    expect(screen.queryByText(/BC agriculture capability:/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Alberta detailed soil map unit MMNV9/i)).not.toBeInTheDocument()
   })
 
   it('shows plain-language regional priors for drawn boundaries and dropped points', async () => {
@@ -1590,7 +1365,7 @@ describe('Open Agronomy map upload workflow', () => {
         acres: 96,
       },
       regionalContext: 'AAFC Canada Ecozone 13',
-      geoPriors: bcPriors,
+      geoPriors: abPriors,
       sourceBoundary: 'Regional context is not field truth.',
       createdAt: '2026-07-25T12:00:00Z',
       updatedAt: '2026-07-26T12:00:00Z',
@@ -2701,7 +2476,7 @@ describe('Open Agronomy map upload workflow', () => {
       if (url === '/api/geo/priors') {
         const body = JSON.parse(String(init?.body || '{}'))
         const firstLongitude = body.geometry?.coordinates?.[0]?.[0]?.[0]
-        return jsonResponse(firstLongitude < -110 ? bcPriors : skPriors)
+        return jsonResponse(firstLongitude < -110 ? abPriors : skPriors)
       }
       if (url === '/api/tools/aafc-nasdi-agroclimate') return jsonResponse(nasdiConditions)
       return jsonResponse({})
@@ -2855,7 +2630,7 @@ describe('Open Agronomy map upload workflow', () => {
       if (url === '/api/configs') return jsonResponse(bootConfig)
       if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
       if (url === '/api/demo/fields') return jsonResponse(emptyDemoFields)
-      if (url === '/api/geo/priors') return jsonResponse(bcPriors)
+      if (url === '/api/geo/priors') return jsonResponse(abPriors)
       if (url === '/api/tools/aafc-nasdi-agroclimate') return jsonResponse(nasdiConditions)
       return jsonResponse({})
     })
@@ -3371,6 +3146,33 @@ describe('Open Agronomy map upload workflow', () => {
     const create = fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/sessions' && init?.method === 'POST')
     const createdKey = JSON.parse(String(create?.[1]?.body || '{}')).context.field_conversation_key
     expect(createdKey).toMatch(/^general:chat:/)
+  })
+
+  it('restores legacy device fields without showing unregistered map layers', async () => {
+    const unregistered = {
+      ...abPriors.regional_intersections[0], layer_id: 'unregistered_official_layer',
+      system: 'Old regional layer', code: 'OLD-1', name: 'Old mapped zone',
+    }
+    const storedField = {
+      id: 'legacy-device', name: 'Legacy device field', createdAt: '2026-07-20T12:00:00Z',
+      crop: '', region: '', jurisdiction: '', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } },
+      regionalContext: 'Old regional layer OLD-1',
+      geoPriors: { ...abPriors, regional_intersections: [unregistered, ...abPriors.regional_intersections] },
+    }
+    const storageKey = 'open-agronomy-agent.fields.v1'
+    window.localStorage.setItem(storageKey, JSON.stringify([storedField]))
+    installDegradedFetchMock()
+    render(<OpenAgronomyApp />)
+
+    openPrimaryPage('Fields')
+    const savedField = await screen.findByRole('button', { name: /^Legacy device field/ })
+    expect(savedField).not.toHaveTextContent('Old regional layer OLD-1')
+    fireEvent.click(savedField)
+    openFieldTab('Map context')
+    expect(await screen.findByText('Alberta detailed soil map unit MMNV9/U1l', { selector: 'strong' })).toBeInTheDocument()
+    expect(screen.queryByText('Old mapped zone')).not.toBeInTheDocument()
+    expect(JSON.parse(window.localStorage.getItem(storageKey) || '[]')).toEqual([storedField])
   })
 
   it('edits a device field without dropping fields beyond the former list cap', async () => {

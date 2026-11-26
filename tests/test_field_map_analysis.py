@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import builtins
+import asyncio
 import json
+import math
 import sqlite3
+import threading
+import zlib
+from contextlib import contextmanager
 from types import SimpleNamespace
 
 import pytest
+import httpx
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -50,14 +56,15 @@ def _feature(code: str, geometry: dict) -> dict:
     return {"type": "Feature", "geometry": geometry, "properties": {"code": code, "name": code}}
 
 
-def _source(monkeypatch, features: list[dict], *, exceeded: bool = False) -> None:
-    def fake_query(layer, *, geometry, geometry_type):
+def _source(monkeypatch, features: list[dict]) -> None:
+    @contextmanager
+    def fake_query(layer, envelopes, *, readiness):
         assert layer.id == "synthetic_zone"
-        assert geometry_type == "esriGeometryEnvelope"
-        assert len(geometry.split(",")) == 4
-        return {"type": "FeatureCollection", "features": features, "exceededTransferLimit": exceeded}
+        assert envelopes and all(len(bbox) == 4 for bbox in envelopes)
+        assert readiness["status"] == "verified"
+        yield iter(features)
 
-    monkeypatch.setattr(geo, "_query_layer", fake_query)
+    monkeypatch.setattr(geo, "local_coverage_features", fake_query)
 
 
 def test_geodesic_union_prevents_overlapping_zones_from_double_counting(monkeypatch) -> None:
@@ -101,7 +108,6 @@ def test_holes_multipart_and_reversed_winding_are_measured(monkeypatch) -> None:
     {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]], [[2, 2], [3, 2], [3, 3], [2, 3], [2, 2]]]},
     {"type": "MultiPolygon", "coordinates": []},
     polygon(179, 0, -179, 1),
-    polygon(0, 0, 13, 1),
 ])
 def test_invalid_or_unsupported_geometry_fails_closed(bad) -> None:
     with pytest.raises(ValueError):
@@ -116,8 +122,8 @@ def test_explicit_layer_selection_and_input_cap(monkeypatch) -> None:
         analysis.analyze_field_map(geometry=FIELD, layer_ids=[layer.id, layer.id], network_mode="offline")
     with pytest.raises(ValueError, match="0 to 4"):
         analysis.analyze_field_map(geometry=FIELD, layer_ids=[layer.id] * 5, network_mode="offline")
-    large_ring = [[i / 100000, 0] for i in range(1025)]
-    with pytest.raises(ValueError, match="1024"):
+    large_ring = [[i / 100000, 0] for i in range(10_001)]
+    with pytest.raises(ValueError, match="10000"):
         analysis.analyze_field_map(
             geometry={"type": "Polygon", "coordinates": [large_ring]}, layer_ids=[], network_mode="offline"
         )
@@ -185,6 +191,19 @@ def test_real_local_adapter_finds_second_component_and_east_edge(tmp_path, monke
     gap = analysis.analyze_field_map(geometry=holed, layer_ids=[layer.id], network_mode="offline")
     assert gap["layers"][0]["status"] == "complete"
     assert gap["layers"][0]["coverage_fraction"] == 0
+    same_zone = {"type": "MultiPolygon", "coordinates": [
+        polygon(.0421, .0021, .0422, .0022)["coordinates"],
+        polygon(.0424, .0024, .0425, .0025)["coordinates"],
+    ]}
+    once = analysis.analyze_field_map(geometry=same_zone, layer_ids=[layer.id], network_mode="offline")
+    assert once["layers"][0]["coverage_fraction"] == 1
+    assert once["layers"][0]["feature_count"] == once["layers"][0]["processed_feature_count"] == 1
+    wide = {"type": "MultiPolygon", "coordinates": [
+        multi["coordinates"][1], polygon(14, 0, 14.01, .01)["coordinates"],
+    ]}
+    prior = geo.intersect_region_layers(geometry=wide, layer_ids=[layer.id], network_mode="offline")
+    assert prior["errors"] == []
+    assert [item["code"] for item in prior["intersections"]] == ["second"]
 
 
 @pytest.mark.parametrize("raw,expected_status,expected_reason", [
@@ -233,10 +252,13 @@ def test_remote_complete_multipart_query_preserves_all_rings(monkeypatch) -> Non
     assert mapped["coverage_fraction"] == 0
 
 
-def test_feature_cap_never_reports_complete_coverage(monkeypatch) -> None:
-    layer = _layer(monkeypatch)
-    _source(monkeypatch, [_feature(str(i), FIELD) for i in range(geo.MAX_FEATURES_PER_LAYER)])
-    result = analysis.analyze_field_map(geometry=FIELD, layer_ids=[layer.id], network_mode="offline")
+def test_remote_feature_cap_never_reports_complete_coverage(monkeypatch) -> None:
+    layer = _layer(monkeypatch, backend="arcgis_feature_service")
+    monkeypatch.setattr(geo, "_query_layer", lambda *args, **kwargs: {
+        "type": "FeatureCollection",
+        "features": [_feature(str(i), FIELD) for i in range(geo.MAX_FEATURES_PER_LAYER)],
+    })
+    result = analysis.analyze_field_map(geometry=FIELD, layer_ids=[layer.id], network_mode="online")
     mapped = result["layers"][0]
     assert result["status"] == "partial"
     assert mapped["status"] == "partial"
@@ -245,6 +267,113 @@ def test_feature_cap_never_reports_complete_coverage(monkeypatch) -> None:
     assert mapped["coverage_fraction"] is None
     assert all(zone["area_ha"] is None for zone in mapped["zones"])
     assert mapped["omitted_zone_count"] == geo.MAX_FEATURES_PER_LAYER - analysis.MAX_ZONES_SHOWN
+
+
+def test_remote_vertex_limit_still_withholds_coverage(monkeypatch) -> None:
+    layer = _layer(monkeypatch, backend="arcgis_feature_service")
+    monkeypatch.setattr(analysis, "MAX_REMOTE_SOURCE_VERTICES", 9)
+    monkeypatch.setattr(geo, "_query_layer", lambda *args, **kwargs: {
+        "type": "FeatureCollection",
+        "features": [_feature("first", FIELD), _feature("second", FIELD)],
+    })
+    result = analysis.analyze_field_map(geometry=FIELD, layer_ids=[layer.id], network_mode="online")
+    layer_result = result["layers"][0]
+    assert layer_result["status"] == "partial"
+    assert layer_result["reason"] == "source_vertex_limit_reached"
+    assert layer_result["coverage_fraction"] is None
+    assert layer_result["zones"] == []
+
+
+@pytest.mark.parametrize("compressed", [False, True])
+def test_local_analysis_streams_past_candidate_feature_and_vertex_cutoffs(
+    tmp_path, monkeypatch, qualified_spatial_layer, compressed,
+) -> None:
+    from shapely import segmentize
+    from shapely.geometry import mapping, shape
+
+    # The original viewport cap would have stopped inside these 641 envelope
+    # false positives. The whole field lies in their polygon holes.
+    hole = {"type": "Polygon", "coordinates": [
+        polygon(-.02, -.02, .04, .04)["coordinates"][0],
+        polygon(-.01, -.01, .03, .03)["coordinates"][0],
+    ]}
+    left = polygon(-.01, -.01, .01, .03)
+    right = mapping(segmentize(shape(polygon(.01, -.01, .03, .03)), .000004))
+    assert len(right["coordinates"][0]) > 20_000
+    rows = [(f"miss-{index}", hole) for index in range(641)]
+    rows += [(f"left-{index}", left) for index in range(82)]
+    rows.append(("right", right))
+    db = tmp_path / "coverage.sqlite3"
+    encoding = "zlib" if compressed else "json"
+    with sqlite3.connect(db) as connection:
+        connection.executescript(
+            "CREATE TABLE metadata(key TEXT, value_json TEXT);"
+            f"CREATE TABLE features(fid INTEGER PRIMARY KEY, code TEXT, name TEXT, properties_{encoding}, geometry_{encoding});"
+            "CREATE VIRTUAL TABLE feature_bounds USING rtree(fid, min_lon, max_lon, min_lat, max_lat);"
+        )
+        for fid, (code, geometry) in enumerate(rows, 1):
+            w, s, e, n = shape(geometry).bounds
+            properties, payload = "{}", json.dumps(geometry)
+            if compressed:
+                properties, payload = zlib.compress(properties.encode()), zlib.compress(payload.encode())
+            connection.execute("INSERT INTO features VALUES(?, ?, ?, ?, ?)", (fid, code, code, properties, payload))
+            connection.execute("INSERT INTO feature_bounds VALUES(?, ?, ?, ?, ?)", (fid, w, e, s, n))
+    layer = geo.RegionLayer(
+        id="coverage_fixture", label="Soils", system="fixture", service_url="",
+        source_url="https://example.invalid/source", color="#123456", code_fields=("code",),
+        name_fields=("name",), query_backend="local_sqlite", local_database=str(db),
+    )
+    monkeypatch.setitem(geo.REGION_LAYERS, layer.id, layer)
+    qualified_spatial_layer(db, layer.id)
+
+    positions = 4_000
+    ring = [[.01 + .008 * math.cos(2 * math.pi * i / positions),
+             .01 + .008 * math.sin(2 * math.pi * i / positions)] for i in range(positions)]
+    field = {"type": "Polygon", "coordinates": [[*ring, ring[0]]]}
+    assert len(json.dumps(field, separators=(",", ":"))) > 128 * 1024
+    app = FastAPI()
+    map_analysis_routes.register_map_analysis_routes(app, SimpleNamespace(network_mode="offline"))
+    response = TestClient(app).post("/api/geo/field-analysis", json={"geometry": field, "layers": [layer.id]})
+    assert response.status_code == 200
+    result = response.json()
+    mapped = result["layers"][0]
+    assert result["status"] == mapped["status"] == "complete"
+    assert mapped["feature_count"] == 724
+    assert mapped["processed_feature_count"] == 83
+    assert mapped["coverage_fraction"] == 1
+    assert mapped["covered_area_ha"] == result["geometry"]["area_ha"]
+    assert mapped["omitted_zone_count"] == 83 - analysis.MAX_ZONES_SHOWN
+
+
+def test_wide_multipart_local_coverage_is_independent_of_remote_extent(monkeypatch) -> None:
+    local = _layer(monkeypatch)
+    remote = geo.REGION_LAYERS["nrcs_mlra"]
+    distant = polygon(14, 0, 14.02, .02)
+    field = {"type": "MultiPolygon", "coordinates": [FIELD["coordinates"], distant["coordinates"]]}
+    _source(monkeypatch, [_feature("first", FIELD), _feature("distant", distant)])
+    monkeypatch.setattr(geo, "_query_layer", lambda *args, **kwargs: pytest.fail("remote extent is unsupported"))
+    result = analysis.analyze_field_map(geometry=field, layer_ids=[local.id, remote.id], network_mode="online")
+    assert result["geometry"]["status"] == "complete"
+    assert result["layers"][0]["coverage_fraction"] == 1
+    assert result["layers"][1]["reason"] == "remote_geometry_span_unsupported"
+    prior = geo.intersect_region_layers(geometry=field, layer_ids=[remote.id], network_mode="online")
+    assert prior["query"]["bbox"] == [0, 0, 14.02, .02]
+    assert prior["query_attempted_layer_ids"] == prior["source_qualified_layer_ids"] == []
+    assert prior["skipped_layers"][0]["reason"] == "remote_geometry_span_unsupported"
+
+
+def test_area_is_additive_when_clipping_inserts_vertices(monkeypatch) -> None:
+    layer = _layer(monkeypatch)
+    field = polygon(-120, 50, -104, 51)
+    west = polygon(-120, 50, -112, 51)
+    east = polygon(-112, 50, -104, 51)
+    _source(monkeypatch, [_feature("west", west), _feature("east", east)])
+    result = analysis.analyze_field_map(geometry=field, layer_ids=[layer.id], network_mode="offline")
+    mapped = result["layers"][0]
+    assert mapped["status"] == "complete"
+    assert mapped["coverage_fraction"] == 1
+    assert mapped["covered_area_ha"] == result["geometry"]["area_ha"]
+    assert [zone["fraction_of_field"] for zone in mapped["zones"]] == [0.5, 0.5]
 
 
 def test_point_matches_zones_without_inventing_area(monkeypatch) -> None:
@@ -320,7 +449,7 @@ def test_offline_remote_and_missing_local_report_unavailable_without_query(monke
 
 def test_source_error_and_missing_spatial_dependencies_preserve_unknown(monkeypatch) -> None:
     layer = _layer(monkeypatch)
-    monkeypatch.setattr(geo, "_query_layer", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fixture failure")))
+    monkeypatch.setattr(geo, "local_coverage_features", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("fixture failure")))
     result = analysis.analyze_field_map(geometry=FIELD, layer_ids=[layer.id], network_mode="offline")
     assert result["geometry"]["status"] == "complete"
     assert result["layers"][0]["status"] == "unavailable"
@@ -339,12 +468,50 @@ def test_source_error_and_missing_spatial_dependencies_preserve_unknown(monkeypa
     assert absent["layers"][0]["reason"] == "spatial_dependencies_missing"
 
 
-def test_route_is_sync_and_validation_is_422(monkeypatch) -> None:
+def test_route_validation_is_422() -> None:
     app = FastAPI()
     map_analysis_routes.register_map_analysis_routes(app, SimpleNamespace(network_mode="offline"))
-    route = next(route for route in app.routes if getattr(route, "path", None) == "/api/geo/field-analysis")
-    assert not __import__("inspect").iscoroutinefunction(route.endpoint)
     client = TestClient(app)
     assert client.post("/api/geo/field-analysis", json={"geometry": FIELD, "layers": []}).json()["status"] == "complete"
     assert client.post("/api/geo/field-analysis", json={"geometry": FIELD}).status_code == 422
     assert client.post("/api/geo/field-analysis", json={"geometry": FIELD, "layers": [], "extra": "ignored?"}).status_code == 422
+
+
+def test_local_route_queues_large_work_without_blocking_geometry_requests(monkeypatch) -> None:
+    layer = _layer(monkeypatch)
+    app = FastAPI()
+    map_analysis_routes.register_map_analysis_routes(app, SimpleNamespace(network_mode="offline"))
+    first_started, second_started, release_first = (threading.Event() for _ in range(3))
+
+    def analyze(**payload):
+        if payload["layer_ids"]:
+            if not first_started.is_set():
+                first_started.set()
+                assert release_first.wait(5)
+            else:
+                second_started.set()
+        return {"status": "complete"}
+
+    monkeypatch.setattr(map_analysis_routes, "analyze_field_map", analyze)
+
+    async def exercise():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
+            path = "/api/geo/field-analysis"
+            field_request = {"geometry": FIELD, "layers": [layer.id]}
+            first = asyncio.create_task(client.post(path, json=field_request))
+            second = None
+            try:
+                assert await asyncio.to_thread(first_started.wait, 5)
+                second = asyncio.create_task(client.post(path, json=field_request))
+                measure = await asyncio.wait_for(client.post(path, json={"geometry": FIELD, "layers": []}), 3)
+                assert measure.status_code == 200
+                assert not second_started.is_set()
+            finally:
+                release_first.set()
+                await first
+                if second is not None:
+                    await second
+            assert first.result().status_code == second.result().status_code == 200
+            assert second_started.is_set()
+
+    asyncio.run(exercise())

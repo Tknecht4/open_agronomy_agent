@@ -74,6 +74,7 @@ import {
 } from './sourceCards'
 import { buildReviewerExportMarkdown, reviewerExportFilename } from './reviewerExport'
 import { CapabilityReadinessStatus } from './CapabilityReadinessStatus'
+import { isBuiltInMapLayer } from './mapPresentation'
 import { canAskWithReadiness, isBoundTurnReadiness, matchingTurnReadiness, turnReadinessKey, type TurnReadinessState } from './turnReadiness'
 import {
   RetrievedDoc,
@@ -245,10 +246,6 @@ type RegionalIntersection = {
   match_reason: string
   source: string
   boundary?: string
-  capability_label?: string
-  capability_summary?: string
-  primary_class?: string
-  components?: Array<{ percent?: number; class?: string; subclasses?: string[] }>
   source_scale?: number
   source_scale_label?: string
   source_scale_range?: string
@@ -258,18 +255,8 @@ type RegionalIntersection = {
   mapping_basis?: string
   drainage_class?: string
   capability_class?: string
-  capability_interpretation?: string
   erosion_risk?: string
-  erosion_indicator_2021?: number
-  erosion_risk_1981?: string
-  erosion_indicator_1981?: number
-  erosion_change_1981_2021?: string
-  erosion_change_indicator?: number
-  erosion_summary?: string
   soil_landscape_id?: string
-  source_year?: number
-  publication_year?: number
-  coverage_area?: string
   slope_class?: string
   surface_texture_group?: string
   soil_summary?: string
@@ -695,7 +682,7 @@ const sampleProfiles: SampleProfile[] = [
     acres: '96',
     concern: 'how the mapped soil constraints should change scouting and crop planning',
     notes: 'Use mapped drainage, capability, erosion, slope, and surface texture as regional screening context. Confirm field variability, soil profile, nutrient status, salinity, compaction, drainage performance, and current Saskatchewan guidance before choosing a crop or rate.',
-    mlra: 'Saskatchewan detailed soil context with thematic fallback',
+    mlra: 'Saskatchewan detailed soil survey context',
     geometry: 'Local Saskatchewan detailed-soil intersection when the Prairie spatial pack is installed.',
     initialGeometry: sampleBoundary(96, 50.447, -104.734, 50.453, -104.726),
   },
@@ -1046,15 +1033,37 @@ const regionalContextSummary = (priors: GeoPriors): string => {
   return `${count} official regional match${count === 1 ? '' : 'es'} from ${systems.join(', ')}. Use this as regional guidance for retrieval and source checks, not as soil-test, scouting, yield, legal-boundary, or product-rate evidence.`
 }
 
+const deviceRegionalPriors = (priors: GeoPriors): GeoPriors => {
+  const candidateRegions = (priors.candidate_regions || []).filter(item => isBuiltInMapLayer(item.layer))
+  const intersections = priors.regional_intersections?.filter(item => isBuiltInMapLayer(item.layer_id))
+  const features = priors.regional_feature_collection
+  const hasMappedContext = candidateRegions.length > 0 || Boolean(intersections?.length)
+  return {
+    ...priors,
+    candidate_regions: candidateRegions,
+    regional_intersections: intersections,
+    regional_feature_collection: features && {
+      ...features,
+      features: (features.features || []).filter(item => isBuiltInMapLayer(item.properties?.layer_id)),
+    },
+    official_layer_status: priors.official_layer_status?.filter(item => isBuiltInMapLayer(item.layer_id)),
+    geo_errors: priors.geo_errors?.filter(item => isBuiltInMapLayer(item.layer_id)),
+    uncertainty: hasMappedContext ? priors.uncertainty : 'unknown',
+  }
+}
+
+const storedRegionalLabel = (stored: StoredField): string => {
+  const priors = stored.geoPriors
+  if (!priors || stored.storageMode === 'account_workspace') return stored.regionalContext
+  const removed = [
+    ...(priors.candidate_regions || []).filter(item => !isBuiltInMapLayer(item.layer)),
+    ...(priors.regional_intersections || []).filter(item => !isBuiltInMapLayer(item.layer_id)),
+  ]
+  return removed.some(item => stored.regionalContext === `${item.system} ${item.code}`) ? '' : stored.regionalContext
+}
+
 const regionalMatchDetail = (item: RegionalIntersection): string =>
   `${formatPercent(item.coverage_estimate)} field-geometry coverage estimate · ${formatPercent(item.confidence)} match confidence`
-
-const regionalAuthorityNote = (item: RegionalIntersection): string =>
-  item.coverage_area
-    ? `${item.coverage_area} historical context—not province-wide or current field truth.`
-    : item.layer_id === 'pei_detailed_soil'
-    ? 'Historical mapped context, not current field truth.'
-    : 'Generalized regional context, not current field truth.'
 
 const regionalSourceScale = (item: RegionalIntersection): string | null => {
   const scale = item.source_scale_label || item.source_scale_range
@@ -1144,26 +1153,14 @@ const fieldContextIntersections = (items: RegionalIntersection[]) =>
     match_reason: item.match_reason,
     source: item.source,
     boundary: item.boundary,
-    capability_label: item.capability_label,
-    capability_summary: item.capability_summary,
-    primary_class: item.primary_class,
-    components: item.components,
     source_scale: item.source_scale,
     source_scale_label: item.source_scale_label,
     source_scale_range: item.source_scale_range,
     source_scale_note: item.source_scale_note,
     drainage_class: item.drainage_class,
     capability_class: item.capability_class,
-    capability_interpretation: item.capability_interpretation,
     erosion_risk: item.erosion_risk,
-    erosion_indicator_2021: item.erosion_indicator_2021,
-    erosion_risk_1981: item.erosion_risk_1981,
-    erosion_indicator_1981: item.erosion_indicator_1981,
-    erosion_change_1981_2021: item.erosion_change_1981_2021,
-    erosion_change_indicator: item.erosion_change_indicator,
-    erosion_summary: item.erosion_summary,
     soil_landscape_id: item.soil_landscape_id,
-    source_year: item.source_year,
     slope_class: item.slope_class,
     surface_texture_group: item.surface_texture_group,
     soil_summary: item.soil_summary,
@@ -1312,7 +1309,7 @@ export function AnswerContextDisclosure({
 const primaryRegionalCandidate = (priors: GeoPriors | null): GeoPriorCandidate | null => {
   const candidates = (priors?.candidate_regions || []).filter(candidate => candidate.code && candidate.code.toUpperCase() !== 'UNKNOWN' && candidate.system.toLowerCase() !== 'unknown')
   return candidates.find((candidate) =>
-    /(?:soil|capability|erosion)/i.test(`${candidate.system} ${candidate.name} ${candidate.code}`),
+    /soil/i.test(`${candidate.system} ${candidate.name} ${candidate.code}`),
   ) || candidates[0] || null
 }
 
@@ -3082,7 +3079,8 @@ export function OpenAgronomyApp() {
     setFieldToolsOpen(false)
     setUploadContext(null)
     setSelectedUploadFeatureId('')
-    setGeoPriors(stored.geoPriors || null)
+    const storedPriors = stored.geoPriors || null
+    setGeoPriors(storedPriors && stored.storageMode !== 'account_workspace' ? deviceRegionalPriors(storedPriors) : storedPriors)
     setBoundaryStatus(`Loaded ${stored.name}.`)
     setMapMode('inspect')
   }
@@ -3585,7 +3583,7 @@ export function OpenAgronomyApp() {
                         ) : (
                           <button type="button" className="field-library-load" disabled={!fieldsHydrated || savingField} onClick={() => loadStoredField(stored)}>
                             <strong>{stored.name}</strong>
-                            <span>{[stored.crop, stored.region || stored.jurisdiction].filter(Boolean).join(' · ') || stored.regionalContext}</span>
+                            <span>{[stored.crop, stored.region || stored.jurisdiction].filter(Boolean).join(' · ') || storedRegionalLabel(stored)}</span>
                             <small>{active ? 'Active field' : `Updated ${new Date(stored.updatedAt || stored.createdAt).toLocaleDateString()}`}</small>
                           </button>
                         )}
@@ -3793,9 +3791,8 @@ export function OpenAgronomyApp() {
                           {regionalSourceScale(item) ? <small>{regionalSourceScale(item)}</small> : null}
                           <small>{regionalMatchDetail(item)}</small>
                           <small>{item.match_reason}</small>
-                          {item.erosion_summary ? <small>{item.erosion_summary}</small> : null}
                           {item.source === 'bundled_official_geospatial_layer' ? (
-                            <small className="regional-authority-note">{regionalAuthorityNote(item)}</small>
+                            <small className="regional-authority-note">Generalized regional context, not current field truth.</small>
                           ) : null}
                           {item.source_url ? (
                             <a href={item.source_url} target="_blank" rel="noreferrer">

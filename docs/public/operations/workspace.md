@@ -190,8 +190,9 @@ contains the location and calculation method. If recorded
 acreage differs materially from the computed boundary area, both are labelled;
 neither overwrites the other. Pins have a location but no inferred area.
 
-For selected context layers, coverage uses clipped source polygons and geodesic
-area. It does not reinterpret the older vertex-sampling match scores as area.
+For selected context layers, coverage clips the source polygons and measures
+ellipsoidal area using the same longitude/latitude edges as GeoJSON clipping.
+Boundary length uses geodesic segments.
 A layer's overall coverage uses the union of its source shapes; individual named
 zones may overlap, so their percentages need not add to 100%. Empty matches are
 collapsed; unavailable, partial, offline, and uninstalled states remain explicit.
@@ -203,13 +204,15 @@ soil test, crop observation, or recommendation.
 New native and container installations include `pyproj` and `shapely`. Existing
 environments should refresh their supported requirements to enable analysis;
 without those libraries the API reports unavailable. Optional soil-map packs are
-still separate. The interactive endpoint limits each request to four explicit
-layers, 1,024 input positions and a 128 KiB geometry. Very large, invalid, or
-antimeridian-crossing boundaries are rejected rather than silently simplified.
-The editor still accepts a single exterior field ring; the analysis API also
-supports validated holes and multipart polygons with local map packs. The legacy
-online query path cannot establish complete coverage for those shapes, so remote
-results remain explicitly partial with unknown total coverage.
+still separate. Field insights accepts the same 10,000-position boundary limit
+as import, with up to four selected layers and a 1 MiB JSON request. It preserves
+holes and multipart boundaries and rejects invalid or antimeridian-crossing
+geometry. For verified local packs, it searches the envelope of each parcel and
+checks every distinct candidate against the exact field boundary. Map preview
+limits and the number of displayed zone rows do not cut off coverage. Local
+map calculations run one at a time on each server instance and stay pending
+while the dialog is open. Online providers can have extent and page limits,
+so an incomplete provider response leaves total coverage unknown.
 
 Basemap tiles load only for the visible map; the app does not prefetch or package
 them for offline use. Keep provider attribution visible. OpenStreetMap service use

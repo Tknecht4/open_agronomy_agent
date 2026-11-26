@@ -67,16 +67,20 @@ def stage(root: Path, output: Path) -> dict[str, int | str]:
     containerfile_path = root / "Containerfile"
     containerfile = containerfile_path.read_text(encoding="utf-8")
     manifest = json.loads((root / "container/runtime_manifest.json").read_text(encoding="utf-8"))
+    selected_paths = dict.fromkeys(
+        Path(entry["path"])
+        for key in ("runtime_knowledge", "control_files")
+        for entry in manifest.get(key) or []
+    )
 
     shutil.copy2(containerfile_path, output / "Containerfile")
 
     copied_sources = 0
     for relative in dict.fromkeys(_copy_sources(containerfile)):
         if relative in MANIFEST_FILTERED_KNOWLEDGE_ROOTS:
-            for entry in manifest.get("runtime_knowledge") or []:
-                knowledge_path = Path(str(entry.get("path") or ""))
-                if knowledge_path.is_relative_to(relative):
-                    _copy_path(root, output, knowledge_path)
+            for path in selected_paths:
+                if path.is_relative_to(relative):
+                    _copy_path(root, output, path)
             copied_sources += 1
             continue
         _copy_path(root, output, relative)

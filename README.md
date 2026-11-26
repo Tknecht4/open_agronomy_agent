@@ -74,9 +74,10 @@ The later `d4def84` collections finished for E2B and Luna, including their recor
 failures. Both E4B attempts lost their Colab assignments with partial full-cohort
 results; they cannot be combined into a whole run. Later serving repairs have
 source tests and retained-answer replay checks, without a fresh model assessment.
-There are no new whole-study scores for those repairs. Superseded generations
-were deleted at the owner's request; current results, required baselines, the
-latest complete comparison and compact findings remain.
+There are no new whole-study scores for those repairs. The local historical
+run directory was retired. The published comparison and review document
+retain the reported results. The final-suite catalog separately pins the
+controller inputs needed to plan a fresh run.
 
 Current workflows include:
 

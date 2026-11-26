@@ -38,15 +38,14 @@ export function readMapPreferences(): MapPreferences {
 export function saveMapPreferences(value: MapPreferences) {
   try { localStorage.setItem(MAP_PREFERENCES_KEY, JSON.stringify({ ...value, layerSelectionVersion: 2 })) } catch { /* View controls still work without browser storage. */ }
 }
+const mapLayerNames = new Map([
+  ['canada_ecozones', 'Canada ecozones'], ['nrcs_mlra', 'US land resource areas'], ['epa_l3_us', 'US ecoregions'],
+  ['ab_detailed_soil', 'Alberta soils'], ['sk_detailed_soil', 'Saskatchewan soils'], ['mb_detailed_soil', 'Manitoba soils'],
+  ['ca_statcan_2021_provinces_territories', 'Province boundaries'], ['ca_statcan_2021_census_agricultural_regions', 'Agricultural regions'],
+  ['ca_aafc_terrestrial_ecoregions_v2_2', 'Canada ecoregions'],
+])
+export const isBuiltInMapLayer = (id: unknown) => typeof id === 'string' && mapLayerNames.has(id)
 export function mapLayerLabel(layer: Pick<MapLayerChoice, 'id' | 'label'>): string {
-  const names: Record<string, string> = {
-    canada_ecozones: 'Canada ecozones', nrcs_mlra: 'US land resource areas', epa_l3_us: 'US ecoregions',
-    ab_detailed_soil: 'Alberta soils', sk_detailed_soil: 'Saskatchewan soils', mb_detailed_soil: 'Manitoba soils',
-    sk_thematic_soil: 'Saskatchewan soil themes', bc_agriculture_capability: 'BC land capability',
-    pei_detailed_soil: 'PEI soils', ns_pictou_detailed_soil: 'Pictou County soils',
-    ca_statcan_2021_provinces_territories: 'Province boundaries', ca_statcan_2021_census_agricultural_regions: 'Agricultural regions',
-    ca_aafc_terrestrial_ecoregions_v2_2: 'Canada ecoregions',
-  }
-  return names[layer.id] || layer.label
+  return mapLayerNames.get(layer.id) || layer.label
 }
 export const safeSourceUrl = (value?: string) => value && /^https?:\/\//i.test(value) ? value : undefined

@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import sqlite3
+import stat
 import socket
 import urllib.error
 import urllib.request
@@ -39,6 +40,7 @@ from offline_spatial_profiles import (
     ROOT,
     load_profile,
     profile_entry_sha256,
+    profile_pack_filename,
     resolve_pack_root,
     resolve_state_path,
     sha256_path,
@@ -54,6 +56,7 @@ from verify_prairie_spatial_pack import run_probe as run_prairie_probe
 DEFAULT_REGISTRY = ROOT / "data/manifests/canada_geospatial_sources.json"
 LINEAGE_SCHEMA_VERSION = "open_agronomy_agent.canada_raw_source_lineage.v1"
 SETUP_SCHEMA_VERSION = "open_agronomy_agent.offline_spatial_setup.v1"
+CLEANUP_SCHEMA_VERSION = "open_agronomy_agent.prairie_dss_cleanup.v1"
 STATE_ROOT_LOCK_SCHEMA_VERSION = "open_agronomy_agent.offline_spatial_setup_lock.v1"
 STATE_ROOT_LOCK_FILENAME = ".open_agronomy_offline_spatial_setup.lock"
 MAX_LOCK_METADATA_BYTES = 16 * 1024
@@ -228,9 +231,14 @@ def _json(path: Path) -> dict[str, Any]:
 
 def _write_json_atomically(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    with temporary.open("x", encoding="utf-8") as handle:
+        try:
+            handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+            handle.flush()
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 def _registry_source(registry: dict[str, Any], source_id: str) -> dict[str, Any]:
@@ -552,6 +560,91 @@ def _discard_raw(profile: dict[str, Any], data_root: Path) -> list[str]:
     return removed
 
 
+def _cleanup_file_identity(status: os.stat_result) -> tuple[int, ...]:
+    return (status.st_dev, status.st_ino, status.st_mode, status.st_size, status.st_mtime_ns, status.st_ctime_ns)
+
+
+def _cleanup_verified_prairie(
+    *, data_root: Path, pack_root: Path, profile: dict[str, Any], manifest_sha256: str,
+) -> dict[str, Any]:
+    """Delete only the pinned archives and exact copies of verified pack assets."""
+    manifest_path = pack_root / profile_pack_filename(profile, "manifest")
+    manifest_bytes = manifest_path.read_bytes()
+    if (manifest_path.resolve() != manifest_path
+        or hashlib.sha256(manifest_bytes).hexdigest() != manifest_sha256):
+        raise ValueError("the Prairie pack manifest changed before cleanup")
+    manifest = json.loads(manifest_bytes)
+    layers = {layer["source_id"]: layer for layer in manifest["layers"]}
+    receipt_path = data_root / f"prairie-dss-cleanup-{manifest_sha256}.json"
+    if receipt_path.is_symlink() or (receipt_path.exists() and not receipt_path.is_file()):
+        raise ValueError("refusing an unsafe Prairie cleanup receipt path")
+    if receipt_path.is_file():
+        prior = _json(receipt_path)
+        if (prior.get("schema_version") != CLEANUP_SCHEMA_VERSION
+            or prior.get("pack_manifest_sha256") != manifest_sha256):
+            raise ValueError("existing Prairie cleanup receipt does not match the verified pack")
+
+    plan = []
+    already_absent = []
+    for profile_source in profile["sources"]:
+        layer = layers[profile_source["source_id"]]
+        for key in ("database", "derived_manifest"):
+            packed = pack_root / layer[key]
+            if packed.resolve() != packed:
+                raise ValueError(f"refusing cleanup while a packed asset is linked: {packed}")
+        expected = (
+            ("raw", profile_source["expected_raw_sha256"]),
+            ("derived", layer["sha256"]),
+            ("derived_manifest", layer["derived_manifest_sha256"]),
+        )
+        for kind, digest in expected:
+            path = resolve_state_path(data_root, profile_source, kind)
+            if path != data_root / profile_source["state_paths"][kind] or path.is_relative_to(pack_root):
+                raise ValueError(f"refusing cleanup of linked or packed {kind}: {path}")
+            relative = path.relative_to(data_root).as_posix()
+            try:
+                identity = path.lstat()
+            except FileNotFoundError:
+                already_absent.append(relative)
+                continue
+            if not stat.S_ISREG(identity.st_mode) or sha256_path(path) != digest:
+                raise ValueError(f"cleanup asset differs from verified bytes: {relative}")
+            plan.append((
+                path, _cleanup_file_identity(identity),
+                {"path": relative, "bytes": identity.st_size, "sha256": digest},
+            ))
+
+    # Preflight every asset before unlinking any. A retry may find a subset already gone.
+    for path, identity, _ in plan:
+        if path.resolve() != path or _cleanup_file_identity(path.lstat()) != identity:
+            raise ValueError(f"cleanup asset changed after preflight: {path}")
+    for path, identity, _ in plan:
+        # Pin the parent so replacing it cannot redirect the unlink.
+        parent = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            current = os.stat(path.name, dir_fd=parent, follow_symlinks=False)
+            if _cleanup_file_identity(current) != identity:
+                raise ValueError(f"cleanup asset changed before removal: {path}")
+            os.unlink(path.name, dir_fd=parent)
+        finally:
+            os.close(parent)
+
+    removed = [entry for _, _, entry in plan]
+    result = {
+        "schema_version": CLEANUP_SCHEMA_VERSION,
+        "status": "pass",
+        "completed_at": dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat(),
+        "pack_manifest_sha256": manifest_sha256,
+        "removed": removed,
+        "removed_bytes": sum(entry["bytes"] for entry in removed),
+        "already_absent": already_absent,
+        "removal_observation": "Removed bytes count only files unlinked by this invocation.",
+    }
+    if removed or not receipt_path.is_file():
+        _write_json_atomically(receipt_path, result)
+    return {**result, "receipt": str(receipt_path)}
+
+
 def _run_setup_under_lock(
     *,
     profile_id: str,
@@ -560,6 +653,7 @@ def _run_setup_under_lock(
     build: bool,
     verify: bool,
     retain_raw: bool,
+    cleanup: bool,
     registry_path: Path,
     profile_manifest_path: Path,
     profile: dict[str, Any],
@@ -569,7 +663,9 @@ def _run_setup_under_lock(
 ) -> None:
     """Execute every state-root operation while its exclusive lock is held."""
 
-    if download or build:
+    reuse_for_cleanup = cleanup and pack_root.exists()
+    prepare = (download or build) and not reuse_for_cleanup
+    if prepare:
         _check_disk_space(data_root, required_bytes=int(profile["pack"]["minimum_free_bytes"]))
     registry_sha256 = sha256_path(registry_path)
     for source_id in profile_source_ids(profile):
@@ -577,9 +673,9 @@ def _run_setup_under_lock(
         registry_source = _registry_source(registry, source_id)
         row: dict[str, Any] = {"source_id": source_id, "layer_id": profile_source["layer_id"]}
         raw_path = resolve_state_path(data_root, profile_source, "raw")
-        if download:
+        if prepare and download:
             row["download"] = _download_source(profile_source=profile_source, data_root=data_root)
-        if download or build:
+        if prepare:
             _assert_expected_raw(raw_path, profile_source)
             row["lineage"] = _ensure_lineage(
                 profile_source=profile_source,
@@ -588,7 +684,7 @@ def _run_setup_under_lock(
                 registry_path=registry_path,
                 registry_sha256=registry_sha256,
             )
-        if build:
+        if prepare and build:
             row["derivation"] = _build_derived_source(
                 profile_source=profile_source,
                 registry_source=registry_source,
@@ -596,7 +692,9 @@ def _run_setup_under_lock(
             )
         report["sources"].append(row)
 
-    if build:
+    if reuse_for_cleanup:
+        report["pack"] = {"action": "reused"}
+    elif build:
         source_validation = validate_registry(
             registry_path,
             root=data_root,
@@ -665,11 +763,17 @@ def _run_setup_under_lock(
         if probe["status"] != "pass":
             raise ValueError("offline spatial runtime probe failed: " + "; ".join(probe["errors"]))
 
-    if build and not retain_raw:
-        if not verify:
-            raise ValueError("--discard-raw-after-build requires --verify after pack assembly")
+    if cleanup:
+        report["cleanup"] = _cleanup_verified_prairie(
+            data_root=data_root,
+            pack_root=pack_root,
+            profile=profile,
+            manifest_sha256=report["pack_validation"]["manifest_sha256"],
+        )
+    elif build and not retain_raw:
         report["removed_raw_assets"] = _discard_raw(profile, data_root)
     elif not _raw_assets_present(profile, data_root):
+        report["raw_retained_after_success"] = False
         report["raw_assets"] = "not_retained; pack/receipt validation remains available"
 
 
@@ -681,12 +785,21 @@ def run_setup(
     build: bool,
     verify: bool,
     dry_run: bool,
-    retain_raw: bool,
+    retain_raw: bool | None = None,
+    cleanup: bool = False,
     registry_path: Path = DEFAULT_REGISTRY,
     profile_manifest_path: Path = DEFAULT_PROFILE_MANIFEST,
 ) -> dict[str, Any]:
     """Run the requested explicit setup phases and return a provenance receipt."""
 
+    if cleanup and (profile_id != DEFAULT_PROFILE_ID or not verify or retain_raw is True):
+        raise ValueError("Prairie --cleanup requires --verify and cannot be combined with --retain-raw")
+    if retain_raw is False and not (build and verify):
+        raise ValueError("--discard-raw-after-build requires --build and --verify")
+    cleanup = cleanup or (profile_id == DEFAULT_PROFILE_ID and build and verify and retain_raw is not True)
+    # The Prairie install receipt records retention at pack publication.
+    # Cleanup has its own receipt written after successful verification and removal.
+    retain_raw = cleanup or retain_raw is not False
     data_root = _external_state_root(data_root)
     registry_path = registry_path.resolve()
     profile_manifest_path = profile_manifest_path.resolve()
@@ -716,7 +829,7 @@ def run_setup(
         "pack_root": str(pack_root),
         "requested": requested,
         "network_requested": bool(download),
-        "raw_retained_after_success": bool(retain_raw),
+        "raw_retained_after_success": retain_raw and not cleanup,
         "disk_space": disk,
         "sources": [],
         "actions": [],
@@ -724,19 +837,22 @@ def run_setup(
         "boundary": profile.get("boundary"),
     }
     if dry_run:
+        reuse_for_cleanup = cleanup and pack_root.exists()
         report["actions"] = [
             "validate profile and source-registry entry identities",
             *(
                 ["download exact pinned official bytes to .part files, then hash-before-promote"]
-                if download
+                if download and not reuse_for_cleanup
                 else []
             ),
             *(
                 ["derive WGS84 SQLite/RTree layers and atomically promote a flat runtime pack"]
-                if build
+                if build and not reuse_for_cleanup
                 else []
             ),
+            *(["reuse the existing pack if verification passes"] if reuse_for_cleanup else []),
             *(["verify pack integrity and run offline application-path probes"] if verify else []),
+            *(["delete pinned archives and exact intermediate copies after verification"] if cleanup else []),
         ]
         for profile_source in profile.get("sources") or []:
             if not isinstance(profile_source, dict):
@@ -766,6 +882,7 @@ def run_setup(
             build=build,
             verify=verify,
             retain_raw=retain_raw,
+            cleanup=cleanup,
             registry_path=registry_path,
             profile_manifest_path=profile_manifest_path,
             profile=profile,
@@ -790,12 +907,17 @@ def main() -> int:
     retention.add_argument(
         "--retain-raw",
         action="store_true",
-        help="retain verified raw source archives after a successful build (the safe default)",
+        help="retain verified raw archives and intermediate databases after a successful build",
     )
     retention.add_argument(
         "--discard-raw-after-build",
         action="store_true",
-        help="remove exact verified raw archives only after --build --verify succeeds",
+        help="remove verified raw archives after --build --verify (also removes Prairie intermediate copies)",
+    )
+    retention.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="with --verify, remove verified Prairie downloads and intermediate copies from an existing installation",
     )
     args = parser.parse_args()
     if not (args.download or args.build or args.verify or args.dry_run):
@@ -812,7 +934,8 @@ def main() -> int:
             build=args.build,
             verify=args.verify,
             dry_run=args.dry_run,
-            retain_raw=not args.discard_raw_after_build,
+            retain_raw=True if args.retain_raw else False if args.discard_raw_after_build else None,
+            cleanup=args.cleanup,
             registry_path=args.registry or (ROOT / load_profile(args.profile_manifest, args.profile)["source_registry_path"]),
             profile_manifest_path=args.profile_manifest,
         )

@@ -5,7 +5,7 @@ import pytest
 from shapely.geometry import Point, Polygon, shape
 from pyproj import Geod
 
-from agronomy_agent.geospatial.geometry import canonical_geometry, geodesic_metrics, geometries_intersect, project_geometry
+from agronomy_agent.geospatial.geometry import canonical_geometry, geodesic_metrics, geojson_area_m2, geometries_intersect, project_geometry
 
 
 def polygon(x=0, y=0, width=1):
@@ -25,6 +25,22 @@ def test_holes_and_all_multipart_members_survive_and_are_measured():
     assert metrics["area_m2"] == pytest.approx(expected)
     assert shape(parsed).covers(Point(metrics["representative_point"]["longitude"], metrics["representative_point"]["latitude"]))
     assert metrics["perimeter_m"] == pytest.approx(Geod(ellps="WGS84").geometry_length(shape(value).boundary))
+
+
+def test_geojson_area_matches_equal_area_rectangle_and_is_invariant_to_edge_splitting():
+    from pyproj import Proj
+    from shapely.geometry import box
+
+    project = Proj("+proj=cea +ellps=WGS84")
+    xmin, ymin = project(-120, 48)
+    xmax, ymax = project(-103, 58)
+    assert geojson_area_m2(box(-120, 48, -103, 58)) == pytest.approx((xmax - xmin) * (ymax - ymin), rel=1e-12)
+
+    vertices = [(-120, 48), (-103, 53), (-110, 58), (-120, 48)]
+    field = Polygon(vertices)
+    left = field.intersection(box(-121, 47, -112, 59))
+    right = field.intersection(box(-112, 47, -102, 59))
+    assert geojson_area_m2(left) + geojson_area_m2(right) == pytest.approx(geojson_area_m2(field), rel=1e-12)
 
 
 @pytest.mark.parametrize("value", [

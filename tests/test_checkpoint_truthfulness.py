@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 import agronomy_agent.server.app as app_module
-from agronomy_agent.server.app import _change_proposal_gates, _geo_priors_for_location, _present_geo_priors
+from agronomy_agent.server.app import _change_proposal_gates, _geo_priors_for_location, _present_geo_label, _present_geo_priors
 from agronomy_agent.server.services.eval_service import eval_run_gates, eval_run_metrics
 from agronomy_agent.server.services.export_service import (
     _demo_eval_run_record,
@@ -218,13 +218,38 @@ def test_saved_legacy_geo_response_excludes_stubs_without_rewriting_storage(runt
     assert views[0] == views[1]
 
 
+def test_unregistered_official_layer_is_omitted_from_saved_context_projection():
+    retired = {**verified_intersection(), "layer_id": "unregistered_official_layer",
+               "source": "bundled_official_geospatial_layer"}
+    priors = {
+        "candidate_regions": [{**retired, "layer": retired["layer_id"]}],
+        "regional_intersections": [retired],
+        "official_layer_status": [retired],
+        "geo_errors": [retired],
+        "regional_feature_collection": {"type": "FeatureCollection", "features": [{"properties": retired}]},
+        "evidence": ["official_polygon_intersection"],
+        "uncertainty": "low",
+    }
+    before = deepcopy(priors)
+    presented = _present_geo_priors(priors)
+    for key in ("candidate_regions", "regional_intersections", "official_layer_status", "geo_errors", "evidence"):
+        assert presented[key] == []
+    assert presented["regional_feature_collection"]["features"] == []
+    assert presented["uncertainty"] == "unknown"
+    assert _present_geo_label(f"{retired['system']} {retired['code']}", priors) == ""
+    assert _present_geo_label("Declared field region", priors) == "Declared field region"
+    assert _present_geo_priors(presented) == presented
+    assert priors == before
+
+
 @pytest.mark.parametrize("mapped", [False, True])
 def test_public_lookup_preserves_official_geometry_result_and_unknown_coverage(runtime, monkeypatch, mapped):
     client, _, _, _, _ = runtime
-    intersections = [verified_intersection()] if mapped else []
+    layer_id = "canada_ecozones"
+    intersections = [{**verified_intersection(), "layer_id": layer_id}] if mapped else []
     monkeypatch.setattr(app_module, "intersect_region_layers", lambda **kwargs: {
         "intersections": intersections, "feature_collection": {"type": "FeatureCollection", "features": []}, "errors": []})
-    statuses = [{"layer_id": "reviewed_survey", "status": "available" if mapped else "not_installed"}]
+    statuses = [{"layer_id": layer_id, "status": "available" if mapped else "not_installed"}]
     monkeypatch.setattr(app_module, "official_layer_status", lambda result: statuses)
     response = client.post("/api/geo/priors", json={"location_text": "crop on sandy field",
                            "geometry": {"type": "Point", "coordinates": [-100, 50]}})

@@ -24,12 +24,7 @@ REQUIRED_RUNTIME_ENV = {
 }
 
 GEOSPATIAL_LINEAGE_MANIFESTS = (
-    "data/derived/geo_layers/bc_agriculture_capability_manifest.json",
-    "data/derived/geo_layers/sk_thematic_soil_manifest.json",
     "data/derived/geo_layers/sk_detailed_soil_manifest.json",
-    "data/derived/geo_layers/ca_soil_erosion_risk_manifest.json",
-    "data/derived/geo_layers/pei_detailed_soil_manifest.json",
-    "data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json",
     "data/derived/geo_layers/ab_detailed_soil_manifest.json",
     "data/derived/geo_layers/mb_detailed_soil_manifest.json",
 )
@@ -284,7 +279,11 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
     for path in GEOSPATIAL_LINEAGE_MANIFESTS:
         if not _containerfile_copies_path(root, containerfile, path):
             errors.append(f"Containerfile does not copy geospatial lineage manifest: {path}")
-    if "chmod -R a+rX /app" not in containerfile:
+    runtime_access_commands = (
+        "find /app -type d ! -perm -0555 -exec chmod a+rx {} +",
+        r"find /app -type f \( ! -perm -0444 -o \( -perm /0111 ! -perm -0111 \) \) -exec chmod a+rX {} +",
+    )
+    if not all(command in containerfile for command in runtime_access_commands):
         errors.append("Containerfile must make bundled runtime assets readable by the app user")
     for value in REQUIRED_RUNTIME_ENV:
         if value not in containerfile.replace(" \\\n", " "):

@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-24T22:07:10+00:00",
+  "generated_at": "2026-11-26T01:30:53+00:00",
   "status": "pass",
-  "contract_sha256": "125f657557800aac8edf6884bbd20f091b12242bd199a20d0d1102a18f07900f",
+  "contract_sha256": "ddb1a09a58e345e04c31e82cb5eda611a873e265b6f7c2cf63df0b8416a2d9f0",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -414,14 +414,14 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 221,
-      "bytes": 7057094,
-      "sha256": "80382e671202e14eed0609ead4b3ae2bae0842dbdc64d8348cc0c571b77d3ec2"
+      "bytes": 7054705,
+      "sha256": "1b2c5b4c6d418041e87d8d649edb88a46693315a2732a3d34ffd02cb51ba3eef"
     },
     {
       "path": "frontend/src",
-      "file_count": 122,
-      "bytes": 1652189,
-      "sha256": "f9f1d102f6345b718856ea75cad04e5b8a78224710238b765c01fa1a4e521ee9"
+      "file_count": 118,
+      "bytes": 1497084,
+      "sha256": "5b85ad895050206e5b00b0cd5aa12413448f36ad63a3768b0f781545631e67f4"
     },
     {
       "path": "frontend/scripts",
@@ -437,21 +437,21 @@
     },
     {
       "path": "scripts",
-      "file_count": 144,
-      "bytes": 1918772,
-      "sha256": "9cc13abbdab607d279287071c0b50633bdee4da4c3625485f4b4932a273ac64d"
+      "file_count": 141,
+      "bytes": 1875988,
+      "sha256": "998800910f19360f12cbcccdf9e98ca062523c350a09e9f1965102736346f1bc"
     },
     {
       "path": "configs",
       "file_count": 97,
-      "bytes": 403949,
-      "sha256": "89d129fb2d38c65ca4ce9ba65c347861f00e0ec2302c42fdc073388abd1931b6"
+      "bytes": 403983,
+      "sha256": "3ae6f23062a4858297b14cd8c13705fe49313a0fe7fa0860d40bd60b58906793"
     },
     {
       "path": "data/manifests",
       "file_count": 42,
-      "bytes": 19689677,
-      "sha256": "4d04d0ece4443ca7e24883ca8be34f3eaf106544dccb7f28c190e63146104bcd"
+      "bytes": 19677762,
+      "sha256": "7aa4fb823c621223540dd40d09530bedae48297ec40b9535c9ac955bf8de13b5"
     },
     {
       "path": "data/eval",
@@ -468,8 +468,8 @@
     {
       "path": "docs/public",
       "file_count": 104,
-      "bytes": 10119846,
-      "sha256": "aab9e63fa909812780a602b050963b2b5b3fe1bb53c71db2685a2a256cbcbe0b"
+      "bytes": 9762854,
+      "sha256": "24102b366860a4109f7813c181e161af62af0df27a558e90acfa6d22224d3263"
     }
   ],
   "geo_cache_seed": {
@@ -480,9 +480,9 @@
   },
   "bundled_geo_layers": {
     "path": "data/derived/geo_layers",
-    "file_count": 8,
-    "bytes": 32805,
-    "sha256": "de958f674e8a5818d0c9c841033b9cb8be6e05e4d8f77634f98cbbadf96e84c7",
+    "file_count": 3,
+    "bytes": 18157,
+    "sha256": "a986288f736ac3fc9413d0738d902ed79407f803f67494ef07d459bf5341b9a5",
     "content_class": "lineage_manifests_only",
     "runtime_layer_assets_included": false,
     "install_authority": "data/manifests/offline_spatial_profiles_v1.json"
@@ -500,6 +500,12 @@
       "role": "runtime_control",
       "bytes": 1652,
       "sha256": "23c152b8c6f87552adba2628b919c2c3eade56dd77e4a1f5a776522db27e94dc"
+    },
+    {
+      "path": "configs/runtime_profiles.json",
+      "role": "runtime_control",
+      "bytes": 1778,
+      "sha256": "e1e7873788ed17f8ae8bcfd287ef0727300290d79f171d858bfb3a9309e19ff9"
     },
     {
       "path": "LICENSE",
@@ -528,8 +534,8 @@
     {
       "path": "Containerfile",
       "role": "runtime_control",
-      "bytes": 4021,
-      "sha256": "7219928a7417d9fac8630406e0b429d7d1177d1fa421b32544946db0392146b3"
+      "bytes": 3806,
+      "sha256": "8d3c877ffa5225080dba04539e1800942b48e8bf94274551d48f781207ae6812"
     },
     {
       "path": "Containerfile.overlay",
@@ -540,8 +546,8 @@
     {
       "path": ".dockerignore",
       "role": "runtime_control",
-      "bytes": 2516,
-      "sha256": "2c9438c21234b3214bb8f01b62e8500f598d14108d251095fffeffe482ceb384"
+      "bytes": 2190,
+      "sha256": "abece49a5ff90dbbeac199453663bf0282e693e9783f50d89b5fe8208ac1f580"
     },
     {
       "path": "requirements/requirements-container.txt",
@@ -636,8 +642,8 @@
     {
       "path": "container/entrypoint.sh",
       "role": "runtime_control",
-      "bytes": 1168,
-      "sha256": "841ffcff4e25d8463c0fbc3cb3aafd643d9fe1e9dc4aaf1df9a6fcf7b4b8d279"
+      "bytes": 1039,
+      "sha256": "3b3fbff2ceae721f7f1acf337889151fc0a0dda1e84ec150e7e6f3bfa49a2883"
     },
     {
       "path": "container/model-host.sh",
@@ -672,8 +678,8 @@
     {
       "path": "scripts/stage_edge_build_context.py",
       "role": "runtime_control",
-      "bytes": 4389,
-      "sha256": "a605436c7eb77e1279b3c8fbd12d6e4b5bc7c61018a1c0cb4fe4d8c86f76ebd3"
+      "bytes": 4448,
+      "sha256": "c0671f245b7d8364f4e8066ef8302222e95d27cfc3648c856f3b829178ae713d"
     },
     {
       "path": "scripts/verify_edge_release.py",
@@ -696,8 +702,8 @@
     {
       "path": "data/manifests/canada_geospatial_sources.json",
       "role": "runtime_control",
-      "bytes": 29540,
-      "sha256": "fd0850224615baba61b86841d41466bac16cbaa03907307d51230a2b996ea17f"
+      "bytes": 17625,
+      "sha256": "dd27929a17e4ac12abcfc8ee992fffded0822fbb56fbf5a8e41f8c9c47525e33"
     },
     {
       "path": "data/manifests/administrative_geospatial_sources.json",
@@ -716,6 +722,12 @@
       "role": "runtime_control",
       "bytes": 45296,
       "sha256": "13f7c7e73f82b3c49fb1b6b554a1cfb50b71b4c95b60a0ab41744ba233425e24"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/active/store_manifest.json",
+      "role": "runtime_control",
+      "bytes": 2334,
+      "sha256": "3b8014c32578f6a18f19adfe1fa2f53c0fbdd2f5bc3aff5373d61ab33887f76a"
     }
   ]
 }

@@ -2106,6 +2106,27 @@ def _image_embedding_search(
     )
 
 
+def _unregistered_catalog_row(row: dict[str, Any]) -> bool:
+    return (
+        row.get("source") in ("bundled_official_geospatial_layer", "official_arcgis_feature_service")
+        and str(row.get("layer_id") or row.get("layer") or "") not in REGION_LAYERS
+    )
+
+
+def _present_geo_label(label: str, priors: Any) -> str:
+    if not label or not isinstance(priors, dict):
+        return label
+    for key in ("candidate_regions", "regional_intersections"):
+        rows = priors.get(key)
+        if isinstance(rows, list) and any(
+            isinstance(row, dict) and _unregistered_catalog_row(row)
+            and label == f"{row.get('system')} {row.get('code')}"
+            for row in rows
+        ):
+            return ""
+    return label
+
+
 def _present_geo_priors(value: Any) -> dict[str, Any] | None:
     """Project current mapped context without rewriting the stored snapshot."""
     if not isinstance(value, dict):
@@ -2126,7 +2147,25 @@ def _present_geo_priors(value: Any) -> dict[str, Any] | None:
         and previous.get("schema_version") == "open_agronomy_agent.geo_prior_presentation.v1"
         and previous.get("legacy_text_candidates_excluded") is True
     )
-    result["candidate_regions"] = kept
+    result["candidate_regions"] = [row for row in kept if isinstance(row, dict) and not _unregistered_catalog_row(row)]
+    original_intersections = result.get("regional_intersections")
+    if isinstance(original_intersections, list):
+        result["regional_intersections"] = [
+            row for row in original_intersections if isinstance(row, dict) and not _unregistered_catalog_row(row)
+        ]
+    for key in ("geo_errors", "official_layer_status"):
+        if isinstance(result.get(key), list):
+            result[key] = [
+                row for row in result[key]
+                if isinstance(row, dict) and str(row.get("layer_id") or "") in REGION_LAYERS
+            ]
+    feature_collection = result.get("regional_feature_collection")
+    if isinstance(feature_collection, dict) and isinstance(feature_collection.get("features"), list):
+        feature_collection["features"] = [
+            feature for feature in feature_collection["features"]
+            if isinstance(feature, dict) and isinstance(feature.get("properties"), dict)
+            and str(feature["properties"].get("layer_id") or "") in REGION_LAYERS
+        ]
     if excluded:
         legacy_evidence = {
             "string_match:iowa", "string_match:des_moines_lobe", "string_match:ia",
@@ -2134,10 +2173,12 @@ def _present_geo_priors(value: Any) -> dict[str, Any] | None:
         }
         if isinstance(result.get("evidence"), list):
             result["evidence"] = [item for item in result["evidence"] if not (isinstance(item, str) and item in legacy_evidence)]
-        if not kept and not result.get("regional_intersections"):
-            result["uncertainty"] = "unknown"
-            result["disclaimer"] = "No verified mapped regional context is available. Location text remains declared context."
-            result["ui_notice"] = result["disclaimer"]
+    if not result["candidate_regions"] and not result.get("regional_intersections") and (excluded or candidates or original_intersections):
+        if isinstance(result.get("evidence"), list):
+            result["evidence"] = [item for item in result["evidence"] if item != "official_polygon_intersection"]
+        result["uncertainty"] = "unknown"
+        result["disclaimer"] = "No verified mapped regional context is available. Location text remains declared context."
+        result["ui_notice"] = result["disclaimer"]
     result["presentation"] = {
         "schema_version": "open_agronomy_agent.geo_prior_presentation.v1",
         "legacy_text_candidates_excluded": excluded,
@@ -2874,7 +2915,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "country_code": {"Canada": "CA", "United States": "US"}.get(country),
                 "concern": stored.get("concern") or inner.get("concern"),
                 "geometry": canonical_geometry(stored.get("geometry") or inner.get("geometry")),
-                "regional_context": stored.get("regionalContext") or inner.get("regional_context"),
+                "regional_context": stored.get("regionalContext"),
             }
         )
         from agronomy_agent.server.services.conversation_scope import season_identity
@@ -2985,6 +3026,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     def _demo_field_record(record: dict[str, Any]) -> dict[str, Any]:
         open_metadata = _demo_field_metadata(record)
         field = open_metadata.get("field") if isinstance(open_metadata.get("field"), dict) else {}
+        geo_priors = open_metadata.get("geo_priors")
+        regional_context = _present_geo_label(str(open_metadata.get("regional_context_label") or ""), geo_priors)
 
         def field_text(key: str, *legacy_values: Any) -> str:
             if key in field:
@@ -3002,8 +3045,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "concern": field_text("concern"),
             "notes": field_text("notes", record.get("management_notes")),
             "geometry": open_metadata.get("geometry") or {"kind": "none"},
-            "regionalContext": open_metadata.get("regional_context_label") or record.get("region_text") or "",
-            "geoPriors": _present_geo_priors(open_metadata.get("geo_priors")),
+            "regionalContext": regional_context or record.get("region_text") or "",
+            "geoPriors": _present_geo_priors(geo_priors),
             "geoContextLineage": open_metadata.get("geo_context_lineage"),
             "fieldRevision": open_metadata.get("field_revision"),
             "sourceBoundary": open_metadata.get("source_boundary"),
@@ -3205,6 +3248,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             for layer_id, layer in REGION_LAYERS.items()
             if layer.query_backend == "local_sqlite"
         ]
+        remote_layer_ids = REGION_LAYERS.keys() - set(local_layer_ids)
         server_result = intersect_region_layers(
             geometry=_demo_geometry_geojson(geometry),
             layer_ids=local_layer_ids,
@@ -3220,20 +3264,20 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         retained_remote = [
             {**item, "binding_status": "client_snapshot_context_only"}
             for item in (supplied_intersections if isinstance(supplied_intersections, list) else [])
-            if isinstance(item, dict) and str(item.get("layer_id") or "") not in local_layer_ids
+            if isinstance(item, dict) and str(item.get("layer_id") or "") in remote_layer_ids
         ][:20]
 
         supplied_status = supplied_priors.get("official_layer_status")
         retained_remote_status = [
             item
             for item in (supplied_status if isinstance(supplied_status, list) else [])
-            if isinstance(item, dict) and str(item.get("layer_id") or "") not in local_layer_ids
+            if isinstance(item, dict) and str(item.get("layer_id") or "") in remote_layer_ids
         ][:20]
         supplied_errors = supplied_priors.get("geo_errors")
         retained_remote_errors = [
             item
             for item in (supplied_errors if isinstance(supplied_errors, list) else [])
-            if isinstance(item, dict) and str(item.get("layer_id") or "") not in local_layer_ids
+            if isinstance(item, dict) and str(item.get("layer_id") or "") in remote_layer_ids
         ][:20]
 
         supplied_features = supplied_priors.get("regional_feature_collection")
@@ -3245,7 +3289,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 else []
             )
             if isinstance(feature, dict)
-            and str((feature.get("properties") or {}).get("layer_id") or "") not in local_layer_ids
+            and isinstance(feature.get("properties"), dict)
+            and str(feature["properties"].get("layer_id") or "") in remote_layer_ids
         ][:80]
         intersections = [*server_intersections, *retained_remote]
         governed = {
@@ -3342,10 +3387,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             season = previous_open_metadata.get("crop_season")
         jurisdiction = _field_payload_text(field.get("jurisdiction"), max_length=120)
         region = _field_payload_text(field.get("region"), max_length=160)
-        regional_context = _field_payload_text(
-            payload.get("regionalContext"),
-            fallback="regional context pending",
-            max_length=240,
+        regional_context = _present_geo_label(
+            _field_payload_text(payload.get("regionalContext"), fallback="regional context pending", max_length=240),
+            payload.get("geoPriors"),
         )
         concern = _field_payload_text(field.get("concern"), max_length=500)
         notes = _field_payload_text(field.get("notes"), max_length=1000)

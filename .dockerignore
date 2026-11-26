@@ -55,14 +55,8 @@ data/derived/rag/*
 !data/derived/rag/soilwise_knowledge_graph.json
 !data/derived/rag/offline_agronomy/
 !data/derived/rag/offline_agronomy/**
-!data/derived/geo_cache/
 !data/derived/geo_layers/
 data/derived/geo_layers/*
-!data/derived/geo_layers/bc_agriculture_capability_manifest.json
-!data/derived/geo_layers/sk_thematic_soil_manifest.json
-!data/derived/geo_layers/ca_soil_erosion_risk_manifest.json
-!data/derived/geo_layers/pei_detailed_soil_manifest.json
-!data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json
 !data/derived/geo_layers/ab_detailed_soil_manifest.json
 !data/derived/geo_layers/sk_detailed_soil_manifest.json
 !data/derived/geo_layers/mb_detailed_soil_manifest.json

@@ -51,13 +51,7 @@ COPY data/manifests ./data/manifests
 COPY data/eval ./data/eval
 COPY data/snapshots ./data/snapshots
 COPY data/derived/rag ./data/derived/rag
-COPY data/derived/geo_cache ./data/derived/geo_cache
-COPY data/derived/geo_layers/bc_agriculture_capability_manifest.json \
-     data/derived/geo_layers/sk_thematic_soil_manifest.json \
-     data/derived/geo_layers/sk_detailed_soil_manifest.json \
-     data/derived/geo_layers/ca_soil_erosion_risk_manifest.json \
-     data/derived/geo_layers/pei_detailed_soil_manifest.json \
-     data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json \
+COPY data/derived/geo_layers/sk_detailed_soil_manifest.json \
      data/derived/geo_layers/ab_detailed_soil_manifest.json \
      data/derived/geo_layers/mb_detailed_soil_manifest.json \
      ./data/derived/geo_layers/
@@ -66,9 +60,11 @@ COPY scripts ./scripts
 COPY container ./container
 COPY --from=frontend-build /build/frontend/dist ./frontend/dist
 
-RUN mkdir -p /state /app/data/derived/geo_cache \
+# Leave already readable assets in their original layers.
+RUN mkdir -p /state \
     && chmod 755 /app/container/entrypoint.sh \
-    && chmod -R a+rX /app
+    && find /app -type d ! -perm -0555 -exec chmod a+rx {} + \
+    && find /app -type f \( ! -perm -0444 -o \( -perm /0111 ! -perm -0111 \) \) -exec chmod a+rX {} +
 
 ARG RUNTIME_MANIFEST_SHA256=unrecorded
 ARG RELEASE_VERSION=development

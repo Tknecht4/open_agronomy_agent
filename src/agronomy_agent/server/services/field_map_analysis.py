@@ -7,21 +7,20 @@ Spatial libraries are imported only when an analysis is requested.
 from __future__ import annotations
 
 import json
-import sqlite3
+import math
 import time
 from collections import defaultdict
-from pathlib import Path
+from collections.abc import Iterable
 from typing import Any
 
 from agronomy_agent.server.services import geospatial_service as geo
-from agronomy_agent.geospatial.geometry import checked_positions as _checked_positions, geodesic_metrics
+from agronomy_agent.geospatial.geometry import MAX_GEOMETRY_VERTICES, checked_positions, geodesic_metrics, geojson_area_m2
 
 
 SCHEMA_VERSION = "open_agronomy_agent.field_map_analysis.v1"
 MAX_LAYERS = 4
-MAX_REQUEST_BYTES = 128 * 1024
-MAX_INPUT_VERTICES = 1024
-MAX_SOURCE_VERTICES = 20_000
+MAX_REQUEST_BYTES = 1024 * 1024
+MAX_REMOTE_SOURCE_VERTICES = 20_000
 MAX_ZONES_SHOWN = 10
 ACRES_PER_HECTARE = 2.471053814671653
 
@@ -33,7 +32,7 @@ def _empty_layer(layer: Any, status: str, reason: str | None = None) -> dict[str
         "source_url": layer.source_url,
         "source_mode": layer.query_backend,
         "boundary": layer.boundary,
-        "coverage_method": "WGS84 geodesic area of field clipped to union of returned source polygons",
+        "coverage_method": "WGS84 ellipsoidal area using the GeoJSON edges of the clipped source union",
         "uncertainty": "Mapped source geometry and scale limit precision; remote geometry may be generalized.",
         "status": status,
         "reason": reason,
@@ -57,57 +56,16 @@ def _record_incomplete(item: dict[str, Any], reason: str) -> None:
         item["reason"] = reason
 
 
-def _local_candidate_limit_reached(layer: Any, geometry: dict[str, Any]) -> bool:
-    """Detect the adapter's 8x feature candidate scan cap for installed packs."""
-    path = Path(str(layer.local_database or ""))
-    if layer.query_backend != "local_sqlite" or not path.is_file():
-        return False
-    west, south, east, north = geo.geometry_bbox(geometry)
-    with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as connection:
-        return connection.execute(
-            "SELECT 1 FROM feature_bounds WHERE max_lon >= ? AND min_lon <= ? "
-            "AND max_lat >= ? AND min_lat <= ? LIMIT 1 OFFSET ?",
-            (west, east, south, north, geo.MAX_FEATURES_PER_LAYER * 8 - 1),
-        ).fetchone() is not None
+def _area_in_field_m2(geometry: Any, field_area_m2: float) -> float:
+    area_m2 = geojson_area_m2(geometry)
+    if area_m2 > field_area_m2 and not math.isclose(area_m2, field_area_m2, rel_tol=1e-10, abs_tol=0.001):
+        raise ValueError("clipped area exceeds the field area")
+    return min(area_m2, field_area_m2)
 
 
-def _load_layer_features(
+def _load_remote_features(
     layer: Any, geometry: dict[str, Any], network_mode: str
 ) -> tuple[list[dict[str, Any]] | None, int | None, list[str], bool | None]:
-    """Use a raw envelope only for installed local packs; keep remote egress unchanged."""
-    if layer.query_backend == "local_sqlite":
-        bounds = geo.geometry_bbox(geometry)
-        raw = geo._query_layer(
-            layer, geometry=geo._arcgis_envelope(*bounds), geometry_type="esriGeometryEnvelope"
-        )
-        if (not isinstance(raw, dict) or raw.get("type") != "FeatureCollection"
-            or not isinstance(raw.get("features"), list)):
-            return None, None, ["malformed_source_collection"], None
-        raw_features = raw["features"]
-        transfer = raw.get("exceededTransferLimit")
-        reasons: list[str] = []
-        if transfer is True:
-            reasons.append("source_transfer_limit_reached")
-        elif transfer is not None and transfer is not False:
-            reasons.append("malformed_source_transfer_flag")
-        if len(raw_features) >= geo.MAX_FEATURES_PER_LAYER:
-            reasons.append("source_feature_limit_reached")
-        valid_raw: list[dict[str, Any]] = []
-        for feature in raw_features[:geo.MAX_FEATURES_PER_LAYER]:
-            if (not isinstance(feature, dict) or feature.get("type") != "Feature"
-                or not isinstance(feature.get("properties"), dict)
-                or not isinstance(feature.get("geometry"), dict)):
-                if "malformed_source_feature" not in reasons:
-                    reasons.append("malformed_source_feature")
-                continue
-            valid_raw.append(feature)
-        normalized = geo._normalize_feature_collection(
-            {"type": "FeatureCollection", "features": valid_raw}, layer
-        )
-        if len(normalized) != len(valid_raw) and "malformed_source_feature" not in reasons:
-            reasons.append("malformed_source_feature")
-        return normalized, len(raw_features), reasons, transfer if isinstance(transfer, bool) else None
-
     # This is the existing field-intersection adapter and its existing egress.
     # Completeness metadata is inspected before its normalized subset can be
     # promoted to a complete area statistic.
@@ -144,6 +102,93 @@ def _load_layer_features(
     return features[:geo.MAX_FEATURES_PER_LAYER], raw_count, reasons, transfer
 
 
+def _measure_layer_features(
+    item: dict[str, Any], features: Iterable[dict[str, Any] | None], field_shape: Any, area_m2: float,
+    *, remote: bool,
+) -> int:
+    """Measure exact intersections as candidates arrive, retaining only clipped geometry."""
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+    from shapely.prepared import prep
+
+    prepared_field = prep(field_shape)
+    point = field_shape.geom_type == "Point"
+    scanned = matched = 0
+    remaining = MAX_REMOTE_SOURCE_VERTICES if remote else None
+    zones = []
+    clipped_by_zone: dict[tuple[str, str], list[Any]] = defaultdict(list)
+    for feature in features:
+        scanned += 1
+        geometry = feature.get("geometry") if feature else None
+        if not isinstance(geometry, dict) or geometry.get("type") not in {"Polygon", "MultiPolygon"}:
+            _record_incomplete(item, "malformed_source_feature")
+            continue
+        try:
+            positions = checked_positions(geometry, maximum=remaining, label="source geometry")
+        except ValueError as exc:
+            if "exceeds" in str(exc):
+                _record_incomplete(item, "source_vertex_limit_reached")
+                item["reason"] = "source_vertex_limit_reached"
+                item["processed_feature_count"] = matched
+                return scanned
+            _record_incomplete(item, "malformed_source_feature")
+            continue
+        if remaining is not None:
+            remaining -= positions
+        try:
+            region = shape(geometry)
+        except (TypeError, ValueError, KeyError):
+            _record_incomplete(item, "invalid_source_geometry")
+            continue
+        if (region.is_empty or not region.is_valid or region.geom_type not in {"Polygon", "MultiPolygon"}
+            or region.bounds[2] - region.bounds[0] >= 180):
+            _record_incomplete(item, "invalid_source_geometry")
+            continue
+        if not prepared_field.intersects(region):
+            continue
+        matched += 1
+        properties = feature["properties"]
+        code = str(properties.get("code") or "")
+        name = str(properties.get("name") or "")
+        if point:
+            if len(zones) < MAX_ZONES_SHOWN:
+                zones.append({"code": code, "name": name, "area_ha": None, "fraction_of_field": None})
+        else:
+            clipped = field_shape.intersection(region)
+            if not clipped.is_empty:
+                clipped_by_zone[code, name].append(clipped)
+
+    item["processed_feature_count"] = matched
+    if point:
+        item["zones"] = zones
+        item["omitted_zone_count"] = matched - len(zones)
+        return scanned
+
+    coverage_pieces = []
+    complete = item["status"] == "complete"
+    for (code, name), pieces in clipped_by_zone.items():
+        merged = pieces[0] if len(pieces) == 1 else unary_union(pieces)
+        zone_m2 = _area_in_field_m2(merged, area_m2)
+        coverage_pieces.append(merged)
+        zones.append({
+            "code": code,
+            "name": name,
+            "area_ha": round(zone_m2 / 10_000, 6),
+            "fraction_of_field": round(zone_m2 / area_m2, 6),
+        })
+    if complete:
+        covered_m2 = _area_in_field_m2(unary_union(coverage_pieces), area_m2) if coverage_pieces else 0.0
+        item["covered_area_ha"] = round(covered_m2 / 10_000, 6)
+        item["coverage_fraction"] = round(covered_m2 / area_m2, 6)
+    zones.sort(key=lambda zone: (-zone["area_ha"], zone["code"], zone["name"]))
+    item["zones"] = zones[:MAX_ZONES_SHOWN]
+    if not complete:
+        for zone in item["zones"]:
+            zone["area_ha"] = zone["fraction_of_field"] = None
+    item["omitted_zone_count"] = max(0, len(zones) - MAX_ZONES_SHOWN)
+    return scanned
+
+
 def analyze_field_map(
     *, geometry: dict[str, Any], layer_ids: list[str], network_mode: str = "online"
 ) -> dict[str, Any]:
@@ -158,28 +203,20 @@ def analyze_field_map(
     if not isinstance(geometry, dict) or geometry.get("type") not in {"Point", "Polygon", "MultiPolygon"}:
         raise ValueError("geometry must be a GeoJSON Point, Polygon, or MultiPolygon")
     if len(json.dumps(geometry, separators=(",", ":")).encode("utf-8")) > MAX_REQUEST_BYTES:
-        raise ValueError("geometry exceeds 128 KiB limit")
-    _checked_positions(geometry, maximum=MAX_INPUT_VERTICES, label="geometry")
-    parsed = geometry
-    raw_bounds = geo._geometry_bbox(parsed)
-    # The official adapters use ordinary WGS84 envelopes and cannot represent a wrap.
-    if raw_bounds[2] - raw_bounds[0] >= 180:
-        raise ValueError("antimeridian-crossing geometry is unsupported")
-    if raw_bounds[2] - raw_bounds[0] > 12 or raw_bounds[3] - raw_bounds[1] > 12:
-        raise ValueError("geometry span exceeds 12 degrees")
-
+        raise ValueError("geometry exceeds 1 MiB limit")
+    checked_positions(geometry)
     layers = [geo.REGION_LAYERS[layer_id] for layer_id in layer_ids]
     result: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "status": "unavailable",
         "geometry": {
-            "type": parsed["type"],
+            "type": geometry["type"],
             "status": "unavailable",
             "area_ha": None,
             "area_ac": None,
             "perimeter_m": None,
             "location": None,
-            "method": "WGS84 ellipsoid geodesic area/perimeter; representative point for polygons",
+            "method": "WGS84 ellipsoidal area using GeoJSON edges, geodesic boundary length, and an interior representative point",
         },
         "layers": [],
         "network_policy": {
@@ -190,9 +227,9 @@ def analyze_field_map(
         "limits": {
             "max_layers": MAX_LAYERS,
             "max_request_bytes": MAX_REQUEST_BYTES,
-            "max_input_vertices": MAX_INPUT_VERTICES,
-            "max_source_vertices": MAX_SOURCE_VERTICES,
-            "max_features_per_layer": geo.MAX_FEATURES_PER_LAYER,
+            "max_input_vertices": MAX_GEOMETRY_VERTICES,
+            "max_remote_source_vertices": MAX_REMOTE_SOURCE_VERTICES,
+            "max_remote_features_per_layer": geo.MAX_FEATURES_PER_LAYER,
             "max_zones_shown": MAX_ZONES_SHOWN,
             "remote_timeout_seconds_per_layer": geo.HTTP_TIMEOUT_SECONDS,
         },
@@ -202,17 +239,19 @@ def analyze_field_map(
     try:
         import pyproj  # noqa: F401 - explicit optional dependency readiness check
         from shapely.geometry import shape
-        from shapely.ops import unary_union
     except ImportError:
         result["layers"] = [_empty_layer(layer, "unavailable", "spatial_dependencies_missing") for layer in layers]
         result["warnings"].append("Install the supported runtime requirements to enable field analysis.")
         result["elapsed_ms"] = round((time.monotonic() - started) * 1000, 2)
         return result
 
-    parsed = geo.validate_geojson_geometry(parsed)
+    parsed = geo.validate_geojson_geometry(geometry)
     field_shape = shape(parsed)
+    bounds = field_shape.bounds
+    envelopes = tuple(part.bounds for part in field_shape.geoms) if parsed["type"] == "MultiPolygon" else (bounds,)
+    remote_span_supported = max(bounds[2] - bounds[0], bounds[3] - bounds[1]) <= geo.MAX_BBOX_SPAN_DEGREES
     metrics = geodesic_metrics(field_shape)
-    area_m2, perimeter_m = metrics["area_m2"], metrics["perimeter_m"]
+    area_m2, perimeter_m = geojson_area_m2(field_shape), metrics["perimeter_m"]
     location = metrics["representative_point"]
     result["geometry"].update(
         status="complete",
@@ -226,12 +265,13 @@ def analyze_field_map(
     # attached to their source. The adapter enforces the active network policy.
     for layer in layers:
         layer_started = time.monotonic()
-        if network_mode == "offline" and layer.query_backend != "local_sqlite":
+        local = layer.query_backend == "local_sqlite"
+        if network_mode == "offline" and not local:
             blocked = _empty_layer(layer, "blocked_offline", "offline_network_policy")
             blocked["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
             result["layers"].append(blocked)
             continue
-        if layer.query_backend == "local_sqlite":
+        if local:
             readiness = geo._local_layer_readiness(layer)
             if readiness["status"] != "verified":
                 unavailable = _empty_layer(
@@ -242,139 +282,35 @@ def analyze_field_map(
                 unavailable["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
                 result["layers"].append(unavailable)
                 continue
-        item = _empty_layer(layer, "unavailable")
+        item = _empty_layer(layer, "complete")
         try:
-            if _local_candidate_limit_reached(layer, parsed):
-                item["status"] = "partial"
-                item["reason"] = "source_candidate_limit_reached"
-                item["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
-                result["layers"].append(item)
-                continue
-            features, feature_count, incomplete, transfer = _load_layer_features(
-                layer, parsed, network_mode
-            )
-            if layer.query_backend == "local_sqlite":
-                geo._assert_stable_local_source(layer, readiness)
-                item["source_integrity"] = readiness
-            item["feature_count"] = feature_count
-            item["source_exceeded_transfer_limit"] = transfer
-            item["incomplete_reasons"] = incomplete
-            if features is None:
-                item["reason"] = incomplete[0]
-                result["warnings"].append(f"{layer.label}: source query or collection unavailable.")
-                item["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
-                result["layers"].append(item)
-                continue
-            item["processed_feature_count"] = len(features)
-            vertex_total = 0
-            checked_features: list[dict[str, Any]] = []
-            for feature in features:
-                source_geometry = feature.get("geometry") if isinstance(feature, dict) else None
-                if not isinstance(source_geometry, dict) or source_geometry.get("type") not in {"Polygon", "MultiPolygon"}:
-                    if "malformed_source_feature" not in incomplete:
-                        incomplete.append("malformed_source_feature")
-                    continue
-                try:
-                    source_vertices = _checked_positions(
-                        source_geometry, maximum=MAX_SOURCE_VERTICES, label="source geometry"
+            if local:
+                with geo.local_coverage_features(layer, envelopes, readiness=readiness) as candidates:
+                    item["feature_count"] = _measure_layer_features(
+                        item, candidates, field_shape, area_m2, remote=False,
                     )
-                except ValueError as exc:
-                    reason = "source_vertex_limit_reached" if "exceeds" in str(exc) else "malformed_source_feature"
-                    if reason not in incomplete:
-                        incomplete.append(reason)
-                    continue
-                vertex_total += source_vertices
-                if vertex_total > MAX_SOURCE_VERTICES:
-                    if "source_vertex_limit_reached" not in incomplete:
-                        incomplete.append("source_vertex_limit_reached")
-                    break
-                checked_features.append(feature)
-            features = checked_features
-            item["processed_feature_count"] = len(features)
-            item["status"] = "partial" if incomplete else "complete"
-            item["reason"] = incomplete[0] if incomplete else None
-            if "source_vertex_limit_reached" in incomplete:
-                item["status"] = "partial"
-                item["reason"] = "source_vertex_limit_reached"
-                item["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
-                result["layers"].append(item)
-                continue
-            if parsed["type"] == "Point":
-                matched_zones = []
-                for feature in features:
-                    try:
-                        region_shape = shape(feature["geometry"])
-                    except (TypeError, ValueError, KeyError):
-                        _record_incomplete(item, "invalid_source_geometry")
-                        continue
-                    if (region_shape.is_empty or not region_shape.is_valid
-                        or region_shape.geom_type not in {"Polygon", "MultiPolygon"}
-                        or region_shape.bounds[2] - region_shape.bounds[0] >= 180):
-                        _record_incomplete(item, "invalid_source_geometry")
-                        continue
-                    if not region_shape.covers(field_shape):
-                        continue
-                    properties = feature.get("properties") or {}
-                    matched_zones.append({
-                        "code": str(properties.get("code") or ""),
-                        "name": str(properties.get("name") or ""),
-                        "area_ha": None,
-                        "fraction_of_field": None,
-                    })
-                item["zones"] = matched_zones[:MAX_ZONES_SHOWN]
-                item["omitted_zone_count"] = max(0, len(matched_zones) - MAX_ZONES_SHOWN)
-                item["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
-                result["layers"].append(item)
-                continue
-            clipped_by_zone: dict[tuple[str, str], list[Any]] = defaultdict(list)
-            all_clipped: list[Any] = []
-            for feature in features:
-                try:
-                    region_shape = shape(feature["geometry"])
-                except (TypeError, ValueError, KeyError):
-                    _record_incomplete(item, "invalid_source_geometry")
-                    continue
-                if (region_shape.is_empty or not region_shape.is_valid
-                    or region_shape.geom_type not in {"Polygon", "MultiPolygon"}
-                    or region_shape.bounds[2] - region_shape.bounds[0] >= 180):
-                    _record_incomplete(item, "invalid_source_geometry")
-                    continue
-                clipped = field_shape.intersection(region_shape)
-                if clipped.is_empty:
-                    continue
-                properties = feature.get("properties") or {}
-                key = (str(properties.get("code") or ""), str(properties.get("name") or ""))
-                clipped_by_zone[key].append(clipped)
-                all_clipped.append(clipped)
-            # A capped or invalid source leaves unknown coverage; showing a
-            # numeric fraction would misrepresent it as a complete layer.
-            if item["status"] == "complete":
-                covered_m2 = geodesic_metrics(unary_union(all_clipped))["area_m2"] if all_clipped else 0.0
-                item["covered_area_ha"] = round(covered_m2 / 10_000, 6)
-                item["coverage_fraction"] = round(min(1.0, covered_m2 / area_m2), 6)
-            zones = []
-            for (code, name), pieces in clipped_by_zone.items():
-                zone_m2 = geodesic_metrics(unary_union(pieces))["area_m2"]
-                zones.append({
-                    "code": code,
-                    "name": name,
-                    "area_ha": round(zone_m2 / 10_000, 6),
-                    "fraction_of_field": round(min(1.0, zone_m2 / area_m2), 6),
-                })
-            zones.sort(key=lambda zone: zone["area_ha"], reverse=True)
-            if item["status"] != "complete":
-                for zone in zones:
-                    zone["area_ha"] = None
-                    zone["fraction_of_field"] = None
-            item["zones"] = zones[:MAX_ZONES_SHOWN]
-            item["omitted_zone_count"] = max(0, len(zones) - MAX_ZONES_SHOWN)
+                item["source_integrity"] = readiness
+                item["source_exceeded_transfer_limit"] = False
+            elif not remote_span_supported:
+                item.update(status="unavailable", reason="remote_geometry_span_unsupported")
+            else:
+                features, feature_count, incomplete, transfer = _load_remote_features(layer, parsed, network_mode)
+                item["feature_count"] = feature_count
+                item["source_exceeded_transfer_limit"] = transfer
+                item["incomplete_reasons"] = incomplete
+                if features is None:
+                    item.update(status="unavailable", reason=incomplete[0])
+                    result["warnings"].append(f"{layer.label}: source query or collection unavailable.")
+                else:
+                    if incomplete:
+                        item.update(status="partial", reason=incomplete[0])
+                    _measure_layer_features(item, features, field_shape, area_m2, remote=True)
         except geo.LocalLayerIntegrityError as exc:
             item = _empty_layer(layer, "integrity_failed", "local_source_identity_failed")
             item["source_integrity"] = exc.receipt
             result["warnings"].append(f"{layer.label}: local source identity changed during analysis.")
         except Exception as exc:
-            item["status"] = "unavailable"
-            item["reason"] = "analysis_failed"
+            item = _empty_layer(layer, "unavailable", "analysis_failed")
             result["warnings"].append(f"{layer.label}: analysis failed ({type(exc).__name__}).")
         item["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
         result["layers"].append(item)
